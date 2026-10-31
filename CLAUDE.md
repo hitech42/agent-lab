@@ -50,6 +50,8 @@ directly; no agent frameworks.
 - Collaborators are injected via constructors. No module-level mutable state; nothing reads env vars at import time.
 - Pydantic models are data only (AgentConfig, TokenUsage, traces, AttemptResult). Service logic lives in plain classes.
 - No getters/setters, no Manager/Helper classes. Small helpers become private or static methods on the class that owns the data.
+- Tunable settings (caps, timeouts, limits) are constructor arguments with defaults, not module-level constants that tests monkeypatch.
+- Result and response types are plain data (frozen dataclasses or pydantic models), not wrappers that forward to another object through properties.
 - Tooling: `uv sync`, `uv run ruff check`, `uv run ruff format`, `uv run mypy`, `uv run pytest`.
 
 ## Known gaps

@@ -19,6 +19,7 @@ def test_bash_timeout_is_an_error(sandbox: Sandbox) -> None:
         BashTool(timeout_s=1).execute(sandbox, {"command": "sleep 30"})
 
 
+@pytest.mark.slow
 def test_run_tests_pass_and_fail(sandbox: Sandbox) -> None:
     sandbox.write_text("test_ok.py", "def test_ok():\n    assert True\n")
     assert "1 passed" in RunTestsTool().execute(sandbox, {})
@@ -27,6 +28,7 @@ def test_run_tests_pass_and_fail(sandbox: Sandbox) -> None:
     assert "failed" in bad and "[exit code: 1]" in bad
 
 
+@pytest.mark.slow
 def test_run_tests_output_is_tail_trimmed(sandbox: Sandbox) -> None:
     sandbox.write_text("test_big.py", "def test_big():\n    assert 0, 'x' * 20000\n")
     out = RunTestsTool().execute(sandbox, {})
@@ -34,6 +36,7 @@ def test_run_tests_output_is_tail_trimmed(sandbox: Sandbox) -> None:
     assert out.rstrip().endswith("[exit code: 1]")
 
 
+@pytest.mark.slow
 def test_run_tests_timeout_is_an_error(sandbox: Sandbox) -> None:
     sandbox.write_text("test_slow.py", "import time\n\ndef test_slow():\n    time.sleep(30)\n")
     with pytest.raises(ToolError, match="timed out"):

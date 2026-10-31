@@ -12,6 +12,9 @@ dependencies = [
     "pyyaml",
 ]
 
+[project.scripts]
+agent-lab = "agent_lab.runner.cli:main"
+
 [dependency-groups]
 dev = [
     "pytest",
@@ -28,6 +31,8 @@ build-backend = "uv_build"
 target-version = "py314"
 line-length = 100
 src = ["src", "tests"]
+# Task fixtures are data (some intentionally buggy); they are not linted or collected.
+extend-exclude = ["tasks"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
@@ -43,3 +48,5 @@ mypy_path = "src"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["slow: spawns real pytest subprocesses (deselected by default; CI runs everything)"]
+addopts = "-m 'not slow'"

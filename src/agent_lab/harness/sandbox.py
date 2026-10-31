@@ -103,6 +103,10 @@ class Sandbox:
     def close(self) -> None:
         shutil.rmtree(self._home, ignore_errors=True)
 
+    def rebased(self, root: Path) -> Sandbox:
+        """A new sandbox over ``root`` with the same output cap and drain timeout."""
+        return Sandbox(root, self._output_cap_bytes, self._drain_timeout_s)
+
     @staticmethod
     def minimal_env(home: Path) -> dict[str, str]:
         """The ONLY environment a sandboxed command sees. Nothing is inherited."""

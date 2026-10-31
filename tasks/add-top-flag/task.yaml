@@ -1,0 +1,17 @@
+id: add-top-flag
+title: Add a --top N option to a word-count CLI
+category: feature
+prompt: |
+  `wordcount.py` is a small command line tool. By default it prints one summary line
+  `<lines> <words> <chars>` for the files named on the command line (or for standard
+  input when no files are given).
+
+  Add a `--top N` option. When it is given, print the N most frequent words instead of
+  the summary line, one per line, formatted as `<word> <count>`. Words are the tokens
+  the tool already counts (see `tokenize`), compared case-insensitively and printed in
+  lowercase. Order by count, highest first; words with equal counts go in alphabetical
+  order. If there are fewer than N distinct words, print all of them. N must be a
+  positive integer: zero, negative numbers and non-numbers are usage errors that exit
+  with status 2, like any other bad argument. Without `--top` the behaviour must not
+  change. Run the tests in `tests/` to check your work, and do not edit the tests.
+grading: hidden_tests

@@ -168,3 +168,17 @@ def test_escaped_process_after_timeout_is_bounded(tmp_path: Path) -> None:
             assert result.timed_out and "timed out" in result.output
         finally:
             _kill_escaped(quick)
+
+
+def test_rebased_sandbox_keeps_limits_but_uses_the_new_root(tmp_path: Path) -> None:
+    other = tmp_path / "other"
+    other.mkdir()
+    (other / "marker.txt").write_text("in other")
+    with Sandbox(tmp_path, output_cap_bytes=100, drain_timeout_s=1.0) as original:
+        with original.rebased(other) as rebased:
+            assert rebased.root == other.resolve()
+            assert rebased.read_text("marker.txt") == "in other"
+            assert rebased.run_command("cat marker.txt", timeout=10).output == "in other"
+            result = rebased.run_command("python -c \"print('a' * 1000)\"", timeout=10)
+        assert "output truncated" in result.output  # the 100-byte cap was inherited
+        assert original.root == tmp_path.resolve()

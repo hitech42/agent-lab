@@ -1,0 +1,10 @@
+id: fix-date-range
+title: Fix inclusive day counts for date ranges
+category: bugfix
+prompt: |
+  The `daterange` module in this project parses ranges such as "2026-01-28..2026-02-03"
+  and counts the days they cover, both ends included. Users report wrong counts and
+  confusing errors. Find and fix the bugs in `daterange.py` so it behaves as its
+  docstrings describe. Run the tests in `tests/` to check your work, and do not edit
+  the tests.
+grading: hidden_tests

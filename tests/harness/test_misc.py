@@ -46,6 +46,7 @@ def test_trace_aggregation() -> None:
             cache_read_input_tokens=2,
             stop_reason="tool_use",
             latency_s=0.5,
+            total_latency_s=0.75,
             retries=n - 1,
             tool_calls=calls,
         )
@@ -59,7 +60,7 @@ def test_trace_aggregation() -> None:
     assert trace.total_input_tokens == 20 and trace.total_output_tokens == 10
     assert trace.total_cache_creation_input_tokens == 2
     assert trace.total_cache_read_input_tokens == 4
-    assert trace.total_latency_s == pytest.approx(1.0)
+    assert trace.total_latency_s == pytest.approx(1.5)
     assert trace.total_retries == 1
     assert trace.tool_call_count == 2 and trace.tool_error_count == 1
     assert trace.total_usage().total == 36

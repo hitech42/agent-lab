@@ -31,14 +31,18 @@ class Cli:
         if not tasks:
             print(f"no tasks found in {tasks_dir}", file=self._stdout)
             return 1
-        failures = 0
+        failures = warnings = 0
         for task in tasks:
             report = self._validator.validate(task)
             print(f"{'PASS' if report.ok else 'FAIL'} {report.task_id}", file=self._stdout)
             for problem in report.problems:
                 print(f"  - {problem}", file=self._stdout)
+            for warning in report.warnings:
+                print(f"  warning: {warning}", file=self._stdout)
             failures += not report.ok
-        print(f"{len(tasks) - failures}/{len(tasks)} tasks valid", file=self._stdout)
+            warnings += len(report.warnings)
+        summary = f"{len(tasks) - failures}/{len(tasks)} tasks valid"
+        print(summary + (f", {warnings} warning(s)" if warnings else ""), file=self._stdout)
         return 1 if failures else 0
 
     @staticmethod

@@ -9,6 +9,8 @@ from task_builders import BUGGY_CALC, FIXED_CALC
 from agent_lab.benchmark.pytest_runner import PytestRunner
 from agent_lab.harness.sandbox import Sandbox
 
+pytestmark = pytest.mark.slow  # spawns real pytest subprocesses
+
 HIDDEN_PASS = "def test_ok():\n    assert 1 + 1 == 2\n"
 HIDDEN_CALC = "from calc import add\n\n\ndef test_add():\n    assert add(2, 3) == 5\n"
 
@@ -100,6 +102,7 @@ def test_project_module_importable_from_workspace_root(tmp_path: Path) -> None:
 
 FORGERY = """
 import atexit, sys
+
 
 def _forge():
     path = [a.split("=", 1)[1] for a in sys.argv if a.startswith("--junitxml=")][0]

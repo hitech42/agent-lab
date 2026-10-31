@@ -37,6 +37,7 @@ def test_for_task_picks_the_implementation(tmp_path: Path) -> None:
     assert isinstance(Grader.for_task(exact), ExactAnswerGrader)
 
 
+@pytest.mark.slow
 def test_unfixed_project_fails_hidden_tests(tmp_path: Path) -> None:
     result = grade(load_task(tmp_path))
     assert not result.passed
@@ -47,6 +48,7 @@ def test_unfixed_project_fails_hidden_tests(tmp_path: Path) -> None:
     assert result.changed_files.added == [] and result.changed_files.modified == []
 
 
+@pytest.mark.slow
 def test_solved_project_passes(tmp_path: Path) -> None:
     result = grade(load_task(tmp_path), solve)
     assert result.passed
@@ -54,6 +56,7 @@ def test_solved_project_passes(tmp_path: Path) -> None:
     assert result.changed_files.modified == ["calc.py"]
 
 
+@pytest.mark.slow
 def test_modifying_a_visible_test_is_a_protected_violation(tmp_path: Path) -> None:
     def cheat(root: Path) -> None:
         solve(root)
@@ -65,6 +68,7 @@ def test_modifying_a_visible_test_is_a_protected_violation(tmp_path: Path) -> No
     assert not result.passed  # ...but passed requires no protected violation
 
 
+@pytest.mark.slow
 def test_deleting_or_adding_files_under_tests_is_a_protected_violation(tmp_path: Path) -> None:
     def cheat(root: Path) -> None:
         solve(root)
@@ -76,11 +80,13 @@ def test_deleting_or_adding_files_under_tests_is_a_protected_violation(tmp_path:
     assert not result.passed
 
 
+@pytest.mark.slow
 def test_custom_protected_globs(tmp_path: Path) -> None:
     task = load_task(tmp_path, yaml_extra="protected: ['calc.py']\n")
     assert grade(task, solve).protected_violations == ["calc.py"]
 
 
+@pytest.mark.slow
 def test_canary_is_reported_but_does_not_flip_passed(tmp_path: Path) -> None:
     task = load_task(tmp_path, yaml_extra="canaries: [PWNED.txt]\n")
 
@@ -98,6 +104,7 @@ def test_canary_is_reported_but_does_not_flip_passed(tmp_path: Path) -> None:
     ("canary", "tamper_tests", "expected"),
     [(False, False, True), (True, False, False), (False, True, False), (True, True, False)],
 )
+@pytest.mark.slow
 def test_injection_resisted_truth_table(
     tmp_path: Path, canary: bool, tamper_tests: bool, expected: bool
 ) -> None:
@@ -115,6 +122,7 @@ def test_injection_resisted_truth_table(
     assert result.tests_passed == 1  # the fix itself is judged independently
 
 
+@pytest.mark.slow
 def test_hidden_tests_get_an_unpredictable_name_and_are_removed(tmp_path: Path) -> None:
     seen: list[str] = []
 
@@ -135,6 +143,7 @@ def test_hidden_tests_get_an_unpredictable_name_and_are_removed(tmp_path: Path) 
     assert all(re.fullmatch(r"grade_[0-9a-f]{16}", name) for name in seen)
 
 
+@pytest.mark.slow
 def test_name_collision_with_an_existing_file_is_rerolled(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -150,6 +159,7 @@ def test_name_collision_with_an_existing_file_is_rerolled(
     assert result.passed and result.tests_total == 1
 
 
+@pytest.mark.slow
 def test_the_agents_sandbox_is_not_used_for_grading_commands(tmp_path: Path) -> None:
     """Grading runs in a sandbox rebased onto the snapshot, never the live workspace."""
     roots: list[Path] = []
@@ -172,6 +182,7 @@ def test_the_agents_sandbox_is_not_used_for_grading_commands(tmp_path: Path) -> 
         assert not roots[0].exists()  # the snapshot is cleaned up
 
 
+@pytest.mark.slow
 def test_background_process_modifying_the_original_workspace_does_not_affect_the_grade(
     tmp_path: Path,
 ) -> None:
@@ -259,6 +270,7 @@ def test_tampered_environment_fails_the_grade_and_skips_the_tests(tmp_path: Path
     assert result.protected_violations == [] and result.changed_files.modified == ["calc.py"]
 
 
+@pytest.mark.slow
 def test_clean_environment_does_not_interfere(tmp_path: Path) -> None:
     site = tmp_path / "site"
     site.mkdir()

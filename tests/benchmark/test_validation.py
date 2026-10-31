@@ -15,6 +15,9 @@ from agent_lab.benchmark.loader import TaskSuite
 from agent_lab.benchmark.task import Task
 from agent_lab.benchmark.validation import TaskValidator, ValidationReport
 
+pytestmark = pytest.mark.slow  # spawns real pytest subprocesses
+
+
 REAL_IDS = [t.id for t in TaskSuite.load(REAL_TASKS_DIR).all()]
 PADDING = "\n".join(f"V{i} = {i}" for i in range(60)) + "\n"  # lifts the project to 50+ code lines
 
@@ -157,17 +160,32 @@ def test_stdlib_pytest_and_project_imports_are_allowed(tmp_path: Path) -> None:
     assert validate(task).problems == []
 
 
-@pytest.mark.parametrize("extra_lines", [0, 400])
-def test_project_size_must_be_within_bounds(tmp_path: Path, extra_lines: int) -> None:
-    body = BUGGY_CALC + "\n".join(f"V{i} = {i}" for i in range(extra_lines)) + "\n"
-    task = load_task(
+def sized_task(tmp_path: Path, extra_lines: int) -> Task:
+    filler = "\n".join(f"V{i} = {i}" for i in range(extra_lines)) + "\n"
+    return load_task(
         tmp_path,
-        project={"calc.py": body, "tests/test_calc.py": VISIBLE_TEST},
-        solution={"calc.py": FIXED_CALC + "\n".join(f"V{i} = {i}" for i in range(extra_lines))},
+        project={"calc.py": BUGGY_CALC + filler, "tests/test_calc.py": VISIBLE_TEST},
+        solution={"calc.py": FIXED_CALC + filler},
     )
-    assert any(
-        "lines of code outside tests/; expected 50-200" in p for p in validate(task).problems
-    )
+
+
+def test_project_under_the_minimum_size_is_only_a_warning(tmp_path: Path) -> None:
+    report = validate(sized_task(tmp_path, 0))
+    assert report.ok and report.problems == []
+    assert len(report.warnings) == 1
+    assert "only 2 lines of code" in report.warnings[0] and "50-200" in report.warnings[0]
+
+
+def test_project_within_bounds_has_no_warning(tmp_path: Path) -> None:
+    report = validate(sized_task(tmp_path, 60))
+    assert report.ok and report.warnings == []
+
+
+def test_project_over_the_maximum_size_is_an_error(tmp_path: Path) -> None:
+    report = validate(sized_task(tmp_path, 400))
+    assert not report.ok
+    assert any("maximum is 200" in p for p in report.problems)
+    assert report.warnings == []
 
 
 def test_exact_answer_task_validates(tmp_path: Path) -> None:

@@ -60,6 +60,11 @@ directly; no agent frameworks.
 - Tunable settings (caps, timeouts, limits) are constructor arguments with defaults, not module-level constants that tests monkeypatch.
 - Result and response types are plain data (frozen dataclasses or pydantic models), not wrappers that forward to another object through properties.
 - Tooling: `uv sync`, `uv run ruff check`, `uv run ruff format`, `uv run mypy`, `uv run pytest`.
+- Tests that spawn real pytest subprocesses (grading, anti-cheat, task validation) are marked
+  `@pytest.mark.slow` (or `pytestmark = pytest.mark.slow` for a whole module). The default
+  `uv run pytest` skips them (`addopts = -m 'not slow'`) for a fast local loop. Run everything,
+  as CI does, with `uv run pytest -m "slow or not slow"`; run only the slow ones with
+  `uv run pytest -m slow`. Run the full suite before opening a PR.
 
 ## Task authoring
 
@@ -78,7 +83,8 @@ A task is a directory `tasks/<task_id>/` (id is a lowercase slug and equals the 
 Rules:
 
 - Task code and tests import only the standard library and pytest (the sandbox runs the
-  harness venv's interpreter). Each project is 50-200 lines of code outside `tests/`.
+  harness venv's interpreter). Each project is 50-200 lines of code outside `tests/`:
+  over 200 fails validation, under 50 only prints a warning.
 - Prompts never mention hidden tests or grading (the loader rejects them). They may say
   what the visible tests are for and tell the agent not to edit them.
 - Bugs are realistic and solvable by a small model within 15 turns, but not solvable by

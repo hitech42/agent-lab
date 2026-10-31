@@ -10,6 +10,8 @@ from task_builders import REAL_TASKS_DIR, real_task
 from agent_lab.benchmark.loader import TaskSuite
 from agent_lab.benchmark.workspace import TaskWorkspace
 
+pytestmark = pytest.mark.slow  # spawns real pytest subprocesses
+
 
 def visible_tests(tmp_path: Path, task_id: str, solved: bool) -> subprocess.CompletedProcess[str]:
     task = real_task(task_id)

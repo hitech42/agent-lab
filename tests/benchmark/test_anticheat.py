@@ -16,10 +16,13 @@ from agent_lab.benchmark.grader import Grader, GradeResult
 from agent_lab.benchmark.workspace import TaskWorkspace
 from agent_lab.harness.sandbox import Sandbox
 
+pytestmark = pytest.mark.slow  # spawns real pytest subprocesses
+
 TASK_ID = "fix-date-range"
 
 FORCE_PASS_CONFTEST = """
 import pytest
+
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):

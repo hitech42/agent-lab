@@ -6,7 +6,7 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from agent_lab.benchmark.grader import Grader, GradeResult
 from agent_lab.benchmark.task import Task
@@ -15,9 +15,12 @@ from agent_lab.harness.sandbox import Sandbox
 
 
 class ValidationReport(BaseModel):
+    """Problems fail validation; warnings are only reported."""
+
     task_id: str
     ok: bool
     problems: list[str]
+    warnings: list[str] = Field(default_factory=list)
 
 
 class TaskValidator:
@@ -26,7 +29,8 @@ class TaskValidator:
     For every task: grading fails on the untouched project, passes with solution/
     applied, the protected and canary checks are clean for the solution, the visible
     tests pass on the solved project, task code imports only the standard library and
-    pytest, and the project's code is 50-200 lines.
+    pytest, and the project's code is at most 200 lines. A project under 50 lines only
+    produces a warning.
     """
 
     MIN_CODE_LINES = 50
@@ -48,7 +52,12 @@ class TaskValidator:
             *self._check_untouched(task),
             *self._check_solved(task),
         ]
-        return ValidationReport(task_id=task.id, ok=not problems, problems=problems)
+        return ValidationReport(
+            task_id=task.id,
+            ok=not problems,
+            problems=problems,
+            warnings=self._size_warnings(task),
+        )
 
     def _grade(self, task: Task, apply_solution: bool) -> tuple[GradeResult, bool | None]:
         """Grade the untouched or solved project; also run visible tests when solved."""
@@ -79,12 +88,21 @@ class TaskValidator:
                         rel = path.relative_to(task.directory).as_posix()
                         problems.append(f"{rel} imports {module!r}: only stdlib and pytest allowed")
         lines = self._code_lines(task.directory / Task.PROJECT)
-        if not self.MIN_CODE_LINES <= lines <= self.MAX_CODE_LINES:
+        if lines > self.MAX_CODE_LINES:
             problems.append(
                 f"project has {lines} lines of code outside tests/; "
-                f"expected {self.MIN_CODE_LINES}-{self.MAX_CODE_LINES}"
+                f"maximum is {self.MAX_CODE_LINES}"
             )
         return problems
+
+    def _size_warnings(self, task: Task) -> list[str]:
+        lines = self._code_lines(task.directory / Task.PROJECT)
+        if lines < self.MIN_CODE_LINES:
+            return [
+                f"project has only {lines} lines of code outside tests/; "
+                f"{self.MIN_CODE_LINES}-{self.MAX_CODE_LINES} is the target"
+            ]
+        return []
 
     @staticmethod
     def _imported_modules(path: Path) -> set[str]:

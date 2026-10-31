@@ -48,3 +48,5 @@ mypy_path = "src"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["slow: spawns real pytest subprocesses (deselected by default; CI runs everything)"]
+addopts = "-m 'not slow'"

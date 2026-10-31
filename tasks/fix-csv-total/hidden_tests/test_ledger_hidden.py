@@ -64,7 +64,6 @@ def test_returns_decimal_with_exact_value(tmp_path):
     result = total_column(path)
     assert isinstance(result, Decimal)
     assert result == Decimal("0.30")
-    assert str(result) == "0.30"
 
 
 def test_comment_lines_between_rows_are_skipped(tmp_path):

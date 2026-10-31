@@ -31,8 +31,10 @@ def total_column(path: str | Path, column: str = "amount") -> Decimal:
 
     The column is chosen by name from the header, so column order does not matter.
     Amounts may be negative and may contain thousands separators (``"1,200.50"``).
-    Raises ``ValueError`` if an amount cannot be parsed. A ledger with a header and
-    no data rows totals ``Decimal("0")``.
+    Every amount must be a finite decimal number: an empty amount, text such as
+    ``abc`` or ``12.3.4``, and NaN or Infinity in any spelling (``nan``, ``inf``,
+    ``-Infinity``) raise ``ValueError``. A ledger with a header and no data rows
+    totals ``Decimal("0")``.
     """
     total = 0.0
     for row in read_rows(path):

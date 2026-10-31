@@ -11,9 +11,10 @@ SEPARATOR = ".."
 def parse_range(text: str) -> tuple[date, date]:
     """Parse ``START..END`` (ISO dates) into a ``(start, end)`` pair.
 
-    Both ends are part of the range. Raises ``ValueError`` if ``text`` is not
-    exactly two ISO dates joined by ``..``, or if the range is reversed
-    (END before START).
+    Both ends are part of the range. Leading and trailing whitespace around the
+    whole text is ignored. Raises ``ValueError`` if ``text`` is not exactly two
+    ISO dates joined by ``..`` (an empty, missing or invalid date makes it
+    malformed), or if the range is reversed (END before START).
     """
     parts = text.strip().split(SEPARATOR)
     if len(parts) != 2:
@@ -34,7 +35,10 @@ def inclusive_days(start: date, end: date) -> int:
 
 
 def days_in_range(text: str) -> int:
-    """Number of days covered by a ``START..END`` range, both ends included."""
+    """Number of days covered by a ``START..END`` range, both ends included.
+
+    Raises ``ValueError`` exactly when ``parse_range`` does (malformed or reversed).
+    """
     start, end = parse_range(text)
     return inclusive_days(start, end)
 

@@ -1,1 +1,13 @@
-# Placeholder: per-model token pricing. Format TBD.
+# Per-model prices in USD per million tokens.
+# VERIFY against Anthropic's pricing page -- the numbers below are PLACEHOLDERS.
+models:
+  claude-haiku-5-5:
+    input: 1.00
+    output: 5.00
+    cache_write: 1.25
+    cache_read: 0.10
+  claude-sonnet-5-5:
+    input: 3.00
+    output: 15.00
+    cache_write: 3.75
+    cache_read: 0.30

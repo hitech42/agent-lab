@@ -28,3 +28,4 @@ htmlcov/
 *.db-shm
 
 /interaction
+.claude/

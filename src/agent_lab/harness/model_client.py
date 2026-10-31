@@ -65,42 +65,15 @@ class ToolCall:
 
 @dataclass(frozen=True)
 class ModelResponse:
-    response: ResponseLike
+    """What the agent needs from one model call (data only)."""
+
+    stop_reason: str | None
+    content: list[Any]
+    usage: TokenUsage
+    tool_calls: list[ToolCall]
     retries: int
     latency_s: float  # duration of the successful call only
     total_latency_s: float  # failed attempts, backoff sleeps and the successful call
-
-    @property
-    def stop_reason(self) -> str | None:
-        return self.response.stop_reason
-
-    @property
-    def content(self) -> list[Any]:
-        return list(self.response.content)
-
-    def usage(self) -> TokenUsage:
-        u = self.response.usage
-        return TokenUsage(
-            input_tokens=u.input_tokens,
-            output_tokens=u.output_tokens,
-            cache_creation_input_tokens=u.cache_creation_input_tokens or 0,
-            cache_read_input_tokens=u.cache_read_input_tokens or 0,
-        )
-
-    def tool_calls(self) -> list[ToolCall]:
-        return [
-            ToolCall(
-                id=self._field(b, "id"),
-                name=str(self._field(b, "name")),
-                input=self._field(b, "input"),
-            )
-            for b in self.response.content
-            if self._field(b, "type") == "tool_use"
-        ]
-
-    @staticmethod
-    def _field(block: Any, name: str) -> Any:
-        return block.get(name) if isinstance(block, dict) else getattr(block, name, None)
 
 
 class RetryPolicy:
@@ -165,8 +138,37 @@ class ModelClient:
         started = time.perf_counter()
         response, retries = self._retry.call(attempt)
         return ModelResponse(
-            response=response,
+            stop_reason=response.stop_reason,
+            content=list(response.content),
+            usage=self._usage_of(response),
+            tool_calls=self._tool_calls_of(response),
             retries=retries,
             latency_s=last_call_s,
             total_latency_s=time.perf_counter() - started,
         )
+
+    @staticmethod
+    def _usage_of(response: ResponseLike) -> TokenUsage:
+        u = response.usage
+        return TokenUsage(
+            input_tokens=u.input_tokens,
+            output_tokens=u.output_tokens,
+            cache_creation_input_tokens=u.cache_creation_input_tokens or 0,
+            cache_read_input_tokens=u.cache_read_input_tokens or 0,
+        )
+
+    @staticmethod
+    def _tool_calls_of(response: ResponseLike) -> list[ToolCall]:
+        return [
+            ToolCall(
+                id=ModelClient._field(b, "id"),
+                name=str(ModelClient._field(b, "name")),
+                input=ModelClient._field(b, "input"),
+            )
+            for b in response.content
+            if ModelClient._field(b, "type") == "tool_use"
+        ]
+
+    @staticmethod
+    def _field(block: Any, name: str) -> Any:
+        return block.get(name) if isinstance(block, dict) else getattr(block, name, None)

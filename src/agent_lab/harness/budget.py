@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 
-from agent_lab.harness.pricing import ModelPrice, compute_cost
+from agent_lab.harness.pricing import ModelPrice, PriceTable
 from agent_lab.harness.tracing import TokenUsage
 
 
@@ -36,7 +36,7 @@ class Budget:
     @property
     def cost_usd(self) -> float | None:
         """Spend so far in USD, or None when no price is known."""
-        return None if self.price is None else compute_cost(self.price, self.usage)
+        return None if self.price is None else PriceTable.compute_cost(self.price, self.usage)
 
     def exceeded(self) -> bool:
         if self.max_total_tokens is not None and self.usage.total >= self.max_total_tokens:

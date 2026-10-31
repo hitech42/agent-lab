@@ -27,16 +27,6 @@ class PricingFile(BaseModel):
     models: dict[str, ModelPrice]
 
 
-def compute_cost(price: ModelPrice, usage: TokenUsage) -> float:
-    """Cost in USD for the given usage."""
-    return (
-        usage.input_tokens * price.input
-        + usage.output_tokens * price.output
-        + usage.cache_creation_input_tokens * price.cache_write
-        + usage.cache_read_input_tokens * price.cache_read
-    ) / _PER_MILLION
-
-
 class PriceTable:
     """Per-model prices, loaded from config/pricing.yaml."""
 
@@ -62,4 +52,14 @@ class PriceTable:
             raise PricingError(f"no pricing for model {model!r}") from None
 
     def cost(self, model: str, usage: TokenUsage) -> float:
-        return compute_cost(self.price(model), usage)
+        return self.compute_cost(self.price(model), usage)
+
+    @staticmethod
+    def compute_cost(price: ModelPrice, usage: TokenUsage) -> float:
+        """Cost in USD for the given usage at the given price."""
+        return (
+            usage.input_tokens * price.input
+            + usage.output_tokens * price.output
+            + usage.cache_creation_input_tokens * price.cache_write
+            + usage.cache_read_input_tokens * price.cache_read
+        ) / _PER_MILLION

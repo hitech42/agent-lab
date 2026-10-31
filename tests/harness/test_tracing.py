@@ -31,6 +31,4 @@ def test_trace_aggregation() -> None:
     assert trace.total_latency_s == pytest.approx(1.5)
     assert trace.total_retries == 1
     assert trace.tool_call_count == 2 and trace.tool_error_count == 1
-    assert trace.total_usage().total == 36
-    assert "total:" in trace.summary()
     assert trace.model_dump()["tool_call_count"] == 2

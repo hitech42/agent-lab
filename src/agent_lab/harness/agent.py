@@ -82,7 +82,7 @@ class Agent:
                 attempt.status, attempt.error = "error", f"{type(exc).__name__}: {exc}"
                 break
 
-            usage = response.usage()
+            usage = response.usage
             budget.record(usage)
             attempt.stop_reason = response.stop_reason
             attempt.conversation.add_assistant(response.content)
@@ -99,7 +99,7 @@ class Agent:
             if response.stop_reason != "tool_use":
                 attempt.status = "completed"
                 break
-            calls = response.tool_calls()
+            calls = response.tool_calls
             if not calls:
                 attempt.status = "error"
                 attempt.error = "stop_reason was tool_use but no tool_use blocks were returned"

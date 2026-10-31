@@ -5,13 +5,11 @@ from typing import Any, ClassVar
 from agent_lab.harness.sandbox import Sandbox
 from agent_lab.harness.tools.base import Tool, ToolError
 
-_PATH = {"type": "string", "description": "Path relative to the working directory."}
-
 
 class ListFilesTool(Tool):
     name = "list_files"
     description = "Recursively list files in the working directory (or a subdirectory)."
-    input_schema: ClassVar[dict[str, Any]] = Tool._schema({"path": _PATH}, [])
+    input_schema: ClassVar[dict[str, Any]] = Tool._schema({"path": Tool._path_property()}, [])
 
     def execute(self, sandbox: Sandbox, input: dict[str, Any]) -> str:
         files = sandbox.list_files(self._opt_str(input, "path") or ".")
@@ -26,7 +24,7 @@ class ReadFileTool(Tool):
     )
     input_schema: ClassVar[dict[str, Any]] = Tool._schema(
         {
-            "path": _PATH,
+            "path": Tool._path_property(),
             "start_line": {"type": "integer", "minimum": 1},
             "end_line": {"type": "integer", "minimum": 1},
         },
@@ -49,7 +47,11 @@ class StrReplaceEditTool(Tool):
     name = "str_replace_edit"
     description = "Replace old_str with new_str in a file. old_str must match exactly once."
     input_schema: ClassVar[dict[str, Any]] = Tool._schema(
-        {"path": _PATH, "old_str": {"type": "string"}, "new_str": {"type": "string"}},
+        {
+            "path": Tool._path_property(),
+            "old_str": {"type": "string"},
+            "new_str": {"type": "string"},
+        },
         ["path", "old_str", "new_str"],
     )
 
@@ -76,7 +78,7 @@ class CreateFileTool(Tool):
     name = "create_file"
     description = "Create a file (or overwrite an existing one) with the given content."
     input_schema: ClassVar[dict[str, Any]] = Tool._schema(
-        {"path": _PATH, "content": {"type": "string"}}, ["path", "content"]
+        {"path": Tool._path_property(), "content": {"type": "string"}}, ["path", "content"]
     )
 
     def execute(self, sandbox: Sandbox, input: dict[str, Any]) -> str:

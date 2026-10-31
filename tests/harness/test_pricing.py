@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_lab.harness.pricing import ModelPrice, PriceTable, PricingError, compute_cost
+from agent_lab.harness.pricing import ModelPrice, PriceTable, PricingError
 from agent_lab.harness.tracing import TokenUsage
 
 PRICE = ModelPrice(input=1, output=2, cache_write=3, cache_read=4)
@@ -15,7 +15,7 @@ USAGE = TokenUsage(
 
 
 def test_compute_cost_math() -> None:
-    assert compute_cost(PRICE, USAGE) == pytest.approx(1 + 1 + 0.3 + 1)
+    assert PriceTable.compute_cost(PRICE, USAGE) == pytest.approx(1 + 1 + 0.3 + 1)
 
 
 def test_price_table_lookup_and_cost() -> None:

@@ -43,6 +43,10 @@ class Tool(ABC):
         return {"type": "object", "properties": properties, "required": required}
 
     @staticmethod
+    def _path_property() -> dict[str, Any]:
+        return {"type": "string", "description": "Path relative to the working directory."}
+
+    @staticmethod
     def _req_str(inp: dict[str, Any], key: str) -> str:
         value = inp.get(key)
         if not isinstance(value, str):

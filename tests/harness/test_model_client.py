@@ -73,10 +73,10 @@ def test_create_builds_request_and_returns_response_data() -> None:
         "messages": [],
     }
     assert resp.stop_reason == "end_turn" and resp.retries == 0
-    u = resp.usage()
+    u = resp.usage
     assert (u.input_tokens, u.output_tokens) == (3, 4)
     assert (u.cache_creation_input_tokens, u.cache_read_input_tokens) == (5, 0)  # None -> 0
-    assert resp.tool_calls() == []
+    assert resp.tool_calls == []
 
 
 def test_latency_split_includes_backoff_only_in_total() -> None:

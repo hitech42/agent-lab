@@ -1,9 +1,12 @@
+import contextlib
 import os
+import signal
 import time
 from pathlib import Path
 
 import pytest
 
+from agent_lab.harness import sandbox as sandbox_module
 from agent_lab.harness.sandbox import Sandbox, SandboxError, minimal_env
 
 
@@ -104,3 +107,69 @@ def test_timeout_kills_whole_process_group(sandbox: Sandbox) -> None:
 def test_nonzero_exit_reported(sandbox: Sandbox) -> None:
     result = sandbox.run_command("echo hi; exit 3", timeout=10)
     assert result.exit_code == 3 and not result.timed_out and "hi" in result.output
+
+
+def test_unbounded_output_is_capped(sandbox: Sandbox) -> None:
+    started = time.monotonic()
+    result = sandbox.run_command("yes", timeout=1)
+
+    assert time.monotonic() - started < 8
+    assert result.timed_out
+    assert len(result.output) < sandbox_module.OUTPUT_CAP_BYTES + 500
+    assert "output truncated" in result.output and "bytes discarded" in result.output
+    assert "timed out after 1s" in result.output
+    assert result.output.startswith("y\ny\n")  # the FIRST bytes are kept
+
+
+def test_output_cap_marker_counts_discarded_bytes(
+    sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sandbox_module, "OUTPUT_CAP_BYTES", 100)
+    result = sandbox.run_command("python -c \"print('a' * 1000)\"", timeout=10)
+
+    assert not result.timed_out and result.exit_code == 0
+    assert result.output.startswith("a" * 100 + "\n[... output truncated, ")
+    assert "901 bytes discarded" in result.output  # 1000 'a' + newline - 100 kept
+
+
+# `setsid` is not available on macOS, so escape the process group from Python instead.
+_ESCAPE = (
+    'python -c "import subprocess; '
+    "p = subprocess.Popen(['sleep', '100'], start_new_session=True); "
+    "open('escaped.pid', 'w').write(str(p.pid))\""
+)
+
+
+def _kill_escaped(sandbox: Sandbox) -> None:
+    pid_file = sandbox.root / "escaped.pid"
+    if pid_file.exists():
+        with contextlib.suppress(ProcessLookupError):
+            os.kill(int(pid_file.read_text()), signal.SIGKILL)
+
+
+def test_escaped_process_holding_pipe_does_not_block(sandbox: Sandbox) -> None:
+    try:
+        started = time.monotonic()
+        result = sandbox.run_command(f"{_ESCAPE}; echo started", timeout=2)
+        elapsed = time.monotonic() - started
+
+        assert (sandbox.root / "escaped.pid").exists()  # the escape really happened
+        assert elapsed < 2 + 6
+        assert "started" in result.output
+    finally:
+        _kill_escaped(sandbox)
+
+
+def test_escaped_process_after_timeout_is_bounded(
+    sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sandbox_module, "DRAIN_TIMEOUT_S", 1.0)
+    try:
+        started = time.monotonic()
+        result = sandbox.run_command(f"{_ESCAPE}; sleep 60", timeout=1)
+
+        assert (sandbox.root / "escaped.pid").exists()
+        assert time.monotonic() - started < 1 + 1 + 3
+        assert result.timed_out and "timed out" in result.output
+    finally:
+        _kill_escaped(sandbox)

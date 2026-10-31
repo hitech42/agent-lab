@@ -34,7 +34,8 @@ class TurnTrace(BaseModel):
     cache_creation_input_tokens: int
     cache_read_input_tokens: int
     stop_reason: str | None
-    latency_s: float
+    latency_s: float  # duration of the successful API call only
+    total_latency_s: float  # whole turn API phase: failed calls, backoff sleeps, final call
     retries: int = 0
     tool_calls: list[ToolCallTrace] = Field(default_factory=list)
 
@@ -67,7 +68,7 @@ class AttemptTrace(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def total_latency_s(self) -> float:
-        return sum(t.latency_s for t in self.turns)
+        return sum(t.total_latency_s for t in self.turns)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -101,8 +102,8 @@ class AttemptTrace(BaseModel):
             lines.append(
                 f"turn {t.turn}: in={t.input_tokens} out={t.output_tokens} "
                 f"cache_w={t.cache_creation_input_tokens} cache_r={t.cache_read_input_tokens} "
-                f"stop={t.stop_reason} {t.latency_s:.2f}s retries={t.retries}"
-                + (f" tools=[{calls}]" if calls else "")
+                f"stop={t.stop_reason} {t.latency_s:.2f}s (total {t.total_latency_s:.2f}s) "
+                f"retries={t.retries}" + (f" tools=[{calls}]" if calls else "")
             )
         lines.append(
             f"total: in={self.total_input_tokens} out={self.total_output_tokens} "

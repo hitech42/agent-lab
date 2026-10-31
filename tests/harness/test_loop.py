@@ -5,7 +5,7 @@ from conftest import FakeClient, status_error, text_response, tool_use_response,
 
 from agent_lab.harness.budget import Budget
 from agent_lab.harness.config import AgentConfig
-from agent_lab.harness.loop import call_with_retry, run_agent
+from agent_lab.harness.loop import RetryResult, call_with_retry, run_agent
 from agent_lab.harness.pricing import ModelPrice
 from agent_lab.harness.sandbox import Sandbox
 
@@ -190,7 +190,9 @@ def test_call_with_retry_returns_retry_count() -> None:
             raise item
         return item
 
-    assert call_with_retry(fn, sleep=lambda _: None) == ("ok", 1)
+    result = call_with_retry(fn, sleep=lambda _: None)
+    assert (result.value, result.retries) == ("ok", 1)
+    assert isinstance(result, RetryResult) and result.last_call_s >= 0
 
 
 def test_unimplemented_context_strategy_raises(config: AgentConfig, sandbox: Sandbox) -> None:
@@ -214,3 +216,52 @@ def test_tool_output_is_truncated_and_redacted(
     assert "super-secret" not in content and "sk-ant" not in content
     assert "[REDACTED]" in content and "truncated" in content
     assert "super-secret" not in str(result.messages)
+
+
+def test_tool_result_sent_to_model_is_redacted(
+    config: AgentConfig, sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A tool reads a file with secrets; the next request carries only redacted content."""
+    monkeypatch.setattr("agent_lab.harness.redact._API_KEY", "plain-env-secret-value")
+    sandbox.write_text("creds.txt", "a=plain-env-secret-value\nb=sk-ant-api03-FAKE_key-1\n")
+    script = [tool_use_response(("r", "read_file", {"path": "creds.txt"})), text_response()]
+    result, client = run(config, sandbox, script)
+
+    sent = client.requests[1]["messages"][-1]["content"][0]
+    assert sent["type"] == "tool_result" and sent["content"].count("[REDACTED]") == 2
+    assert "plain-env-secret-value" not in str(client.requests[1])
+    assert "sk-ant-api03" not in str(client.requests[1])
+    assert "plain-env-secret-value" not in str(result.messages)
+
+
+def test_unexpected_exception_from_client_is_recorded(
+    config: AgentConfig, sandbox: Sandbox
+) -> None:
+    script = [tool_use_response(("t1", "list_files", {})), ValueError("bad sk-ant-leak_123 value")]
+    result, _ = run(config, sandbox, script)
+
+    assert result.status == "error"
+    assert result.error == "ValueError: bad [REDACTED] value"
+    assert len(result.trace.turns) == 1  # turns collected so far are kept
+    assert result.messages[-1]["role"] == "user"
+
+
+def test_latency_split_between_call_and_total(config: AgentConfig, sandbox: Sandbox) -> None:
+    sleeps: list[float] = []
+    result, _ = run(config, sandbox, [status_error(429), text_response()], sleeps=sleeps)
+
+    turn = result.trace.turns[0]
+    assert turn.retries == 1
+    assert 0 <= turn.latency_s <= turn.total_latency_s
+    assert result.trace.total_latency_s == pytest.approx(turn.total_latency_s)
+
+
+def test_total_latency_includes_backoff_sleep(config: AgentConfig, sandbox: Sandbox) -> None:
+    import time as _time
+
+    client = FakeClient([status_error(503), text_response()])
+    result = run_agent("x", config, sandbox, client, Budget(), sleep=lambda s: _time.sleep(0.2))
+
+    turn = result.trace.turns[0]
+    assert turn.total_latency_s >= 0.2  # the backoff sleep counts
+    assert turn.latency_s < 0.2  # the successful call alone does not

@@ -6,6 +6,7 @@ SDK's built-in retries don't stack on top of ours.
 
 import time
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from functools import partial
 from typing import Any, Literal, Protocol
 
@@ -78,25 +79,35 @@ def is_transient(exc: Exception) -> bool:
     )
 
 
+@dataclass(frozen=True)
+class RetryResult[T]:
+    value: T
+    retries: int
+    last_call_s: float  # duration of the successful call only
+
+
 def call_with_retry[T](
     fn: Callable[[], T],
     *,
     max_attempts: int = MAX_ATTEMPTS,
     base_delay: float = BASE_DELAY_S,
     sleep: Callable[[float], None] = time.sleep,
-) -> tuple[T, int]:
+) -> RetryResult[T]:
     """Call fn, retrying transient errors with exponential backoff.
 
-    Returns (result, retries_used). Re-raises the last error when attempts run out
-    or immediately for non-transient errors.
+    Re-raises the last error when attempts run out, or immediately for
+    non-transient errors.
     """
     for attempt in range(max_attempts):
+        started = time.perf_counter()
         try:
-            return fn(), attempt
+            value = fn()
         except Exception as exc:
             if not is_transient(exc) or attempt == max_attempts - 1:
                 raise
             sleep(base_delay * 2**attempt)
+        else:
+            return RetryResult(value, attempt, time.perf_counter() - started)
     raise AssertionError("unreachable")
 
 
@@ -161,7 +172,7 @@ def run_agent(
         request_messages = apply_context_strategy(config.context_strategy, messages)
         started = time.perf_counter()
         try:
-            response, retries = call_with_retry(
+            call = call_with_retry(
                 partial(
                     client.messages.create,
                     model=config.model,
@@ -172,10 +183,11 @@ def run_agent(
                 ),
                 sleep=sleep,
             )
-        except anthropic.AnthropicError as exc:
+        except Exception as exc:  # run_agent never raises; record and stop
             status, error = "error", f"{type(exc).__name__}: {exc}"
             break
-        latency = time.perf_counter() - started
+        total_latency = time.perf_counter() - started
+        response = call.value
 
         usage = _usage_of(response.usage)
         budget.record(usage)
@@ -186,8 +198,9 @@ def run_agent(
             turn=turn,
             **usage.model_dump(),
             stop_reason=stop_reason,
-            latency_s=latency,
-            retries=retries,
+            latency_s=call.last_call_s,
+            total_latency_s=total_latency,
+            retries=call.retries,
         )
         turns.append(trace)
 

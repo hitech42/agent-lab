@@ -2,28 +2,37 @@
 
 import os
 import re
+from collections.abc import Mapping
 from typing import Any
 
 REDACTED = "[REDACTED]"
 _KEY_PATTERN = re.compile(r"sk-ant-[A-Za-z0-9_-]+")
 
-# Read once at import (process start); never logged or printed.
-_API_KEY: str | None = os.environ.get("ANTHROPIC_API_KEY") or None
 
+class Redactor:
+    """Replaces known secret values and any ``sk-ant-...`` token with [REDACTED]."""
 
-def redact(text: str) -> str:
-    """Replace the exact ANTHROPIC_API_KEY value and any sk-ant-... token."""
-    if _API_KEY:
-        text = text.replace(_API_KEY, REDACTED)
-    return _KEY_PATTERN.sub(REDACTED, text)
+    def __init__(self, secrets: list[str]) -> None:
+        # Longest first so a secret containing another is replaced whole.
+        self._secrets = sorted({s for s in secrets if s}, key=len, reverse=True)
 
+    @classmethod
+    def from_env(cls, environ: Mapping[str, str] | None = None) -> Redactor:
+        """Read ANTHROPIC_API_KEY once, now. The value is never logged or printed."""
+        env = os.environ if environ is None else environ
+        return cls([env.get("ANTHROPIC_API_KEY", "")])
 
-def redact_obj(obj: Any) -> Any:
-    """Recursively redact every string inside nested dicts/lists."""
-    if isinstance(obj, str):
-        return redact(obj)
-    if isinstance(obj, dict):
-        return {k: redact_obj(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [redact_obj(v) for v in obj]
-    return obj
+    def redact(self, text: str) -> str:
+        for secret in self._secrets:
+            text = text.replace(secret, REDACTED)
+        return _KEY_PATTERN.sub(REDACTED, text)
+
+    def redact_obj(self, obj: Any) -> Any:
+        """Recursively redact every string inside nested dicts/lists."""
+        if isinstance(obj, str):
+            return self.redact(obj)
+        if isinstance(obj, dict):
+            return {k: self.redact_obj(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [self.redact_obj(v) for v in obj]
+        return obj

@@ -14,12 +14,16 @@ directly; no agent frameworks.
 
 - `src/agent_lab/harness/`
   - `config.py` — pydantic models for agent configuration
-  - `tools.py` — tool definitions and dispatch
+  - `agent.py` — `Agent`, the hand-written agent loop on the Messages API
+  - `model_client.py` — `ModelClient` and `RetryPolicy` (the harness owns retries)
+  - `conversation.py` — `Conversation`, the message history
+  - `context.py` — `ContextStrategy` ABC and implementations
+  - `tools/` — `Tool` ABC, file/exec tools, and `ToolRegistry`
   - `sandbox.py` — sandboxed execution with minimal explicit environment
-  - `loop.py` — the hand-written agent loop on the Messages API
-  - `context.py` — context management strategies
+  - `redact.py` — `Redactor`, secret redaction
+  - `budget.py` — per-attempt token/cost budget
   - `tracing.py` — run traces
-  - `pricing.py` — token pricing and cost computation
+  - `pricing.py` — `PriceTable` and cost computation
 - `src/agent_lab/benchmark/`
   - `loader.py` — loads task fixtures from `tasks/`
   - `grader.py` — grades attempts with hidden pytest tests
@@ -42,7 +46,15 @@ directly; no agent frameworks.
 - pydantic for config and data models.
 - Small, pure functions.
 - Tests for every module.
+- Composition over inheritance; ABCs only where real variants exist.
+- Collaborators are injected via constructors. No module-level mutable state; nothing reads env vars at import time.
+- Pydantic models are data only (AgentConfig, TokenUsage, traces, AttemptResult). Service logic lives in plain classes.
+- No getters/setters, no Manager/Helper classes. Small helpers become private or static methods on the class that owns the data.
 - Tooling: `uv sync`, `uv run ruff check`, `uv run ruff format`, `uv run mypy`, `uv run pytest`.
+
+## Known gaps
+
+- Context strategies other than `FullHistory` are stubs (they raise `NotImplementedError` at construction). When implementing them, document the message-sequence contract on `ContextStrategy` and add a parametrized contract test across all strategies.
 
 ## HARD RULES
 

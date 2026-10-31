@@ -6,8 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_lab.harness import sandbox as sandbox_module
-from agent_lab.harness.sandbox import Sandbox, SandboxError, minimal_env
+from agent_lab.harness.sandbox import Sandbox, SandboxError
 
 
 @pytest.mark.parametrize("bad", ["../outside.txt", "a/../../outside.txt", "/etc/passwd"])
@@ -54,7 +53,7 @@ def test_allows_inside_paths(sandbox: Sandbox) -> None:
 
 
 def test_minimal_env_has_exactly_three_vars(tmp_path: Path) -> None:
-    env = minimal_env(tmp_path)
+    env = Sandbox.minimal_env(tmp_path)
     assert set(env) == {"PATH", "HOME", "LANG"}
     assert env["HOME"] == str(tmp_path)
 
@@ -115,17 +114,15 @@ def test_unbounded_output_is_capped(sandbox: Sandbox) -> None:
 
     assert time.monotonic() - started < 8
     assert result.timed_out
-    assert len(result.output) < sandbox_module.OUTPUT_CAP_BYTES + 500
+    assert len(result.output) < 1_000_000 + 500  # the default cap
     assert "output truncated" in result.output and "bytes discarded" in result.output
     assert "timed out after 1s" in result.output
     assert result.output.startswith("y\ny\n")  # the FIRST bytes are kept
 
 
-def test_output_cap_marker_counts_discarded_bytes(
-    sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(sandbox_module, "OUTPUT_CAP_BYTES", 100)
-    result = sandbox.run_command("python -c \"print('a' * 1000)\"", timeout=10)
+def test_output_cap_marker_counts_discarded_bytes(tmp_path: Path) -> None:
+    with Sandbox(tmp_path, output_cap_bytes=100) as small:
+        result = small.run_command("python -c \"print('a' * 1000)\"", timeout=10)
 
     assert not result.timed_out and result.exit_code == 0
     assert result.output.startswith("a" * 100 + "\n[... output truncated, ")
@@ -160,16 +157,14 @@ def test_escaped_process_holding_pipe_does_not_block(sandbox: Sandbox) -> None:
         _kill_escaped(sandbox)
 
 
-def test_escaped_process_after_timeout_is_bounded(
-    sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(sandbox_module, "DRAIN_TIMEOUT_S", 1.0)
-    try:
-        started = time.monotonic()
-        result = sandbox.run_command(f"{_ESCAPE}; sleep 60", timeout=1)
+def test_escaped_process_after_timeout_is_bounded(tmp_path: Path) -> None:
+    with Sandbox(tmp_path, drain_timeout_s=1.0) as quick:
+        try:
+            started = time.monotonic()
+            result = quick.run_command(f"{_ESCAPE}; sleep 60", timeout=1)
 
-        assert (sandbox.root / "escaped.pid").exists()
-        assert time.monotonic() - started < 1 + 1 + 3
-        assert result.timed_out and "timed out" in result.output
-    finally:
-        _kill_escaped(sandbox)
+            assert (quick.root / "escaped.pid").exists()
+            assert time.monotonic() - started < 1 + 1 + 3
+            assert result.timed_out and "timed out" in result.output
+        finally:
+            _kill_escaped(quick)

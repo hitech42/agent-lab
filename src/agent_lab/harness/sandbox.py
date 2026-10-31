@@ -19,11 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
 
-OUTPUT_CAP_BYTES = 1_000_000
-DRAIN_TIMEOUT_S = 5.0
 _POLL_INTERVAL_S = 0.05
-_BASE_PATH = "/usr/local/bin:/usr/bin:/bin"
-_SKIP_DIRS = {"__pycache__", ".pytest_cache", ".git", ".mypy_cache", ".ruff_cache"}
 
 
 class SandboxError(Exception):
@@ -37,21 +33,12 @@ class CommandResult:
     timed_out: bool
 
 
-def minimal_env(home: Path) -> dict[str, str]:
-    """The ONLY environment a sandboxed command sees. Nothing is inherited."""
-    interpreter_dir = str(Path(sys.executable).parent)
-    return {
-        "PATH": f"{interpreter_dir}:{_BASE_PATH}",
-        "HOME": str(home),
-        "LANG": "C.UTF-8",
-    }
-
-
 class _OutputReader:
-    """Incrementally reads a pipe fd, keeping the first OUTPUT_CAP_BYTES."""
+    """Incrementally reads a pipe fd, keeping the first ``cap_bytes`` bytes."""
 
-    def __init__(self, fd: int) -> None:
+    def __init__(self, fd: int, cap_bytes: int) -> None:
         self._fd = fd
+        self._cap = cap_bytes
         self._buf = bytearray()
         self._discarded = 0
         self.eof = False
@@ -61,7 +48,7 @@ class _OutputReader:
         if not chunk:
             self.eof = True
             return
-        room = OUTPUT_CAP_BYTES - len(self._buf)
+        room = self._cap - len(self._buf)
         if room > 0:
             self._buf += chunk[:room]
         self._discarded += max(0, len(chunk) - max(room, 0))
@@ -88,8 +75,18 @@ class _OutputReader:
 
 
 class Sandbox:
-    def __init__(self, root: Path) -> None:
+    _BASE_PATH = "/usr/local/bin:/usr/bin:/bin"
+    _SKIP_DIRS = frozenset({"__pycache__", ".pytest_cache", ".git", ".mypy_cache", ".ruff_cache"})
+
+    def __init__(
+        self,
+        root: Path,
+        output_cap_bytes: int = 1_000_000,
+        drain_timeout_s: float = 5.0,
+    ) -> None:
         self.root = root.resolve()
+        self._output_cap_bytes = output_cap_bytes
+        self._drain_timeout_s = drain_timeout_s
         self._home = Path(tempfile.mkdtemp(prefix="agent-lab-home-"))
 
     def __enter__(self) -> Sandbox:
@@ -105,6 +102,16 @@ class Sandbox:
 
     def close(self) -> None:
         shutil.rmtree(self._home, ignore_errors=True)
+
+    @staticmethod
+    def minimal_env(home: Path) -> dict[str, str]:
+        """The ONLY environment a sandboxed command sees. Nothing is inherited."""
+        interpreter_dir = str(Path(sys.executable).parent)
+        return {
+            "PATH": f"{interpreter_dir}:{Sandbox._BASE_PATH}",
+            "HOME": str(home),
+            "LANG": "C.UTF-8",
+        }
 
     def resolve(self, path: str | Path) -> Path:
         """Resolve ``path`` (relative to root) and require it to stay inside root."""
@@ -132,31 +139,31 @@ class Sandbox:
         base = self.resolve(path)
         found: list[str] = []
         for dirpath, dirnames, filenames in os.walk(base):
-            dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
+            dirnames[:] = [d for d in dirnames if d not in self._SKIP_DIRS]
             for name in filenames:
                 found.append(str((Path(dirpath) / name).relative_to(self.root)))
         return sorted(found)
 
     def run_command(self, cmd: str, timeout: float) -> CommandResult:
-        """Run ``cmd`` in its own process group; never blocks past ~timeout + 5s.
+        """Run ``cmd`` in its own process group; never blocks past ~timeout + drain_timeout_s.
 
-        Output is read incrementally: the first OUTPUT_CAP_BYTES are kept and the rest
+        Output is read incrementally: the first ``output_cap_bytes`` are kept and the rest
         discarded (with a marker). On timeout the whole group is killed and remaining
-        output is awaited for at most DRAIN_TIMEOUT_S. Once the shell itself has exited,
+        output is awaited for at most ``drain_timeout_s``. Once the shell itself has exited,
         only output already in the pipe is collected, so a daemonised child (e.g. via
         setsid) that keeps the pipe open cannot hold us up.
         """
         proc = subprocess.Popen(
             ["/bin/sh", "-c", cmd],
             cwd=self.root,
-            env=minimal_env(self._home),
+            env=self.minimal_env(self._home),
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             start_new_session=True,
         )
         assert proc.stdout is not None
-        reader = _OutputReader(proc.stdout.fileno())
+        reader = _OutputReader(proc.stdout.fileno(), self._output_cap_bytes)
         deadline = time.monotonic() + timeout
         timed_out = False
         try:
@@ -176,14 +183,14 @@ class Sandbox:
                     timed_out = True
             if timed_out:
                 self._kill_group(proc)
-                reader.read_until_eof(time.monotonic() + DRAIN_TIMEOUT_S)
+                reader.read_until_eof(time.monotonic() + self._drain_timeout_s)
                 with contextlib.suppress(subprocess.TimeoutExpired):
-                    proc.wait(timeout=DRAIN_TIMEOUT_S)
+                    proc.wait(timeout=self._drain_timeout_s)
         finally:
             self._kill_group(proc)  # reap stragglers left in the group
             proc.stdout.close()
             with contextlib.suppress(subprocess.TimeoutExpired):
-                proc.wait(timeout=DRAIN_TIMEOUT_S)
+                proc.wait(timeout=self._drain_timeout_s)
 
         text = reader.text()
         if timed_out:

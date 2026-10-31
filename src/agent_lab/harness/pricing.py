@@ -27,30 +27,39 @@ class PricingFile(BaseModel):
     models: dict[str, ModelPrice]
 
 
-def default_pricing_path() -> Path:
-    return Path(__file__).resolve().parents[3] / "config" / "pricing.yaml"
+class PriceTable:
+    """Per-model prices, loaded from config/pricing.yaml."""
 
+    def __init__(self, prices: dict[str, ModelPrice]) -> None:
+        self._prices = dict(prices)
 
-def load_prices(path: Path) -> dict[str, ModelPrice]:
-    try:
-        raw = yaml.safe_load(path.read_text())
-        return PricingFile.model_validate(raw).models
-    except Exception as exc:
-        raise PricingError(f"could not load pricing from {path}: {exc}") from exc
+    @classmethod
+    def from_yaml(cls, path: Path) -> PriceTable:
+        try:
+            raw = yaml.safe_load(path.read_text())
+            return cls(PricingFile.model_validate(raw).models)
+        except Exception as exc:
+            raise PricingError(f"could not load pricing from {path}: {exc}") from exc
 
+    @staticmethod
+    def default_path() -> Path:
+        return Path(__file__).resolve().parents[3] / "config" / "pricing.yaml"
 
-def get_price(prices: dict[str, ModelPrice], model: str) -> ModelPrice:
-    try:
-        return prices[model]
-    except KeyError:
-        raise PricingError(f"no pricing for model {model!r}") from None
+    def price(self, model: str) -> ModelPrice:
+        try:
+            return self._prices[model]
+        except KeyError:
+            raise PricingError(f"no pricing for model {model!r}") from None
 
+    def cost(self, model: str, usage: TokenUsage) -> float:
+        return self.compute_cost(self.price(model), usage)
 
-def compute_cost(price: ModelPrice, usage: TokenUsage) -> float:
-    """Cost in USD for the given usage."""
-    return (
-        usage.input_tokens * price.input
-        + usage.output_tokens * price.output
-        + usage.cache_creation_input_tokens * price.cache_write
-        + usage.cache_read_input_tokens * price.cache_read
-    ) / _PER_MILLION
+    @staticmethod
+    def compute_cost(price: ModelPrice, usage: TokenUsage) -> float:
+        """Cost in USD for the given usage at the given price."""
+        return (
+            usage.input_tokens * price.input
+            + usage.output_tokens * price.output
+            + usage.cache_creation_input_tokens * price.cache_write
+            + usage.cache_read_input_tokens * price.cache_read
+        ) / _PER_MILLION

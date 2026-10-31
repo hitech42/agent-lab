@@ -3,10 +3,12 @@ from typing import Any
 import pytest
 from conftest import FakeClient, status_error, text_response, tool_use_response, usage
 
+from agent_lab.harness.agent import Agent
 from agent_lab.harness.budget import Budget
 from agent_lab.harness.config import AgentConfig
-from agent_lab.harness.loop import RetryResult, call_with_retry, run_agent
+from agent_lab.harness.model_client import ModelClient, RetryPolicy
 from agent_lab.harness.pricing import ModelPrice
+from agent_lab.harness.redact import Redactor
 from agent_lab.harness.sandbox import Sandbox
 
 PRICE = ModelPrice(input=1.0, output=2.0, cache_write=3.0, cache_read=0.5)
@@ -18,17 +20,12 @@ def run(
     script: list[Any],
     budget: Budget | None = None,
     sleeps: list[float] | None = None,
+    redactor: Redactor | None = None,
 ) -> tuple[Any, FakeClient]:
     client = FakeClient(script)
-    result = run_agent(
-        "do the task",
-        config,
-        sandbox,
-        client,
-        budget or Budget(),
-        sleep=(sleeps if sleeps is not None else []).append,
-    )
-    return result, client
+    policy = RetryPolicy(sleep=(sleeps if sleeps is not None else []).append)
+    agent = Agent.from_config(config, ModelClient(client, policy), redactor or Redactor([]))
+    return agent.run("do the task", sandbox, budget or Budget()), client
 
 
 def test_multi_turn_tool_loop_to_end_turn(config: AgentConfig, sandbox: Sandbox) -> None:
@@ -181,36 +178,19 @@ def test_non_transient_error_not_retried(config: AgentConfig, sandbox: Sandbox) 
     assert len(client.requests) == 1
 
 
-def test_call_with_retry_returns_retry_count() -> None:
-    calls = iter([status_error(503), "ok"])
-
-    def fn() -> str:
-        item = next(calls)
-        if isinstance(item, Exception):
-            raise item
-        return item
-
-    result = call_with_retry(fn, sleep=lambda _: None)
-    assert (result.value, result.retries) == ("ok", 1)
-    assert isinstance(result, RetryResult) and result.last_call_s >= 0
-
-
-def test_unimplemented_context_strategy_raises(config: AgentConfig, sandbox: Sandbox) -> None:
+def test_unimplemented_context_strategy_raises(config: AgentConfig) -> None:
     cfg = config.model_copy(update={"context_strategy": "summarize"})
     client = FakeClient([text_response()])
-    with pytest.raises(NotImplementedError):
-        run_agent("x", cfg, sandbox, client, Budget())
-    assert client.requests == []  # failed before any API call
+    with pytest.raises(NotImplementedError):  # fails at construction, before any run
+        Agent.from_config(cfg, ModelClient(client, RetryPolicy()), Redactor([]))
+    assert client.requests == []
 
 
-def test_tool_output_is_truncated_and_redacted(
-    config: AgentConfig, sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr("agent_lab.harness.redact._API_KEY", "super-secret-value-123")
+def test_tool_output_is_truncated_and_redacted(config: AgentConfig, sandbox: Sandbox) -> None:
     cfg = config.model_copy(update={"tool_output_max_chars": 50})
     sandbox.write_text("k.txt", "super-secret-value-123 sk-ant-abc_DEF-9 " + "x" * 500)
     script = [tool_use_response(("r", "read_file", {"path": "k.txt"})), text_response()]
-    result, client = run(cfg, sandbox, script)
+    result, client = run(cfg, sandbox, script, redactor=Redactor(["super-secret-value-123"]))
 
     content = client.requests[1]["messages"][-1]["content"][0]["content"]
     assert "super-secret" not in content and "sk-ant" not in content
@@ -218,14 +198,11 @@ def test_tool_output_is_truncated_and_redacted(
     assert "super-secret" not in str(result.messages)
 
 
-def test_tool_result_sent_to_model_is_redacted(
-    config: AgentConfig, sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_tool_result_sent_to_model_is_redacted(config: AgentConfig, sandbox: Sandbox) -> None:
     """A tool reads a file with secrets; the next request carries only redacted content."""
-    monkeypatch.setattr("agent_lab.harness.redact._API_KEY", "plain-env-secret-value")
     sandbox.write_text("creds.txt", "a=plain-env-secret-value\nb=sk-ant-api03-FAKE_key-1\n")
     script = [tool_use_response(("r", "read_file", {"path": "creds.txt"})), text_response()]
-    result, client = run(config, sandbox, script)
+    result, client = run(config, sandbox, script, redactor=Redactor(["plain-env-secret-value"]))
 
     sent = client.requests[1]["messages"][-1]["content"][0]
     assert sent["type"] == "tool_result" and sent["content"].count("[REDACTED]") == 2
@@ -260,7 +237,9 @@ def test_total_latency_includes_backoff_sleep(config: AgentConfig, sandbox: Sand
     import time as _time
 
     client = FakeClient([status_error(503), text_response()])
-    result = run_agent("x", config, sandbox, client, Budget(), sleep=lambda s: _time.sleep(0.2))
+    policy = RetryPolicy(sleep=lambda s: _time.sleep(0.2))
+    agent = Agent.from_config(config, ModelClient(client, policy), Redactor([]))
+    result = agent.run("x", sandbox, Budget())
 
     turn = result.trace.turns[0]
     assert turn.total_latency_s >= 0.2  # the backoff sleep counts

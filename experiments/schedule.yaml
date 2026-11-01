@@ -1,1 +1,56 @@
-# Placeholder: daily experiment schedule (baseline vs. variant). Format TBD.
+# The daily experiment: one baseline config, plus one variant per ISO weekday track.
+# Prompts are files in experiments/prompts/. Every override must be an AgentConfig field
+# with a registered value (models are those in config/pricing.yaml).
+
+baseline:
+  name: baseline
+  model: claude-haiku-5-5
+  tool_set: structured
+  max_turns: 15
+  max_tokens_per_call: 4000
+  tool_output_max_chars: 4000
+  context_strategy: full
+  system_prompt: baseline.md
+
+defaults:
+  trials_per_task: 4
+  daily_max_cost_usd: 1.00
+  attempt_max_cost_usd: 0.15
+
+# Per-attempt cost estimates used until real history exists (USD).
+cost_defaults:
+  claude-haiku-5-5: 0.005
+  claude-sonnet-5-5: 0.06
+
+# Tracks are keyed by ISO weekday (1 = Monday ... 7 = Sunday). Exactly one per weekday.
+tracks:
+  1:
+    name: model-comparison
+    question: Does claude-sonnet-5-5 solve more tasks than claude-haiku-5-5, and at what cost?
+    variant: {model: claude-sonnet-5-5}
+    daily_max_cost_usd: 3.00
+    attempt_max_cost_usd: 0.50
+  2:
+    name: tool-design
+    question: Do the structured tools beat a single bash tool?
+    variant: {tool_set: bash_only}
+  3:
+    name: turn-budget
+    question: How much does cutting the turn budget from 15 to 6 hurt success?
+    variant: {max_turns: 6}
+  4:
+    name: plan-first
+    question: Does asking the agent to write a plan before acting improve results?
+    variant: {system_prompt: plan_first.md}
+  5:
+    name: self-verify
+    question: Does requiring the agent to run tests and re-read its changes improve results?
+    variant: {system_prompt: self_verify.md}
+  6:
+    name: tool-design
+    question: Do the structured tools beat a single bash tool?
+    variant: {tool_set: bash_only}
+  7:
+    name: aa-test
+    question: How large is the day-to-day noise when both configurations are identical?
+    variant: {}

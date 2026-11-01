@@ -28,6 +28,8 @@ class AttemptResult(BaseModel):
     trace: AttemptTrace
     cost_usd: float | None
     error: str | None = None
+    error_type: str | None = None  # exception class name, set together with ``error``
+    error_status: int | None = None  # HTTP status when the exception carries one
     messages: list[dict[str, Any]] = Field(default_factory=list)
 
 
@@ -40,6 +42,8 @@ class _Attempt:
     status: AttemptStatus = "max_turns"
     stop_reason: str | None = None
     error: str | None = None
+    error_type: str | None = None
+    error_status: int | None = None
 
 
 class Agent:
@@ -80,6 +84,8 @@ class Agent:
                 response = self._client.create(self._build_request(attempt.conversation))
             except Exception as exc:  # run never raises; record and stop
                 attempt.status, attempt.error = "error", f"{type(exc).__name__}: {exc}"
+                attempt.error_type = type(exc).__name__
+                attempt.error_status = getattr(exc, "status_code", None)
                 break
 
             usage = response.usage
@@ -103,6 +109,7 @@ class Agent:
             if not calls:
                 attempt.status = "error"
                 attempt.error = "stop_reason was tool_use but no tool_use blocks were returned"
+                attempt.error_type = "InvalidResponse"
                 break
             if budget.exceeded():
                 attempt.status = "budget_exceeded"
@@ -112,14 +119,23 @@ class Agent:
 
         return self._assemble_result(attempt, budget)
 
+    def warmup_request(self) -> ModelRequest:
+        """A minimal request whose cached prefix (system + tools) matches a real attempt's."""
+        return self._request([{"role": "user", "content": "ok"}], max_tokens=1)
+
     def _build_request(self, conversation: Conversation) -> ModelRequest:
+        return self._request(
+            self._context.apply(conversation), max_tokens=self._config.max_tokens_per_call
+        )
+
+    def _request(self, messages: list[dict[str, Any]], max_tokens: int) -> ModelRequest:
         cache = {"type": "ephemeral"}
         return ModelRequest(
             model=self._config.model,
-            max_tokens=self._config.max_tokens_per_call,
+            max_tokens=max_tokens,
             system=[{"type": "text", "text": self._config.system_prompt, "cache_control": cache}],
             tools=self._tools.api_params(),
-            messages=self._context.apply(conversation),
+            messages=messages,
         )
 
     def _execute_tool_calls(
@@ -160,5 +176,7 @@ class Agent:
             trace=AttemptTrace(turns=attempt.turns),
             cost_usd=budget.cost_usd,
             error=None if error is None else self._redactor.redact(error),
+            error_type=attempt.error_type,
+            error_status=attempt.error_status,
             messages=self._redactor.redact_obj(attempt.conversation.messages),
         )

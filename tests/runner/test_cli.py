@@ -1,18 +1,15 @@
-import io
+import tempfile
 from pathlib import Path
 
 import pytest
+from runner_support import build_cli
 from task_builders import BUGGY_CALC, FIXED_CALC, REAL_TASKS_DIR, VISIBLE_TEST, write_task
-
-from agent_lab.benchmark.grader import Grader
-from agent_lab.benchmark.validation import TaskValidator
-from agent_lab.runner.cli import Cli
 
 
 def run(argv: list[str]) -> tuple[int, str]:
-    out = io.StringIO()
-    code = Cli(TaskValidator(Grader.for_task), out).run(argv)
-    return code, out.getvalue()
+    world = build_cli(Path(tempfile.mkdtemp(prefix="cli-test-")))
+    code = world.cli.run(argv)
+    return code, world.out.getvalue()
 
 
 @pytest.mark.slow

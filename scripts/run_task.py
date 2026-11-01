@@ -6,32 +6,24 @@ Usage:
 """
 
 import argparse
-import os
 import sys
 import tempfile
 from pathlib import Path
 
-import anthropic
 from _common import format_trace
 
 from agent_lab.benchmark.environment import EnvironmentIntegrity
 from agent_lab.benchmark.grader import Grader
 from agent_lab.benchmark.loader import TaskSuite
 from agent_lab.benchmark.workspace import TaskWorkspace
-from agent_lab.harness.agent import Agent
-from agent_lab.harness.budget import Budget
-from agent_lab.harness.config import AgentConfig, ToolSet
-from agent_lab.harness.model_client import ModelClient, RetryPolicy
-from agent_lab.harness.pricing import PriceTable
-from agent_lab.harness.redact import Redactor
+from agent_lab.harness.config import ToolSet
 from agent_lab.harness.sandbox import Sandbox
+from agent_lab.runner.schedule import ExperimentSchedule
+from agent_lab.runner.wiring import AgentFactory, MissingApiKeyError
 
-TASKS_DIR = Path(__file__).resolve().parent.parent / "tasks"
-SYSTEM_PROMPT = (
-    "You are a coding agent working in a project directory. Use the tools to complete "
-    "the task, then stop."
-)
-MAX_TURNS = 15
+ROOT = Path(__file__).resolve().parent.parent
+TASKS_DIR = ROOT / "tasks"
+SCHEDULE = ROOT / "experiments" / "schedule.yaml"
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -44,27 +36,21 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("ANTHROPIC_API_KEY is not set", file=sys.stderr)
+    try:
+        factory = AgentFactory.from_env()
+    except MissingApiKeyError as exc:
+        print(exc, file=sys.stderr)
         return 1
 
     task = TaskSuite.load(TASKS_DIR).get(args.task)
     tool_set: ToolSet = args.tool_set
-    prices = PriceTable.from_yaml(PriceTable.default_path())
-    config = AgentConfig(
-        name=f"run-task-{task.id}",
-        model=args.model,
-        system_prompt=SYSTEM_PROMPT,
-        tool_set=tool_set,
-        max_turns=MAX_TURNS,
-        max_tokens_per_call=4000,
-        tool_output_max_chars=4000,
+    schedule = ExperimentSchedule.from_yaml(SCHEDULE, factory.prices)
+    config = schedule.baseline.model_copy(
+        update={"name": f"run-task-{task.id}", "model": args.model, "tool_set": tool_set}
     )
     # An unknown model fails here, before any API call.
-    budget = Budget(max_cost_usd=0.50, max_total_tokens=300_000, price=prices.price(config.model))
-    # The harness owns retries, so disable the SDK's own.
-    client = ModelClient(anthropic.Anthropic(max_retries=0), RetryPolicy())
-    agent = Agent.from_config(config, client, Redactor.from_env())
+    budget = factory.budget(config, max_cost_usd=0.50)
+    agent = factory.agent(config)
 
     integrity = EnvironmentIntegrity.for_running_interpreter()
     integrity.capture()

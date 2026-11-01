@@ -19,6 +19,9 @@ htmlcov/
 .vscode/
 .DS_Store
 
+# Per-attempt transcripts and the derived results database (never committed)
+.transcripts/
+
 # Local SQLite scratch files
 *.sqlite
 *.sqlite3

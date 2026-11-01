@@ -21,9 +21,38 @@ per attempt), `<date>.run.json` (the day's summary), `<date>.abort-*.json` (abor
 were resumed) and `results/configs/<hash>.json` (every configuration that ran, prompt included).
 `agent-lab db rebuild` turns them into a local SQLite database for ad-hoc queries.
 
-**Status:** the harness, tasks, runner, isolation and the daily workflow are written and tested,
-but nothing has run against the real Anthropic API yet, so `results/` is still empty, and there is
-no generated report yet (`src/agent_lab/report/` is a stub).
+**Status:** the harness, tasks, runner, isolation, daily workflow and report are implemented and
+tested. The dashboard below is generated from the committed results and updated by the daily
+workflow; it states the data range it covers.
+
+<!-- agent-lab:report:start -->
+## Results
+
+Data through **2026-11-01** · 1 day(s) run · 24 attempts · **$0.0633** total spend (attempts $0.0632 + warm-ups $0.0001).
+
+Latest day: eval\(aa-test\): baseline 12/12 vs variant 12/12 passed, $0.0633 \[completed\]
+
+| Track | Pairs (excl.) | Baseline pass | Variant pass | Δ pass (pp) | Δ cost / attempt | Δ turns | Verdict | Flags |
+|---|---|---|---|---|---|---|---|---|
+| aa-test | 12 (0) | 100% [76–100] | 100% [76–100] | +0.0 [-24.2, +24.2] | +$0.0000 [-$0.0003, +$0.0003] | +0.1 [-0.7, +0.8] | pass: no detectable difference; cost: no detectable difference | ceiling, noise-floor reference |
+
+- **aa-test**: How large is the day-to-day noise when both configurations are identical? Variant vs baseline: identical configs. Cost per solved task (baseline → variant): $0.0026 → $0.0026. 1 day(s), 3 task(s).
+
+![Variant minus baseline by track](report/tracks.svg)
+
+![Daily spend](report/daily.svg)
+
+**Caveats**
+
+- Deltas are variant minus baseline. "higher" and "lower" are neutral words: more passes is good, more cost is not. Intervals are 95%.
+- Sample size: a series with fewer than 10 included pairs shows point estimates only ("insufficient data"). Intervals are wide until a series has many days of data.
+- Ceiling: when both sides pass at least 95% of attempts, a pass-rate comparison cannot show an improvement; look at cost and turns instead.
+- Independence: trials of the same task are correlated, so treating pairs as independent understates uncertainty with few tasks. A task-clustered bootstrap is used automatically for a series with at least 8 tasks.
+- Multiple comparisons: 3 comparisons are shown (cost: 1, pass: 1, turns: 1), re-evaluated daily. At 95%, roughly 1 in 20 will show a difference by chance. The aa-test row compares identical configurations: it is the noise-floor reference and should show none.
+- Exclusions: a pair is left out when either attempt ended in `error` (an API or harness failure), was environment-tampered, or its other side never ran; the number is in parentheses. Truncated, refused, incomplete, max-turn and over-budget outcomes are agent outcomes: they stay in and count as failures unless the attempt passed.
+- Method: pass rate: Newcombe hybrid score interval \(paired, method 10\); cost, turns, output tokens: pair percentile bootstrap.
+- Charts are SVGs that follow your OS/browser colour scheme, which can differ from GitHub's own theme setting.
+<!-- agent-lab:report:end -->
 
 ## License
 

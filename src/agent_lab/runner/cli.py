@@ -11,6 +11,11 @@ from agent_lab.benchmark.loader import TaskLoadError, TaskSuite
 from agent_lab.benchmark.validation import TaskValidator
 from agent_lab.harness.isolation import LinuxUserIsolation
 from agent_lab.harness.redact import Redactor
+from agent_lab.report.analysis import ResultsAnalyzer
+from agent_lab.report.build import ReportBuilder
+from agent_lab.report.charts import DailySpendChart, TracksChart
+from agent_lab.report.command import ReportCommand
+from agent_lab.report.markdown import MarkdownRenderer, ReadmeUpdater
 from agent_lab.runner.database import ResultsDatabase
 from agent_lab.runner.publish import CommitMessageBuilder, ResultsPublisher
 from agent_lab.runner.run_command import (
@@ -29,12 +34,14 @@ class Cli:
         run_command: RunCommand,
         db_command: DbCommand,
         results_command: ResultsCommand,
+        report_command: ReportCommand,
         stdout: TextIO,
     ) -> None:
         self._validator = validator
         self._run_command = run_command
         self._db_command = db_command
         self._results_command = results_command
+        self._report_command = report_command
         self._stdout = stdout
 
     def run(self, argv: list[str]) -> int:
@@ -52,6 +59,10 @@ class Cli:
                         Path(args.incoming), Path(args.results_dir)
                     )
                 return self._results_command.commit_message(Path(args.incoming))
+            case "report":
+                return self._report_command.build(
+                    Path(args.results_dir), Path(args.readme), Path(args.out), args.check
+                )
         return 2  # unreachable: argparse requires a command
 
     def _validate_tasks(self, tasks_dir: Path) -> int:
@@ -110,6 +121,15 @@ class Cli:
         rebuild = db_commands.add_parser("rebuild", help="rebuild results.db from the JSONL")
         rebuild.add_argument("--db", default="results.db")
         rebuild.add_argument("--results-dir", default="results")
+        report = commands.add_parser("report", help="build the README dashboard and charts")
+        report_commands = report.add_subparsers(dest="report_command", required=True)
+        build = report_commands.add_parser("build", help="regenerate README section and report/")
+        build.add_argument("--results-dir", default="results")
+        build.add_argument("--readme", default="README.md")
+        build.add_argument("--out", default="report")
+        build.add_argument(
+            "--check", action="store_true", help="write nothing; exit 1 if an output would change"
+        )
         results = commands.add_parser("results", help="publish results from an untrusted directory")
         results_commands = results.add_subparsers(dest="results_command", required=True)
         publish = results_commands.add_parser(
@@ -148,6 +168,16 @@ def main() -> None:
         RunCommand(deps, sys.stdout),
         DbCommand(ResultsDatabase(), sys.stdout),
         ResultsCommand(ResultsPublisher, CommitMessageBuilder(Redactor.from_env()), sys.stdout),
+        ReportCommand(
+            ReportBuilder(
+                ResultsAnalyzer(),
+                MarkdownRenderer(),
+                ReadmeUpdater(),
+                TracksChart(),
+                DailySpendChart(),
+            ),
+            sys.stdout,
+        ),
         sys.stdout,
     )
     sys.exit(cli.run(sys.argv[1:]))

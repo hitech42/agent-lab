@@ -27,6 +27,11 @@ from agent_lab.harness.isolation import NoIsolation
 from agent_lab.harness.model_client import ModelClient, RetryPolicy
 from agent_lab.harness.pricing import PriceTable
 from agent_lab.harness.redact import Redactor
+from agent_lab.report.analysis import ResultsAnalyzer
+from agent_lab.report.build import ReportBuilder
+from agent_lab.report.charts import DailySpendChart, TracksChart
+from agent_lab.report.command import ReportCommand
+from agent_lab.report.markdown import MarkdownRenderer, ReadmeUpdater
 from agent_lab.runner.cli import Cli
 from agent_lab.runner.database import ResultsDatabase
 from agent_lab.runner.estimator import CostEstimator
@@ -375,6 +380,16 @@ def build_cli(
         RunCommand(deps, out),
         DbCommand(ResultsDatabase(), out),
         ResultsCommand(ResultsPublisher, CommitMessageBuilder(), out),
+        ReportCommand(
+            ReportBuilder(
+                ResultsAnalyzer(resamples=200),
+                MarkdownRenderer(),
+                ReadmeUpdater(),
+                TracksChart(),
+                DailySpendChart(),
+            ),
+            out,
+        ),
         out,
     )
     return CliWorld(cli, out, client, fake_grader, tmp_path, environ)

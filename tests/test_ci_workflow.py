@@ -159,7 +159,7 @@ def test_the_publish_job_can_push_but_never_sees_the_key_or_runs_agent_code() ->
 
 def test_the_publish_job_commits_only_results_with_the_configured_identity() -> None:
     text = "\n".join(s.get("run", "") for s in steps_of("publish"))
-    assert re.findall(r"git add \S+", text) == ["git add results/"]
+    assert re.findall(r"git add .+", text) == ["git add results/ report/ README.md"]
     assert "results publish" in text and "results commit-message" in text
     assert "git commit -F" in text and "-m " not in text.split("git commit")[1].split("\n")[0]
     assert text.count("git push") == 1 and "git pull --rebase" in text and "1 2 3" in text
@@ -211,3 +211,26 @@ def test_actions_are_on_their_node24_versions_everywhere() -> None:
                     assert ACTION_VERSIONS[action] == version, step["uses"]
                     seen.add(action)
     assert seen == set(ACTION_VERSIONS)
+
+
+# --- the report ---------------------------------------------------------------------------------
+
+
+def test_ci_checks_that_the_committed_report_is_up_to_date() -> None:
+    runs = [s["run"] for s in load()["jobs"]["check"]["steps"] if "run" in s]
+    assert "uv run agent-lab report build --check" in runs
+    assert runs.index("uv run agent-lab report build --check") > runs.index("uv run mypy scripts/")
+
+
+def test_the_publish_job_rebuilds_the_report_between_publishing_and_committing() -> None:
+    names = [s.get("name", s.get("uses", "")) for s in steps_of("publish")]
+    publish = names.index("Validate and copy the results into results/")
+    report = names.index("Rebuild the README dashboard and the report")
+    commit = names.index("Commit and push")
+    assert publish < report < commit
+    assert steps_of("publish")[report]["run"] == "uv run agent-lab report build"
+
+
+def test_the_nothing_new_skip_still_looks_at_results_only() -> None:
+    commit = next(s for s in steps_of("publish") if s.get("name") == "Commit and push")["run"]
+    assert "git status --porcelain -- results/" in commit and "nothing new to commit" in commit

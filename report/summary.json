@@ -1,0 +1,96 @@
+{
+  "attempts": 24,
+  "cluster_min_tasks": 8,
+  "comparisons_by_metric": {
+    "cost": 1,
+    "pass": 1,
+    "turns": 1
+  },
+  "comparisons_shown": 3,
+  "daily": [
+    {
+      "date": "2026-11-01",
+      "spend_usd": 0.063319,
+      "track": "aa-test"
+    }
+  ],
+  "days_run": 1,
+  "latest_date": "2026-11-01",
+  "latest_day": "eval(aa-test): baseline 12/12 vs variant 12/12 passed, $0.0633 [completed]",
+  "min_pairs": 10,
+  "resamples": 2000,
+  "spend_attempts_usd": 0.063208,
+  "spend_usd": 0.063319,
+  "spend_warmups_usd": 0.000111,
+  "tracks": [
+    {
+      "current": {
+        "baseline": {
+          "ci_high": 1.0,
+          "ci_low": 0.757506,
+          "cost_per_solved_usd": 0.002631,
+          "mean_cost_usd": 0.002631,
+          "n": 12,
+          "passed": 12,
+          "rate": 1.0
+        },
+        "baseline_hash": "3016aba7e85c",
+        "ceiling": true,
+        "current": true,
+        "days": 1,
+        "delta_cost_usd": {
+          "high": 0.00031,
+          "low": -0.000338,
+          "mean": 6e-06,
+          "verdict": "no detectable difference"
+        },
+        "delta_output_tokens": {
+          "high": 71.583333,
+          "low": -11.666667,
+          "mean": 31.75,
+          "verdict": "no detectable difference"
+        },
+        "delta_pass_pp": {
+          "high": 24.249401,
+          "low": -24.249401,
+          "mean": 0.0,
+          "verdict": "no detectable difference"
+        },
+        "delta_turns": {
+          "high": 0.833333,
+          "low": -0.666667,
+          "mean": 0.083333,
+          "verdict": "no detectable difference"
+        },
+        "description": "identical configs",
+        "excluded": {
+          "error": 0,
+          "tampered": 0,
+          "unpaired": 0
+        },
+        "first_date": "2026-11-01",
+        "last_date": "2026-11-01",
+        "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
+        "noise_floor": true,
+        "pairs": 12,
+        "question": "How large is the day-to-day noise when both configurations are identical?",
+        "tasks": 3,
+        "track": "aa-test",
+        "variant": {
+          "ci_high": 1.0,
+          "ci_low": 0.757506,
+          "cost_per_solved_usd": 0.002637,
+          "mean_cost_usd": 0.002637,
+          "n": 12,
+          "passed": 12,
+          "rate": 1.0
+        },
+        "variant_hash": "3016aba7e85c"
+      },
+      "older": [],
+      "track": "aa-test",
+      "unattributed_exclusions": 0
+    }
+  ],
+  "unreadable": 0
+}

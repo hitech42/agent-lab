@@ -25,6 +25,7 @@ jobs:
       - run: uv run ruff format --check
       - run: uv run mypy
       - run: uv run mypy scripts/
+      - run: uv run agent-lab report build --check
       - run: uv run pytest -m "slow or not slow"
       - run: uv run agent-lab validate-tasks
 

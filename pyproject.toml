@@ -49,7 +49,7 @@ mypy_path = "src"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # Helper modules (not conftests) shared between test directories: task_builders, runner_support.
-pythonpath = ["tests/benchmark", "tests/runner"]
+pythonpath = ["tests/benchmark", "tests/runner", "tests/report"]
 markers = [
     "slow: spawns real pytest subprocesses (deselected by default; CI runs everything)",
     "isolation: needs Linux, passwordless sudo and the sandbox user (scripts/setup_sandbox_user.sh)",

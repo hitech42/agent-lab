@@ -10,8 +10,16 @@ from agent_lab.benchmark.grader import Grader
 from agent_lab.benchmark.loader import TaskLoadError, TaskSuite
 from agent_lab.benchmark.validation import TaskValidator
 from agent_lab.harness.isolation import LinuxUserIsolation
+from agent_lab.harness.redact import Redactor
 from agent_lab.runner.database import ResultsDatabase
-from agent_lab.runner.run_command import DbCommand, RunArgs, RunCommand, RunDependencies
+from agent_lab.runner.publish import CommitMessageBuilder, ResultsPublisher
+from agent_lab.runner.run_command import (
+    DbCommand,
+    ResultsCommand,
+    RunArgs,
+    RunCommand,
+    RunDependencies,
+)
 
 
 class Cli:
@@ -20,11 +28,13 @@ class Cli:
         validator: TaskValidator,
         run_command: RunCommand,
         db_command: DbCommand,
+        results_command: ResultsCommand,
         stdout: TextIO,
     ) -> None:
         self._validator = validator
         self._run_command = run_command
         self._db_command = db_command
+        self._results_command = results_command
         self._stdout = stdout
 
     def run(self, argv: list[str]) -> int:
@@ -36,6 +46,12 @@ class Cli:
                 return self._run_command.execute(self._run_args(args))
             case "db":
                 return self._db_command.rebuild(Path(args.results_dir), Path(args.db))
+            case "results":
+                if args.results_command == "publish":
+                    return self._results_command.publish(
+                        Path(args.incoming), Path(args.results_dir)
+                    )
+                return self._results_command.commit_message(Path(args.incoming))
         return 2  # unreachable: argparse requires a command
 
     def _validate_tasks(self, tasks_dir: Path) -> int:
@@ -94,6 +110,17 @@ class Cli:
         rebuild = db_commands.add_parser("rebuild", help="rebuild results.db from the JSONL")
         rebuild.add_argument("--db", default="results.db")
         rebuild.add_argument("--results-dir", default="results")
+        results = commands.add_parser("results", help="publish results from an untrusted directory")
+        results_commands = results.add_subparsers(dest="results_command", required=True)
+        publish = results_commands.add_parser(
+            "publish", help="validate an incoming directory and copy it into results/"
+        )
+        publish.add_argument("incoming")
+        publish.add_argument("--results-dir", default="results")
+        message = results_commands.add_parser(
+            "commit-message", help="print the one-line commit message for an incoming directory"
+        )
+        message.add_argument("incoming")
         return parser
 
     @staticmethod
@@ -120,6 +147,7 @@ def main() -> None:
         TaskValidator(Grader.for_task),
         RunCommand(deps, sys.stdout),
         DbCommand(ResultsDatabase(), sys.stdout),
+        ResultsCommand(ResultsPublisher, CommitMessageBuilder(Redactor.from_env()), sys.stdout),
         sys.stdout,
     )
     sys.exit(cli.run(sys.argv[1:]))

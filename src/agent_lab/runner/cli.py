@@ -9,6 +9,7 @@ from typing import TextIO
 from agent_lab.benchmark.grader import Grader
 from agent_lab.benchmark.loader import TaskLoadError, TaskSuite
 from agent_lab.benchmark.validation import TaskValidator
+from agent_lab.harness.isolation import LinuxUserIsolation
 from agent_lab.runner.database import ResultsDatabase
 from agent_lab.runner.run_command import DbCommand, RunArgs, RunCommand, RunDependencies
 
@@ -77,6 +78,17 @@ class Cli:
         run.add_argument("--schedule", default="experiments/schedule.yaml")
         run.add_argument("--resume", action="store_true", help="continue an interrupted day")
         run.add_argument("--dry-run", action="store_true", help="print the plan only")
+        run.add_argument(
+            "--isolation",
+            choices=["none", "linux-user"],
+            default="none",
+            help="how agent commands are isolated (CI requires linux-user)",
+        )
+        run.add_argument(
+            "--isolation-user",
+            default=LinuxUserIsolation.DEFAULT_USER,
+            help="the unprivileged user for --isolation linux-user",
+        )
         db = commands.add_parser("db", help="derived SQLite database")
         db_commands = db.add_subparsers(dest="db_command", required=True)
         rebuild = db_commands.add_parser("rebuild", help="rebuild results.db from the JSONL")
@@ -97,6 +109,8 @@ class Cli:
             schedule=Path(args.schedule),
             resume=args.resume,
             dry_run=args.dry_run,
+            isolation=args.isolation,
+            isolation_user=args.isolation_user,
         )
 
 

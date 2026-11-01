@@ -1,8 +1,9 @@
 """Detect changes to the interpreter's site-packages between attempts.
 
 All attempts share one interpreter, so an attempt could poison later grading with
-.pth files, edited pytest sources or new modules. This detects such changes; it
-cannot prevent them (that needs containers).
+.pth files, edited pytest sources or new modules. The task suite (``tasks/``, hidden
+tests and solutions included) is watched too, so an attempt that reaches it is noticed.
+This detects such changes; it cannot prevent them (run with --isolation linux-user for that).
 """
 
 import site
@@ -13,14 +14,15 @@ from agent_lab.benchmark.manifest import ChangedFiles, DirectoryManifest
 
 
 class EnvironmentIntegrity:
-    """Manifest of site-packages directories, captured once and verified later."""
+    """Manifest of site-packages (and tasks/) directories, captured once and verified later."""
 
-    def __init__(self, site_dirs: list[Path]) -> None:
-        self._site_dirs = [d.resolve() for d in site_dirs]
+    def __init__(self, site_dirs: list[Path], tasks_dir: Path | None = None) -> None:
+        watched = [*site_dirs, *([tasks_dir] if tasks_dir is not None else [])]
+        self._site_dirs = [d.resolve() for d in watched]
         self._baseline: dict[Path, DirectoryManifest] | None = None
 
     @classmethod
-    def for_running_interpreter(cls) -> EnvironmentIntegrity:
+    def for_running_interpreter(cls, tasks_dir: Path | None = None) -> EnvironmentIntegrity:
         found = {
             Path(p).resolve()
             for p in (
@@ -29,7 +31,7 @@ class EnvironmentIntegrity:
                 *site.getsitepackages(),
             )
         }
-        return cls(sorted(d for d in found if d.is_dir()))
+        return cls(sorted(d for d in found if d.is_dir()), tasks_dir)
 
     def capture(self) -> None:
         """Record the baseline. Computed once; later calls keep the first baseline."""

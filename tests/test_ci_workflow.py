@@ -33,3 +33,18 @@ def test_scripts_are_type_checked_right_after_the_sources() -> None:
 
 def test_ci_never_receives_the_api_key() -> None:
     assert "ANTHROPIC_API_KEY" not in WORKFLOW.read_text()
+
+
+def test_the_isolation_job_uses_the_opt_layout_and_the_setup_script() -> None:
+    job = load()["jobs"]["isolation"]
+    assert job["env"] == {
+        "UV_PROJECT_ENVIRONMENT": "/opt/agentlab/venv",
+        "UV_PYTHON_INSTALL_DIR": "/opt/agentlab/python",
+    }
+    runs = [s["run"] for s in job["steps"] if "run" in s]
+    order = [
+        r for r in runs if r in {"uv python install", "uv sync --locked"} or "setup_sandbox" in r
+    ]
+    assert order[0] == "uv python install" and order[1] == "uv sync --locked"
+    assert "sudo scripts/setup_sandbox_user.sh" in order[2]
+    assert runs[-1] == "uv run pytest -m isolation"

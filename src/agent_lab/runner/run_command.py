@@ -1,16 +1,23 @@
 """The `run` and `db` commands: idempotency, planning, dry-run, and running a day."""
 
 import re
+import sysconfig
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import TextIO
+from typing import Literal, TextIO
 
 from agent_lab.benchmark.environment import EnvironmentIntegrity
 from agent_lab.benchmark.grader import Grader
 from agent_lab.benchmark.loader import TaskLoadError, TaskSuite, UnknownTaskError
 from agent_lab.benchmark.task import Task
+from agent_lab.harness.isolation import (
+    CommandIsolation,
+    IsolationError,
+    LinuxUserIsolation,
+    NoIsolation,
+)
 from agent_lab.harness.pricing import PriceTable, PricingError
 from agent_lab.runner.database import ResultsDatabase
 from agent_lab.runner.estimator import CostEstimator
@@ -35,6 +42,15 @@ class RunArgs:
     schedule: Path = Path("experiments/schedule.yaml")
     resume: bool = False
     dry_run: bool = False
+    isolation: Literal["none", "linux-user"] = "none"
+    isolation_user: str = LinuxUserIsolation.DEFAULT_USER
+
+
+def make_isolation(args: RunArgs) -> CommandIsolation:
+    """The isolation the command line asks for (raises IsolationError if unusable)."""
+    if args.isolation == "linux-user":
+        return LinuxUserIsolation(args.isolation_user)
+    return NoIsolation()
 
 
 @dataclass(frozen=True)
@@ -46,8 +62,9 @@ class RunDependencies:
     repo_root: Path
     prices: Callable[[], PriceTable]
     agent_factory: Callable[[Mapping[str, str]], AgentFactory]
-    integrity: Callable[[], EnvironmentIntegrity]
+    integrity: Callable[[Path], EnvironmentIntegrity]  # given the tasks directory to watch
     grader_factory: Callable[[EnvironmentIntegrity], Callable[[Task], Grader]]
+    isolation: Callable[[RunArgs], CommandIsolation] = make_isolation
 
     @classmethod
     def default(cls, environ: Mapping[str, str], repo_root: Path) -> RunDependencies:
@@ -57,7 +74,7 @@ class RunDependencies:
             repo_root=repo_root,
             prices=lambda: PriceTable.from_yaml(PriceTable.default_path()),
             agent_factory=AgentFactory.from_env,
-            integrity=EnvironmentIntegrity.for_running_interpreter,
+            integrity=lambda tasks_dir: EnvironmentIntegrity.for_running_interpreter(tasks_dir),
             grader_factory=lambda integrity: lambda task: Grader.for_task(task, integrity),
         )
 
@@ -88,6 +105,8 @@ class RunCommand:
                 f"{store.attempts_path(day.isoformat())} exists without "
                 f"{day}.run.json: an interrupted run. Pass --resume to continue it."
             )
+        if not args.dry_run and self._ci_without_isolation(args):
+            return self._error("CI runs require --isolation linux-user")
         try:
             prices = self._deps.prices()
             schedule = ExperimentSchedule.from_yaml(args.schedule, prices)
@@ -103,13 +122,24 @@ class RunCommand:
         history, corrupt = store.read_all_attempts()
         estimator = CostEstimator(history, schedule.cost_defaults, prices)
         if args.dry_run:
-            self._print_plan(plan, estimator, corrupt)
+            self._print_plan(plan, estimator, corrupt, args)
             return 0
         try:
             agents = self._deps.agent_factory(self._deps.environ)
         except MissingApiKeyError as exc:
             return self._error(str(exc))
-        integrity = self._deps.integrity()
+        try:
+            isolation = self._deps.isolation(args)
+        except IsolationError as exc:
+            return self._error(str(exc))
+        problems = isolation.verify(self._hidden_paths(args), self._read_only_paths())
+        if problems:
+            return self._error(
+                "the requested isolation is not usable:\n" + "\n".join(f"  - {p}" for p in problems)
+            )
+        if isolation.warning:
+            self._say(f"warning: {isolation.warning}")
+        integrity = self._deps.integrity(args.tasks_dir)
         runner = ExperimentRunner(
             agents=agents,
             suite=suite,
@@ -121,6 +151,7 @@ class RunCommand:
             warmer=CacheWarmer(agents.client, agents.prices),
             provenance=ProvenanceReader(self._deps.repo_root, self._deps.environ).read(),
             clock=self._deps.clock,
+            isolation=isolation,
         )
         self._print_outcome(runner.run(plan))
         return 0
@@ -185,11 +216,26 @@ class RunCommand:
         except ValueError:
             raise ValueError(f"--date must be a real date as YYYY-MM-DD, got {text!r}") from None
 
-    def _print_plan(self, plan: RunPlan, estimator: CostEstimator, corrupt: int) -> None:
+    def _hidden_paths(self, args: RunArgs) -> list[Path]:
+        """What the agent's commands must not be able to read: tasks (hidden tests) and .git."""
+        return [args.tasks_dir.resolve(), (self._deps.repo_root / ".git").resolve()]
+
+    @staticmethod
+    def _read_only_paths() -> list[Path]:
+        """What the agent's commands must not be able to write: the interpreter's packages."""
+        return [Path(sysconfig.get_paths()["purelib"])]
+
+    def _ci_without_isolation(self, args: RunArgs) -> bool:
+        return self._deps.environ.get("GITHUB_ACTIONS") == "true" and args.isolation == "none"
+
+    def _print_plan(
+        self, plan: RunPlan, estimator: CostEstimator, corrupt: int, args: RunArgs
+    ) -> None:
         resolved = plan.resolved
         say = self._say
         say(f"date: {plan.date} (ISO weekday {date.fromisoformat(plan.date).isoweekday()})")
         say(f"track: {resolved.track.name}")
+        say(f"isolation: {args.isolation}")
         say(f"question: {resolved.track.question}")
         for role, config in (("baseline", resolved.baseline), ("variant", resolved.variant)):
             say(

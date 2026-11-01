@@ -52,3 +52,25 @@ def test_importing_the_module_stores_no_secret(monkeypatch: pytest.MonkeyPatch) 
     finally:
         monkeypatch.undo()
         importlib.reload(redact_module)
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        "ghp_" + "a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8",
+        "gho_" + "a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8",
+        "ghu_" + "a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8",
+        "ghs_" + "a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8",
+        "ghr_" + "a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8",
+        "github_pat_" + "11ABCDEFG0_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUV",
+    ],
+)
+def test_redacts_github_tokens(token: str) -> None:
+    text = f'[http "https://github.com/"]\n\textraheader = AUTHORIZATION: basic {token} end'
+    assert Redactor([]).redact(text) == text.replace(token, "[REDACTED]")
+    assert token not in str(Redactor([]).redact_obj({"a": [text]}))
+
+
+def test_text_that_only_looks_a_little_like_a_token_is_left_alone() -> None:
+    plain = "ghx_abc github_pat gh_ ghp ghp- the ghp_ prefix"
+    assert Redactor([]).redact(plain).startswith("ghx_abc github_pat gh_ ghp ghp- the ")

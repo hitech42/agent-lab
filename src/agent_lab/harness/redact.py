@@ -7,10 +7,12 @@ from typing import Any
 
 REDACTED = "[REDACTED]"
 _KEY_PATTERN = re.compile(r"sk-ant-[A-Za-z0-9_-]+")
+# GitHub tokens: ghp_/gho_/ghu_/ghs_/ghr_ and fine-grained github_pat_
+_GITHUB_PATTERN = re.compile(r"(?:gh[pousr]_|github_pat_)[A-Za-z0-9_]+")
 
 
 class Redactor:
-    """Replaces known secret values and any ``sk-ant-...`` token with [REDACTED]."""
+    """Replaces known secret values, ``sk-ant-...`` keys and GitHub tokens with [REDACTED]."""
 
     def __init__(self, secrets: list[str]) -> None:
         # Longest first so a secret containing another is replaced whole.
@@ -25,7 +27,7 @@ class Redactor:
     def redact(self, text: str) -> str:
         for secret in self._secrets:
             text = text.replace(secret, REDACTED)
-        return _KEY_PATTERN.sub(REDACTED, text)
+        return _GITHUB_PATTERN.sub(REDACTED, _KEY_PATTERN.sub(REDACTED, text))
 
     def redact_obj(self, obj: Any) -> Any:
         """Recursively redact every string inside nested dicts/lists."""

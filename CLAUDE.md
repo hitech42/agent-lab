@@ -22,6 +22,8 @@ directly; no agent frameworks.
   - `context.py` — `ContextStrategy` ABC and implementations
   - `tools/` — `Tool` ABC, file/exec tools, and `ToolRegistry`
   - `sandbox.py` — sandboxed execution with minimal explicit environment
+  - `isolation.py` — `CommandIsolation` ABC, `NoIsolation`, `LinuxUserIsolation` (commands as a
+    dedicated user, no network, processes killed after every command)
   - `redact.py` — `Redactor`, secret redaction
   - `budget.py` — per-attempt token/cost budget
   - `tracing.py` — run traces
@@ -34,7 +36,7 @@ directly; no agent frameworks.
   - `checks.py` — `ProtectedFilesCheck` and `CanaryCheck`, applied to every grade
   - `pytest_runner.py` — `PytestRunner`: hardened pytest run, JUnit parsing
   - `grader.py` — `Grader` ABC, `HiddenTestsGrader`, `ExactAnswerGrader`, `GradeResult`
-  - `environment.py` — `EnvironmentIntegrity`: detects site-packages changes between attempts
+  - `environment.py` — `EnvironmentIntegrity`: detects site-packages and `tasks/` changes between attempts
   - `validation.py` — `TaskValidator`: checks a task is solvable and not already solved
 - `src/agent_lab/runner/`
   - `schedule.py` — `ExperimentSchedule`: validated baseline, weekday tracks, `config_hash`
@@ -60,7 +62,8 @@ directly; no agent frameworks.
 - `results/configs/<config_hash>.json` — committed registry of every resolved config that ran
   (prompt text included, `name` excluded: exactly what the hash covers)
 - `tests/` — pytest tests
-- `scripts/` — manual scripts: `smoke.py`, `run_task.py` (real API; never run in CI)
+- `scripts/` — manual scripts: `smoke.py`, `run_task.py` (real API; never run in CI) and
+  `setup_sandbox_user.sh` (CI: creates the sandbox user for `--isolation linux-user`)
 
 ## Conventions
 
@@ -75,6 +78,9 @@ directly; no agent frameworks.
 - Tunable settings (caps, timeouts, limits) are constructor arguments with defaults, not module-level constants that tests monkeypatch.
 - Result and response types are plain data (frozen dataclasses or pydantic models), not wrappers that forward to another object through properties.
 - Tooling: `uv sync`, `uv run ruff check`, `uv run ruff format`, `uv run mypy`, `uv run pytest`.
+- Tests marked `@pytest.mark.isolation` (`tests/isolation/`) need Linux, passwordless sudo and
+  the sandbox user, and are skipped everywhere else; CI runs them in their own job with
+  `uv run pytest -m isolation`. They are also `slow`.
 - Tests that spawn real pytest subprocesses (grading, anti-cheat, task validation) are marked
   `@pytest.mark.slow` (or `pytestmark = pytest.mark.slow` for a whole module). The default
   `uv run pytest` skips them (`addopts = -m 'not slow'`) for a fast local loop. Run everything,
@@ -166,6 +172,30 @@ and warm-up totals cover all segments. To re-run a terminal day, remove its `.ru
   database (tables `attempts`, `runs`, `aborts`, `configs`, view `pairs` of baseline/variant per
   run, task and trial). Nothing depends on it.
 
+## Sandbox isolation
+
+`--isolation none|linux-user` (default `none`; `--isolation-user NAME`, default `agentlab-sandbox`).
+
+- `none` runs agent commands as the harness's own user. A real run prints one warning. With
+  `GITHUB_ACTIONS=true` a real run with `none` exits 1 before any API call ("CI runs require
+  --isolation linux-user"); dry runs are not affected.
+- `linux-user` runs every command as `sudo -n unshare --net setpriv --reuid/--regid
+  --clear-groups --no-new-privs env -i <minimal env> sh -c 'umask 0; ...'`: another uid, no
+  network, no inherited environment. After every command, and when a sandbox closes, all
+  processes of that user are killed (`sudo -n pkill -KILL -u`) and permissions are reclaimed
+  (`chmod -R a+rwX` run as that user), so nothing outlives an attempt and the harness can always
+  read and delete what the agent made. `prepare()` and `share_file()` never follow symlinks: the
+  snapshot holds whatever links the agent left, and following one would let the harness itself
+  expose `tasks/`. The run verifies sudo, the uid, the network namespace, that `tasks/` and
+  `.git` are not readable and site-packages not writable, before the warm-up, and fails fast.
+- CI layout: `UV_PROJECT_ENVIRONMENT=/opt/agentlab/venv` and
+  `UV_PYTHON_INSTALL_DIR=/opt/agentlab/python` are set before `uv python install` / `uv sync`;
+  `sudo scripts/setup_sandbox_user.sh` creates the user and makes `/opt/agentlab` readable and
+  executable (not writable) for it. It changes nothing in the repo or `$HOME`; the sandbox user
+  must simply not be able to read them, which the integration tests assert.
+- The harness user needs passwordless `sudo` for `unshare`, `setpriv` and `pkill`. That makes it
+  root-equivalent, so this mode is for ephemeral CI machines, not a shared workstation.
+
 ## Task authoring
 
 A task is a directory `tasks/<task_id>/` (id is a lowercase slug and equals the directory name):
@@ -205,6 +235,16 @@ Rules:
   not change `passed`. Do not weaken these flags; add an anti-cheat test for any new vector.
 
 ## Known gaps
+
+- `--isolation none` (the default, used by local runs and the scripts) exposes everything the
+  harness user can reach: its environment including `ANTHROPIC_API_KEY` (via
+  `/proc/$PPID/environ`, which base64 hides from the redactor), `tasks/*/hidden_tests` and
+  `solution/`, a writable repo and site-packages, the network, and any credentials such as the
+  push token in `.git/config`. `EnvironmentIntegrity` only detects changes to site-packages and
+  `tasks/` afterwards. Use `linux-user` wherever secrets or a push token exist (CI always).
+- `linux-user` is Linux-only and not a container: no CPU/memory/disk limits, no seccomp or
+  filesystem namespace (world-readable files such as `/etc` and `/usr` stay readable), and
+  grading still executes the agent's code in-process, now as the sandbox user.
 
 - Context strategies other than `FullHistory` are stubs (they raise `NotImplementedError` at construction). When implementing them, document the message-sequence contract on `ContextStrategy` and add a parametrized contract test across all strategies.
 - Grading runs the agent's project code inside the pytest process (R1). Project code can

@@ -14,9 +14,10 @@ import math
 import random
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from statistics import NormalDist
 
-_Z = NormalDist().inv_cdf(0.975)  # 1.959964: two-sided 95%
+# Two-sided 95% normal quantile, as a literal: NormalDist().inv_cdf(0.975) differs in its last
+# bit between Apple Silicon and x86, which could make the generated files platform-dependent.
+_Z = 1.959963984540054
 
 INSUFFICIENT = "insufficient data"
 NO_DIFFERENCE = "no detectable difference"
@@ -43,7 +44,11 @@ def wilson_interval(successes: int, n: int) -> Interval:
     z2 = _Z * _Z
     centre = (p + z2 / (2 * n)) / (1 + z2 / n)
     half = _Z * math.sqrt(p * (1 - p) / n + z2 / (4 * n * n)) / (1 + z2 / n)
-    return Interval(max(0.0, centre - half), min(1.0, centre + half))
+    # The exact limits are 0 for no successes and 1 for all successes; rounding noise
+    # (1e-17 on x86) must not leak out.
+    low = 0.0 if successes <= 0 else max(0.0, centre - half)
+    high = 1.0 if successes >= n else min(1.0, centre + half)
+    return Interval(low, high)
 
 
 def newcombe_paired_difference(

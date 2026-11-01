@@ -17,8 +17,9 @@ network-less Linux user, and the job that runs them cannot push: a second job va
 results and commits them.
 
 Results are committed under `results/` and are append-only: `results/runs/<date>.jsonl` (one line
-per attempt), `<date>.run.json` (the day's summary), `<date>.abort-*.json` (aborted attempts that
-were resumed) and `results/configs/<hash>.json` (every configuration that ran, prompt included).
+per attempt), `<date>.run.json` (the day's summary), `<date>.abort-*.json` (abort events: the run
+stopped and the day stays resumable) and `results/configs/<hash>.json` (every configuration that
+ran, prompt included).
 `agent-lab db rebuild` turns them into a local SQLite database for ad-hoc queries.
 
 **Status:** the harness, tasks, runner, isolation, daily workflow and report are implemented and

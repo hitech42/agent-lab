@@ -35,6 +35,19 @@ def test_wilson_stays_inside_zero_and_one_and_is_the_whole_range_without_data() 
         assert 0.0 <= interval.low <= passed / 20 <= interval.high <= 1.0
 
 
+def test_wilson_limits_are_exact_at_the_extremes() -> None:
+    for n in (1, 7, 12, 20, 50):
+        assert wilson_interval(0, n).low == 0.0 and wilson_interval(n, n).high == 1.0
+
+
+def test_the_normal_quantile_literal_matches_the_standard_library() -> None:
+    from statistics import NormalDist
+
+    from agent_lab.report import stats
+
+    assert NormalDist().inv_cdf(0.975) == pytest.approx(stats._Z, abs=1e-14)
+
+
 # --- Newcombe's hybrid score interval for paired proportions --------------------------
 
 

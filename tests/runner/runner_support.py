@@ -374,6 +374,8 @@ def build_cli(
         integrity=lambda tasks_dir: EnvironmentIntegrity([site_dir]),
         grader_factory=lambda integrity: lambda task: fake_grader,  # type: ignore[arg-type,return-value]
         isolation=isolation or (lambda args: NoIsolation()),
+        git_sha_lookup=lambda root: "abc123",  # independent of where the tests run
+        git_dirty_lookup=lambda root: False,
     )
     cli = Cli(
         TaskValidator(Grader.for_task),

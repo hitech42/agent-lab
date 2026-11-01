@@ -167,8 +167,8 @@ def test_attempts_and_the_database_expose_effort_and_dirty_flag(tmp_path: Path) 
     db = tmp_path / "results.db"
     rebuild(world, db)
     assert rows(db, "SELECT DISTINCT effort FROM attempts") == [("medium",)]
-    # the real repository is read here, so clean or dirty depends on the checkout: but known
-    assert rows(db, "SELECT count(*) FROM attempts WHERE git_dirty IS NULL") == [(0,)]
+    # the git lookups are injected by build_cli, so this does not depend on the checkout
+    assert rows(db, "SELECT DISTINCT git_dirty FROM attempts") == [(0,)]
 
 
 def test_unreadable_files_of_every_kind_are_counted(tmp_path: Path) -> None:

@@ -120,7 +120,7 @@ class Grader(ABC):
         counts = f"{len(changes.added)} added, {len(changes.modified)} modified, "
         counts += f"{len(changes.deleted)} deleted"
         return (
-            f"environment tampered: {counts} site-packages files "
+            f"environment tampered: {counts} site-packages/tasks files "
             f"(showing {min(len(paths), 20)} of {len(paths)}):\n" + "\n".join(paths[:20])
         )
 
@@ -144,6 +144,7 @@ class HiddenTestsGrader(Grader):
     ) -> Score:
         hidden_dir = self._fresh_dir(snapshot.root)
         shutil.copytree(task.directory / Task.HIDDEN_TESTS, hidden_dir)
+        sandbox.prepare_dir(hidden_dir)
         try:
             outcome = self._runner.run(sandbox, hidden_dir)
         finally:

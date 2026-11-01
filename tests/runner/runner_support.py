@@ -23,6 +23,7 @@ from agent_lab.benchmark.loader import TaskSuite
 from agent_lab.benchmark.manifest import ChangedFiles
 from agent_lab.benchmark.task import Task
 from agent_lab.benchmark.validation import TaskValidator
+from agent_lab.harness.isolation import NoIsolation
 from agent_lab.harness.model_client import ModelClient, RetryPolicy
 from agent_lab.harness.pricing import PriceTable
 from agent_lab.harness.redact import Redactor
@@ -279,6 +280,7 @@ def build_world(
         warmer=CacheWarmer(agents.client, agents.prices),
         provenance=PROVENANCE,
         clock=clock or StepClock(),
+        isolation=NoIsolation(),
     )
     return World(
         runner, store, tmp_path / "transcripts", client, fake_grader, integrity, site_dir, plan
@@ -340,6 +342,8 @@ def build_cli(
     grader: FakeGrader | None = None,
     api_key: str | None = "test-key-value",
     clock: Any = None,
+    isolation: Callable[[Any], Any] | None = None,
+    extra_environ: dict[str, str] | None = None,
 ) -> CliWorld:
     """The real Cli and RunCommand over fakes: no network, no real grading."""
     out = io.StringIO()
@@ -348,6 +352,7 @@ def build_cli(
     site_dir = tmp_path / "site-packages"
     site_dir.mkdir(parents=True, exist_ok=True)
     environ: dict[str, str] = {"ANTHROPIC_API_KEY": api_key} if api_key else {}
+    environ.update(extra_environ or {})
 
     def factory(env: Any) -> AgentFactory:
         if not env.get("ANTHROPIC_API_KEY"):
@@ -360,8 +365,9 @@ def build_cli(
         repo_root=REPO,
         prices=prices,
         agent_factory=factory,
-        integrity=lambda: EnvironmentIntegrity([site_dir]),
+        integrity=lambda tasks_dir: EnvironmentIntegrity([site_dir]),
         grader_factory=lambda integrity: lambda task: fake_grader,  # type: ignore[arg-type,return-value]
+        isolation=isolation or (lambda args: NoIsolation()),
     )
     cli = Cli(
         TaskValidator(Grader.for_task),

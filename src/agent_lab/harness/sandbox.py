@@ -2,15 +2,16 @@
 
 Scope: file operations are path-checked against ``root`` (``..``, absolute paths and
 symlinks that resolve outside are rejected). Commands run with cwd=root, an explicit
-three-variable environment, their own process group and a hard timeout. This is NOT a
-filesystem jail: a shell command can still read absolute paths the OS user can read.
+three-variable environment and a hard timeout, wrapped by a ``CommandIsolation``. With the
+default ``NoIsolation`` this is NOT a filesystem jail: a shell command runs as the harness's
+own user and can read whatever that user can (including its environment through /proc).
+``LinuxUserIsolation`` runs commands as another user without network access.
 """
 
 import contextlib
 import os
 import select
 import shutil
-import signal
 import subprocess
 import sys
 import tempfile
@@ -18,6 +19,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
+
+from agent_lab.harness.isolation import CommandIsolation, NoIsolation
 
 _POLL_INTERVAL_S = 0.05
 
@@ -83,11 +86,16 @@ class Sandbox:
         root: Path,
         output_cap_bytes: int = 1_000_000,
         drain_timeout_s: float = 5.0,
+        isolation: CommandIsolation | None = None,
     ) -> None:
         self.root = root.resolve()
         self._output_cap_bytes = output_cap_bytes
         self._drain_timeout_s = drain_timeout_s
+        self._isolation = isolation or NoIsolation()
         self._home = Path(tempfile.mkdtemp(prefix="agent-lab-home-"))
+        self._managed: list[Path] = [self.root, self._home]  # directories the agent may write
+        self._isolation.prepare(self.root)
+        self._isolation.prepare(self._home)
 
     def __enter__(self) -> Sandbox:
         return self
@@ -101,11 +109,18 @@ class Sandbox:
         self.close()
 
     def close(self) -> None:
+        """End of the attempt: no process of the agent may outlive it."""
+        self._isolation.cleanup(self._managed)
         shutil.rmtree(self._home, ignore_errors=True)
 
     def rebased(self, root: Path) -> Sandbox:
-        """A new sandbox over ``root`` with the same output cap and drain timeout."""
-        return Sandbox(root, self._output_cap_bytes, self._drain_timeout_s)
+        """A new sandbox over ``root`` with the same limits and the same isolation."""
+        return Sandbox(root, self._output_cap_bytes, self._drain_timeout_s, self._isolation)
+
+    def prepare_dir(self, directory: Path) -> None:
+        """Make another directory (e.g. a pytest scratch dir) usable by sandboxed commands."""
+        self._isolation.prepare(directory)
+        self._managed.append(directory)
 
     @staticmethod
     def minimal_env(home: Path) -> dict[str, str]:
@@ -137,6 +152,7 @@ class Sandbox:
         target = self.resolve(path)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
+        self._isolation.share_file(target)
 
     def list_files(self, path: str | Path = ".") -> list[str]:
         """Recursively list files under ``path`` as sorted root-relative paths."""
@@ -157,10 +173,11 @@ class Sandbox:
         only output already in the pipe is collected, so a daemonised child (e.g. via
         setsid) that keeps the pipe open cannot hold us up.
         """
+        wrapped = self._isolation.wrap(cmd, self.minimal_env(self._home))
         proc = subprocess.Popen(
-            ["/bin/sh", "-c", cmd],
+            wrapped.argv,
             cwd=self.root,
-            env=self.minimal_env(self._home),
+            env=wrapped.env,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -186,23 +203,19 @@ class Sandbox:
                 except subprocess.TimeoutExpired:
                     timed_out = True
             if timed_out:
-                self._kill_group(proc)
+                self._isolation.kill(proc)
                 reader.read_until_eof(time.monotonic() + self._drain_timeout_s)
                 with contextlib.suppress(subprocess.TimeoutExpired):
                     proc.wait(timeout=self._drain_timeout_s)
         finally:
-            self._kill_group(proc)  # reap stragglers left in the group
+            self._isolation.kill(proc)  # reap stragglers left behind
             proc.stdout.close()
             with contextlib.suppress(subprocess.TimeoutExpired):
                 proc.wait(timeout=self._drain_timeout_s)
+            self._isolation.cleanup(self._managed)
 
         text = reader.text()
         if timed_out:
             msg = f"Command timed out after {timeout:g}s and was killed."
             return CommandResult(f"{text}\n{msg}".lstrip("\n"), None, True)
         return CommandResult(text, proc.returncode, False)
-
-    @staticmethod
-    def _kill_group(proc: subprocess.Popen[bytes]) -> None:
-        with contextlib.suppress(ProcessLookupError, PermissionError):
-            os.killpg(proc.pid, signal.SIGKILL)

@@ -51,6 +51,7 @@ class PytestRunner:
         with tempfile.TemporaryDirectory(prefix="agent-lab-pytest-") as scratch_name:
             scratch = Path(scratch_name)
             (scratch / "grade.ini").write_text("[pytest]\n")
+            sandbox.prepare_dir(scratch)  # the sandbox user writes the report and bytecode here
             result = sandbox.run_command(
                 self._command(sandbox.root, tests_dir, scratch), self._timeout_s
             )

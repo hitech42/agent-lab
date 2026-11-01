@@ -50,5 +50,8 @@ mypy_path = "src"
 testpaths = ["tests"]
 # Helper modules (not conftests) shared between test directories: task_builders, runner_support.
 pythonpath = ["tests/benchmark", "tests/runner"]
-markers = ["slow: spawns real pytest subprocesses (deselected by default; CI runs everything)"]
+markers = [
+    "slow: spawns real pytest subprocesses (deselected by default; CI runs everything)",
+    "isolation: needs Linux, passwordless sudo and the sandbox user (scripts/setup_sandbox_user.sh)",
+]
 addopts = "-m 'not slow'"

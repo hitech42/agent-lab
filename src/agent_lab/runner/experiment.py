@@ -14,6 +14,7 @@ from agent_lab.benchmark.task import Task
 from agent_lab.benchmark.workspace import TaskWorkspace
 from agent_lab.harness.agent import Agent
 from agent_lab.harness.config import AgentConfig
+from agent_lab.harness.isolation import CommandIsolation
 from agent_lab.harness.sandbox import Sandbox
 from agent_lab.runner.budget import DailyBudget
 from agent_lab.runner.estimator import CostEstimator
@@ -93,6 +94,7 @@ class ExperimentRunner:
         warmer: CacheWarmer,
         provenance: Provenance,
         clock: Clock,
+        isolation: CommandIsolation,
         max_consecutive_errors: int = 3,
     ) -> None:
         self._agents = agents
@@ -105,6 +107,7 @@ class ExperimentRunner:
         self._warmer = warmer
         self._provenance = provenance
         self._clock = clock
+        self._isolation = isolation
         self._max_consecutive_errors = max_consecutive_errors
 
     def run(self, plan: RunPlan) -> RunOutcome:
@@ -227,7 +230,7 @@ class ExperimentRunner:
             with (
                 tempfile.TemporaryDirectory(prefix="agent-lab-run-") as base,
                 TaskWorkspace.create(task, Path(base)) as workspace,
-                Sandbox(workspace.root) as sandbox,
+                Sandbox(workspace.root, isolation=self._isolation) as sandbox,
             ):
                 result = agents[planned.config_role].run(task.prompt, sandbox, budget)
                 grade = self._grader_factory(task).grade(

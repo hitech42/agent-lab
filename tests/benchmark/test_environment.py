@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from agent_lab.benchmark.environment import EnvironmentIntegrity
+from agent_lab.benchmark.manifest import ChangedFiles
 
 
 def fake_site(tmp_path: Path) -> Path:
@@ -81,3 +82,45 @@ def test_running_interpreter_environment_verifies_clean() -> None:
     integrity.capture()
     changes = integrity.verify()
     assert (changes.added, changes.modified, changes.deleted) == ([], [], [])
+
+
+def fake_tasks(tmp_path: Path) -> Path:
+    tasks = tmp_path / "tasks"
+    (tasks / "t1" / "hidden_tests").mkdir(parents=True)
+    (tasks / "t1" / "solution").mkdir()
+    (tasks / "t1" / "hidden_tests" / "test_x.py").write_text("def test_x():\n    assert 1\n")
+    (tasks / "t1" / "solution" / "fix.py").write_text("x = 1\n")
+    return tasks
+
+
+def test_unchanged_tasks_verify_clean(tmp_path: Path) -> None:
+    integrity = EnvironmentIntegrity([fake_site(tmp_path)], fake_tasks(tmp_path))
+    integrity.capture()
+    assert integrity.verify() == ChangedFiles()
+
+
+def test_edited_added_and_deleted_task_files_are_detected(tmp_path: Path) -> None:
+    tasks = fake_tasks(tmp_path)
+    integrity = EnvironmentIntegrity([fake_site(tmp_path)], tasks)
+    integrity.capture()
+    (tasks / "t1" / "hidden_tests" / "test_x.py").write_text("def test_x():\n    assert 0\n")
+    (tasks / "t1" / "solution" / "extra.py").write_text("y = 2\n")
+    (tasks / "t1" / "solution" / "fix.py").unlink()
+    changes = integrity.verify()
+    root = tasks.resolve() / "t1"
+    assert changes.modified == [str(root / "hidden_tests" / "test_x.py")]
+    assert changes.added == [str(root / "solution" / "extra.py")]
+    assert changes.deleted == [str(root / "solution" / "fix.py")]
+
+
+def test_the_tasks_directory_is_optional(tmp_path: Path) -> None:
+    integrity = EnvironmentIntegrity([fake_site(tmp_path)])
+    integrity.capture()
+    assert integrity.verify() == ChangedFiles()
+
+
+def test_the_running_interpreter_can_watch_the_real_tasks() -> None:
+    tasks = Path(__file__).resolve().parents[2] / "tasks"
+    integrity = EnvironmentIntegrity.for_running_interpreter(tasks)
+    integrity.capture()
+    assert integrity.verify() == ChangedFiles()

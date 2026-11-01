@@ -4,13 +4,16 @@ The harness owns retries: construct the real client with ``max_retries=0`` so th
 SDK's built-in retries don't stack on top of ours.
 """
 
+import math
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol
 
 import anthropic
+from anthropic.types import OutputConfigParam
 
+from agent_lab.harness.config import Effort
 from agent_lab.harness.tracing import TokenUsage
 
 
@@ -36,7 +39,14 @@ class ResponseLike(Protocol):
 
 class MessagesAPI(Protocol):
     def create(
-        self, *, model: str, max_tokens: int, system: Any, tools: Any, messages: Any
+        self,
+        *,
+        model: str,
+        max_tokens: int,
+        system: Any,
+        tools: Any,
+        messages: Any,
+        output_config: OutputConfigParam,
     ) -> ResponseLike: ...
 
 
@@ -54,6 +64,7 @@ class ModelRequest:
     system: list[dict[str, Any]]
     tools: list[dict[str, Any]]
     messages: list[dict[str, Any]]
+    effort: Effort
 
 
 @dataclass(frozen=True)
@@ -77,16 +88,23 @@ class ModelResponse:
 
 
 class RetryPolicy:
-    """Exponential backoff for transient API errors."""
+    """Exponential backoff for transient API errors, honoring a ``retry-after`` header.
+
+    Waits ``base_delay * 2**attempt`` seconds (2s, 4s, 8s with the defaults). When the
+    error carries a numeric ``retry-after`` header, that many seconds are waited instead,
+    never more than ``max_retry_after``.
+    """
 
     def __init__(
         self,
-        max_attempts: int = 3,
-        base_delay: float = 1.0,
+        max_attempts: int = 4,
+        base_delay: float = 2.0,
+        max_retry_after: float = 60.0,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self._max_attempts = max_attempts
         self._base_delay = base_delay
+        self._max_retry_after = max_retry_after
         self._sleep = sleep
 
     @staticmethod
@@ -109,8 +127,28 @@ class RetryPolicy:
             except Exception as exc:
                 if not self.is_transient(exc) or attempt == self._max_attempts - 1:
                     raise
-                self._sleep(self._base_delay * 2**attempt)
+                self._sleep(self._delay(exc, attempt))
         raise AssertionError("unreachable")
+
+    def _delay(self, exc: Exception, attempt: int) -> float:
+        requested = self._retry_after(exc)
+        if requested is None:
+            return self._base_delay * 2.0**attempt
+        return min(requested, self._max_retry_after)
+
+    @staticmethod
+    def _retry_after(exc: Exception) -> float | None:
+        """Seconds from a numeric ``retry-after`` header; None if absent or unusable."""
+        if not isinstance(exc, anthropic.APIStatusError):
+            return None
+        raw = exc.response.headers.get("retry-after")
+        if raw is None:
+            return None
+        try:
+            seconds = float(raw)
+        except ValueError:  # the HTTP-date form is not supported
+            return None
+        return seconds if math.isfinite(seconds) and seconds >= 0 else None
 
 
 class ModelClient:
@@ -131,6 +169,7 @@ class ModelClient:
                 system=request.system,
                 tools=request.tools,
                 messages=request.messages,
+                output_config={"effort": request.effort},
             )
             last_call_s = time.perf_counter() - started
             return response

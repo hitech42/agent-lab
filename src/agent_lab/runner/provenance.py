@@ -14,6 +14,7 @@ class Provenance(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     git_sha: str
+    git_dirty: bool | None  # uncommitted changes outside results/; None if git is unavailable
     uv_lock_sha256: str
     python_version: str
     anthropic_sdk_version: str
@@ -28,15 +29,18 @@ class ProvenanceReader:
         repo_root: Path,
         environ: Mapping[str, str],
         git_sha_lookup: Callable[[Path], str | None] | None = None,
+        git_dirty_lookup: Callable[[Path], bool | None] | None = None,
     ) -> None:
         self._repo_root = repo_root
         self._environ = environ
         self._git_sha_lookup = git_sha_lookup or self._git_rev_parse
+        self._git_dirty_lookup = git_dirty_lookup or self._git_status_dirty
 
     def read(self) -> Provenance:
         sha = self._environ.get("GITHUB_SHA") or self._git_sha_lookup(self._repo_root)
         return Provenance(
             git_sha=sha or "unknown",
+            git_dirty=self._git_dirty_lookup(self._repo_root),
             uv_lock_sha256=self._lock_sha(),
             python_version=platform.python_version(),
             anthropic_sdk_version=anthropic.__version__,
@@ -63,3 +67,23 @@ class ProvenanceReader:
         except OSError, subprocess.SubprocessError:
             return None
         return done.stdout.strip() or None if done.returncode == 0 else None
+
+    @staticmethod
+    def _git_status_dirty(repo_root: Path) -> bool | None:
+        """True if tracked or untracked (not ignored) files differ, ignoring results/.
+
+        results/ is excluded so that a day's own earlier output does not mark a resumed
+        or CI run as dirty. None when git cannot answer.
+        """
+        try:
+            done = subprocess.run(
+                ["git", "status", "--porcelain", "--", ".", ":(exclude)results"],
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+        except OSError, subprocess.SubprocessError:
+            return None
+        return bool(done.stdout.strip()) if done.returncode == 0 else None

@@ -26,14 +26,20 @@ class AgentFactory:
         self.redactor = redactor
 
     @classmethod
-    def from_env(cls, environ: Mapping[str, str] | None = None) -> AgentFactory:
-        """The real wiring. The API key comes from the environment only and is never shown."""
+    def from_env(
+        cls, environ: Mapping[str, str] | None = None, timeout_s: float = 300.0
+    ) -> AgentFactory:
+        """The real wiring. The API key comes from the environment only and is never shown.
+
+        ``timeout_s`` bounds each HTTP request; a 16000-token reply can take minutes, and
+        timeouts are retried by the harness, so the default is generous.
+        """
         env = os.environ if environ is None else environ
         key = env.get("ANTHROPIC_API_KEY")
         if not key:
             raise MissingApiKeyError("ANTHROPIC_API_KEY is not set")
         # The harness owns retries, so the SDK's own are disabled.
-        raw = anthropic.Anthropic(api_key=key, max_retries=0)
+        raw = anthropic.Anthropic(api_key=key, max_retries=0, timeout=timeout_s)
         return cls(
             ModelClient(raw, RetryPolicy()),
             PriceTable.from_yaml(PriceTable.default_path()),

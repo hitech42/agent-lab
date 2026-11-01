@@ -38,10 +38,8 @@ def record(plan: RunPlan, role: str, task_id: str, cost: float) -> AttemptRecord
         planned,
         task_id,
         "bugfix",
-        config.name,
+        config,
         ExperimentSchedule.config_hash(config),
-        config.model,
-        config.tool_set,
         result=result,
         grade=grade,
     )

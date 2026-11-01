@@ -6,8 +6,9 @@ baseline:
   name: baseline
   model: claude-haiku-5-5
   tool_set: structured
+  effort: medium
   max_turns: 15
-  max_tokens_per_call: 4000
+  max_tokens_per_call: 16000
   tool_output_max_chars: 4000
   context_strategy: full
   system_prompt: baseline.md

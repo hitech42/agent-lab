@@ -14,8 +14,10 @@ directly; no agent frameworks.
 
 - `src/agent_lab/harness/`
   - `config.py` — pydantic models for agent configuration
-  - `agent.py` — `Agent`, the hand-written agent loop on the Messages API
-  - `model_client.py` — `ModelClient` and `RetryPolicy` (the harness owns retries)
+  - `agent.py` — `Agent`, the hand-written agent loop on the Messages API; every request,
+    the cache warm-up included, sends `output_config={"effort": config.effort}`
+  - `model_client.py` — `ModelClient` and `RetryPolicy` (the harness owns retries: 4 attempts,
+    2s/4s/8s backoff, a numeric `retry-after` header replaces the wait, capped at 60s)
   - `conversation.py` — `Conversation`, the message history
   - `context.py` — `ContextStrategy` ABC and implementations
   - `tools/` — `Tool` ABC, file/exec tools, and `ToolRegistry`
@@ -45,7 +47,8 @@ directly; no agent frameworks.
   - `provenance.py` — `ProvenanceReader`: git sha, lockfile hash, versions, ci|local
   - `storage.py` — `ResultsStore` (append-only results) and `TranscriptStore`
   - `database.py` — `ResultsDatabase`: derived SQLite database (never committed)
-  - `wiring.py` — `AgentFactory`: client (`max_retries=0`), prices, redactor; shared with scripts
+  - `wiring.py` — `AgentFactory`: client (`max_retries=0`, 300s request timeout), prices,
+    redactor; shared with scripts
   - `run_command.py` — `RunCommand` and `DbCommand`: the logic behind the CLI commands
   - `cli.py` — `agent-lab` entry point (`validate-tasks`, `run`, `db rebuild`)
 - `src/agent_lab/report/build.py` — report generation
@@ -54,6 +57,8 @@ directly; no agent frameworks.
 - `experiments/prompts/` — system prompts referenced by the schedule
 - `config/pricing.yaml` — model pricing data
 - `results/runs/` — committed results: `<date>.jsonl`, `<date>.run.json`, `<date>.abort-*.json`
+- `results/configs/<config_hash>.json` — committed registry of every resolved config that ran
+  (prompt text included, `name` excluded: exactly what the hash covers)
 - `tests/` — pytest tests
 - `scripts/` — manual scripts: `smoke.py`, `run_task.py` (real API; never run in CI)
 
@@ -102,13 +107,22 @@ values (models in `config/pricing.yaml`, existing prompt files in `experiments/p
    attempts: for each trial and task the baseline and variant run back to back, in an order
    shuffled with `random.Random(<date string>)`, so a date always gives the same plan.
 4. Estimate the cost (history per config/task, else per-model defaults) and capture
-   `EnvironmentIntegrity` once.
-5. Warm the prompt cache with one minimal call per distinct config. Its cost counts against
+   `EnvironmentIntegrity` once. With `--resume`, refuse (exit 1) if the day's existing records or
+   readable abort files belong to another run id or track, or if a role's `config_hash` differs
+   from the one already recorded (the schedule or a prompt was edited since): resuming would
+   mix configurations in one day. `--trials` must be at least 1; `--tasks` must have no empty
+   or duplicate ids.
+5. Register each resolved config in `results/configs/<config_hash>.json` (exclusive create,
+   skipped if it exists), then warm the prompt cache with one minimal call per distinct config. Its cost counts against
    the daily budget. It is also the canary: any warm-up failure aborts before any attempt.
 6. Run the attempts. Before the first attempt of a pair, check that spent + the estimate of
    both attempts fits the daily cap; otherwise stop and mark the rest `skipped_budget`. Each
    attempt gets its own `Budget` (attempt cap), is graded on a snapshot, and its record is
-   appended and fsynced immediately. An exception inside an attempt is recorded as that
+   appended and fsynced immediately. The attempt `status` follows the last stop reason:
+   `completed` only for `end_turn`/`stop_sequence`; `truncated` for `max_tokens` or
+   `model_context_window_exceeded`; `refused` for `refusal`; `incomplete` for anything else that
+   is not `tool_use` (`pause_turn`, unknown); plus `max_turns`, `budget_exceeded`, `error`. The
+   stop reason itself is always recorded, and only `error` counts toward the abort streak. An exception inside an attempt is recorded as that
    attempt's `error` and the run continues. A transcript is written per attempt.
 7. Outcomes. **Terminal** outcomes write `<date>.run.json` (exclusive create) and the day is
    done: `completed`, `partial_budget` (budget stop), `aborted_tampered` (site-packages
@@ -133,11 +147,24 @@ and warm-up totals cover all segments. To re-run a terminal day, remove its `.ru
 - `<date>.run.json`: the terminal `RunSummary`, including `skipped_attempts` (id, task, role,
   trial, reason) because the plan cannot be re-derived once the schedule changes.
 - `<date>.abort-<HHMMSS>.json`: one per abort event.
+- `corrupt_lines` on a summary or abort file counts unreadable JSONL lines and abort files found
+  for that date (a file that cannot be read cannot contribute its warm-up cost, so the daily
+  budget may be slightly under-counted); the CLI prints a warning when it is not 0.
+- `results/configs/<config_hash>.json`: the resolved config of every hash that appears in a
+  record, written once.
 - Append-only: the store only appends or creates exclusively; nothing deletes, truncates or
   rewrites a result file. Never edit past days' files.
+- **Schema compatibility:** result files are never rewritten, so old lines must keep parsing.
+  Only add fields, and every new field needs a default (old files lack it). Never rename, remove
+  or retype a field. A breaking change bumps `schema_version` and keeps a reader for the old one.
+  `tests/runner/fixtures/*_v1.*` are real v1 files; `tests/runner/test_compatibility.py` checks
+  that they parse and that no field missing from them is required. Do not edit the fixtures.
+- Reading is tolerant, writing is strict: lines are split on `\n` and decoded one at a time, so a
+  truncated multi-byte character costs only that line; unreadable lines and files are counted,
+  never fatal. Appends loop until every byte is written.
 - `uv run agent-lab db rebuild [--db results.db] [--results-dir results]` rebuilds a derived SQLite
-  database (tables `attempts`, `runs`, `aborts`, view `pairs` of baseline/variant per run, task
-  and trial). Nothing depends on it.
+  database (tables `attempts`, `runs`, `aborts`, `configs`, view `pairs` of baseline/variant per
+  run, task and trial). Nothing depends on it.
 
 ## Task authoring
 
@@ -193,6 +220,11 @@ Rules:
 - Prompt caching only helps if the shared prefix (tools + system prompt) reaches the model's
   minimum cacheable length. With five short tool definitions it may not, which would make the
   warm-up a harmless no-op. Check `cache_write_tokens`/`cache_read_tokens` in the first day's records.
+- `effort` (`output_config`) support depends on the model. It was added without a real call:
+  if a model rejects it, the warm-up canary aborts the run with a 400 before any attempt. Check
+  the first manual run.
+- The 300s request timeout applies to each HTTP call, and timeouts are retried (up to 4 calls),
+  so one stuck attempt can take a long time and a timed-out call may still be billed.
 - Two simultaneous runs for the same date are not locked against each other (Phase 4: use a CI
   `concurrency` group).
 

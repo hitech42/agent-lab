@@ -1,7 +1,14 @@
 from typing import Any
 
 import pytest
-from conftest import FakeClient, status_error, text_response, tool_use_response, usage
+from conftest import (
+    FakeClient,
+    status_error,
+    stopped_response,
+    text_response,
+    tool_use_response,
+    usage,
+)
 
 from agent_lab.harness.agent import Agent
 from agent_lab.harness.budget import Budget
@@ -158,17 +165,17 @@ def test_retry_then_success_records_retries(config: AgentConfig, sandbox: Sandbo
 
     assert result.status == "completed"
     assert result.trace.turns[0].retries == 2
-    assert sleeps == [1.0, 2.0]
+    assert sleeps == [2.0, 4.0]
     assert len(client.requests) == 3
 
 
 def test_retries_exhausted_recorded_not_raised(config: AgentConfig, sandbox: Sandbox) -> None:
-    script = [status_error(500), status_error(500), status_error(500), text_response()]
+    script = [status_error(500)] * 4 + [text_response()]
     result, client = run(config, sandbox, script)
 
     assert result.status == "error"
     assert result.error is not None and "APIStatusError" in result.error
-    assert len(client.requests) == 3  # max 3 attempts
+    assert len(client.requests) == 4  # max 4 attempts
 
 
 def test_non_transient_error_not_retried(config: AgentConfig, sandbox: Sandbox) -> None:
@@ -249,7 +256,7 @@ def test_total_latency_includes_backoff_sleep(config: AgentConfig, sandbox: Sand
 def test_error_results_carry_the_exception_class_and_http_status(
     config: AgentConfig, sandbox: Sandbox
 ) -> None:
-    result, _ = run(config, sandbox, [status_error(529), status_error(529), status_error(529)])
+    result, _ = run(config, sandbox, [status_error(529)] * 4)
     assert result.status == "error"
     assert (result.error_type, result.error_status) == ("APIStatusError", 529)
 
@@ -289,3 +296,66 @@ def test_warmup_request_shares_the_cached_prefix_with_real_requests(
     assert warm.messages == [{"role": "user", "content": "ok"}]
     assert warm.system[0]["cache_control"] == {"type": "ephemeral"}
     assert warm.tools[-1]["cache_control"] == {"type": "ephemeral"}
+
+
+@pytest.mark.parametrize(
+    ("stop_reason", "status"),
+    [
+        ("end_turn", "completed"),
+        ("stop_sequence", "completed"),
+        ("max_tokens", "truncated"),
+        ("model_context_window_exceeded", "truncated"),
+        ("refusal", "refused"),
+        ("pause_turn", "incomplete"),
+    ],
+)
+def test_the_last_stop_reason_decides_the_status(
+    config: AgentConfig, sandbox: Sandbox, stop_reason: str, status: str
+) -> None:
+    result, client = run(config, sandbox, [stopped_response(stop_reason)])
+    assert result.status == status
+    assert result.stop_reason == stop_reason  # always recorded as well
+    assert len(client.requests) == 1  # anything but tool_use ends the attempt
+
+
+def test_missing_or_unknown_stop_reasons_are_incomplete() -> None:
+    assert Agent._status_for(None) == "incomplete"
+    assert Agent._status_for("something_new") == "incomplete"
+
+
+def test_a_reply_cut_off_after_tool_use_turns_is_truncated(
+    config: AgentConfig, sandbox: Sandbox
+) -> None:
+    script = [
+        tool_use_response(("t1", "create_file", {"path": "a.py", "content": "x = 1\n"})),
+        stopped_response("max_tokens", "I was about to write"),
+    ]
+    result, _ = run(config, sandbox, script)
+    assert result.status == "truncated" and len(result.trace.turns) == 2
+    assert result.final_text == "I was about to write"
+
+
+def test_every_request_carries_the_configured_effort(config: AgentConfig, sandbox: Sandbox) -> None:
+    high = config.model_copy(update={"effort": "high"})
+    script = [
+        tool_use_response(("t1", "create_file", {"path": "a.py", "content": "x = 1\n"})),
+        text_response(),
+    ]
+    _, client = run(high, sandbox, script)
+    assert [r["output_config"] for r in client.requests] == [{"effort": "high"}] * 2
+
+
+def test_the_warmup_request_has_the_attempts_prefix_and_parameters(
+    config: AgentConfig, sandbox: Sandbox
+) -> None:
+    xhigh = config.model_copy(update={"effort": "xhigh"})
+    client = FakeClient([text_response("ok"), text_response("done")])
+    model = ModelClient(client, RetryPolicy())
+    agent = Agent.from_config(xhigh, model, Redactor([]))
+    model.create(agent.warmup_request())
+    agent.run("do the task", sandbox, Budget())
+    warmup, attempt = client.requests
+    assert warmup["max_tokens"] == 1
+    for key in ("model", "system", "tools", "output_config"):
+        assert warmup[key] == attempt[key], key  # identical cached prefix and parameters
+    assert warmup["output_config"] == {"effort": "xhigh"}

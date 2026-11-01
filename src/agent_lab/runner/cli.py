@@ -90,7 +90,7 @@ class Cli:
             date=args.date,
             track=args.track,
             trials=args.trials,
-            tasks=args.tasks.split(",") if args.tasks else None,
+            tasks=[t.strip() for t in args.tasks.split(",")] if args.tasks is not None else None,
             results_dir=Path(args.results_dir),
             transcripts_dir=Path(args.transcripts_dir),
             tasks_dir=Path(args.tasks_dir),

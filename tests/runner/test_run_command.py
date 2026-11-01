@@ -33,7 +33,7 @@ def files_under(path: Path) -> list[Path]:
     return sorted(p for p in path.rglob("*") if p.is_file()) if path.exists() else []
 
 
-# --- dry run ---------------------------------------------------------------------------
+# --- dry run --------------------------------------------------------------------------
 
 
 def test_dry_run_prints_the_plan_and_changes_nothing(tmp_path: Path) -> None:
@@ -79,7 +79,7 @@ def test_dry_run_when_the_day_is_done_reports_it(tmp_path: Path) -> None:
     assert "already done" in output
 
 
-# --- a real (fake-model) run -------------------------------------------------------------
+# --- a real (fake-model) run ----------------------------------------------------------
 
 
 def test_a_run_writes_results_and_exits_zero(tmp_path: Path) -> None:
@@ -111,7 +111,7 @@ def test_only_the_selected_date_is_written(tmp_path: Path) -> None:
     assert names == ["2026-11-05.jsonl", "2026-11-05.run.json"]
 
 
-# --- idempotency and resume --------------------------------------------------------------
+# --- idempotency and resume -----------------------------------------------------------
 
 
 def test_a_finished_day_is_never_run_again(tmp_path: Path) -> None:
@@ -182,7 +182,7 @@ def test_resume_on_a_fresh_date_behaves_like_a_normal_run(tmp_path: Path) -> Non
         return [(r.attempt_id, r.status, r.config_hash, round(r.cost_usd, 9)) for r in records]
 
     assert code == 0 and shape(normal) == shape(resumed)
-    assert ResultsStore(resumed.results_dir).read_summaries()[0].abort_count == 0
+    assert ResultsStore(resumed.results_dir).read_summaries()[0][0].abort_count == 0
 
 
 def test_phase_four_style_resume_after_an_abort(tmp_path: Path) -> None:
@@ -191,11 +191,11 @@ def test_phase_four_style_resume_after_an_abort(tmp_path: Path) -> None:
     code, output = world.run("--date", MONDAY, "--trials", "1", "--resume")
     assert code == 0 and "ABORTED (warmup_failed)" in output and "--resume" in output
     store = ResultsStore(world.results_dir)
-    assert not store.has_summary(MONDAY) and len(store.read_aborts(MONDAY)) == 1
+    assert not store.has_summary(MONDAY) and len(store.read_aborts(MONDAY)[0]) == 1
 
     world.client.responder = default_responder  # the key works again
     code, output = world.run("--date", MONDAY, "--trials", "1", "--resume")
-    summary = store.read_summaries()[0]
+    summary = store.read_summaries()[0][0]
     assert code == 0 and summary.status == "completed" and summary.abort_count == 1
 
 
@@ -295,3 +295,132 @@ def test_the_summary_json_is_valid_and_complete(tmp_path: Path) -> None:
         "errored", "skipped_budget", "skipped_aborted", "skipped_attempts", "abort_count",
         "warmup_cost_usd", "total_cost_usd", "estimate_usd", "schema_version",
     }  # fmt: skip
+
+
+# --- effort in the dry run ------------------------------------------------------------
+
+
+def test_dry_run_shows_effort_and_token_limit_for_both_configs(tmp_path: Path) -> None:
+    _, output = build_cli(tmp_path, api_key=None).run("--date", MONDAY, "--dry-run")
+    lines = [line for line in output.splitlines() if line.startswith(("baseline:", "variant:"))]
+    assert len(lines) == 2
+    assert all("effort=medium" in line and "max_tokens=16000" in line for line in lines)
+
+
+# --- argument validation --------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("args", "message"),
+    [
+        (("--trials", "0"), "--trials must be at least 1"),
+        (("--trials", "-2"), "--trials must be at least 1"),
+        (("--tasks", "fix-date-range,fix-date-range"), "duplicates: fix-date-range"),
+        (("--tasks", "fix-date-range, fix-date-range"), "duplicates: fix-date-range"),
+        (("--tasks", "fix-date-range,,add-top-flag"), "empty task ids"),
+        (("--tasks", ""), "empty task ids"),
+        (("--tasks", "fix-date-range,"), "empty task ids"),
+    ],
+)
+def test_invalid_trials_and_task_lists_are_refused_before_anything_happens(
+    tmp_path: Path, args: tuple[str, ...], message: str
+) -> None:
+    world = build_cli(tmp_path, api_key=None)
+    code, output = world.run("--date", MONDAY, *args)
+    assert code == 1 and output.startswith("error: ") and message in output
+    assert world.client.requests == [] and not (tmp_path / "results").exists()
+    dry, _ = world.run("--date", MONDAY, "--dry-run", *args)
+    assert dry == 1  # also for a dry run
+
+
+def test_task_ids_are_trimmed_and_each_may_appear_once(tmp_path: Path) -> None:
+    world = build_cli(tmp_path, api_key=None)
+    code, output = world.run(
+        "--date", MONDAY, "--trials", "1", "--tasks", "fix-date-range, add-top-flag", "--dry-run"
+    )
+    assert code == 0 and "plan (4 attempts" in output
+
+
+# --- resuming only what belongs to the plan -------------------------------------------
+
+
+def test_resume_refuses_records_from_another_track(tmp_path: Path) -> None:
+    world = interrupted_day(tmp_path)
+    path = world.results_dir / "runs" / f"{MONDAY}.jsonl"
+    before, calls = path.read_bytes(), len(world.client.requests)
+    code, output = world.run(
+        "--date", MONDAY, "--trials", "1", "--track", "tool-design", "--resume"
+    )
+    assert code == 1 and "cannot resume 2026-11-02" in output
+    assert "2026-11-02-model-comparison (track model-comparison)" in output
+    assert "2026-11-02-tool-design (track tool-design)" in output
+    assert path.read_bytes() == before and len(world.client.requests) == calls
+
+
+def test_resume_refuses_abort_files_from_another_track(tmp_path: Path) -> None:
+    world = build_cli(tmp_path, responder=lambda request: auth_error())
+    code, output = world.run("--date", MONDAY, "--trials", "1", "--track", "tool-design")
+    assert code == 0 and "ABORTED" in output
+    world.client.responder = default_responder
+    calls = len(world.client.requests)
+    code, output = world.run("--date", MONDAY, "--trials", "1", "--resume")
+    assert code == 1 and "cannot resume" in output and "tool-design" in output
+    assert len(world.client.requests) == calls
+    code, _ = world.run("--date", MONDAY, "--trials", "1", "--track", "tool-design", "--resume")
+    assert code == 0  # the same track continues fine
+
+
+def test_resume_refuses_when_a_config_changed_since_the_first_attempts(tmp_path: Path) -> None:
+    world = interrupted_day(tmp_path)
+    changed = write_schedule(
+        tmp_path / "edited", lambda raw: raw["baseline"].update({"max_turns": 14})
+    )
+    calls = len(world.client.requests)
+    code, output = world.run(
+        "--date", MONDAY, "--trials", "1", "--resume", "--schedule", str(changed)
+    )
+    assert code == 1 and "the config changed since the first attempts" in output
+    assert "baseline (recorded " in output and "variant (recorded " in output
+    assert len(world.client.requests) == calls
+
+
+def test_resume_with_the_same_configs_is_still_accepted(tmp_path: Path) -> None:
+    world = interrupted_day(tmp_path)
+    code, output = world.run("--date", MONDAY, "--trials", "1", "--resume")
+    assert code == 0 and "completed 6/6" in output
+
+
+# --- unreadable results are reported --------------------------------------------------
+
+
+def test_corrupt_lines_and_unreadable_abort_files_are_reported_not_fatal(tmp_path: Path) -> None:
+    world = interrupted_day(tmp_path)
+    runs = world.results_dir / "runs"
+    with (runs / f"{MONDAY}.jsonl").open("ab") as handle:
+        handle.write(b'{"detail": "caf\xc3')  # killed inside a multi-byte character
+    (runs / f"{MONDAY}.abort-010101.json").write_text("{broken")
+    code, output = world.run("--date", MONDAY, "--trials", "1", "--resume")
+    assert code == 0
+    assert "warning: 2 unreadable result line(s)/file(s) for 2026-11-02" in output
+    summary = ResultsStore(world.results_dir).read_summaries()[0][0]
+    assert summary.corrupt_lines == 2 and summary.abort_count == 1
+
+
+def test_a_clean_run_prints_no_corruption_warning(tmp_path: Path) -> None:
+    world = build_cli(tmp_path)
+    _, output = world.run("--date", MONDAY, "--trials", "1")
+    assert "unreadable" not in output
+    assert ResultsStore(world.results_dir).read_summaries()[0][0].corrupt_lines == 0
+
+
+# --- the config registry --------------------------------------------------------------
+
+
+def test_a_run_registers_both_configs_and_a_dry_run_registers_none(tmp_path: Path) -> None:
+    world = build_cli(tmp_path)
+    world.run("--date", MONDAY, "--trials", "1", "--dry-run")
+    assert not (world.results_dir / "configs").exists()
+    world.run("--date", MONDAY, "--trials", "1")
+    configs, bad = ResultsStore(world.results_dir).read_configs()
+    assert bad == 0 and {c.first_name for c in configs} == {"baseline", "model-comparison"}
+    assert {c.model for c in configs} == {"claude-haiku-5-5", "claude-sonnet-5-5"}

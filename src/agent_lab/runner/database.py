@@ -11,7 +11,7 @@ from typing import Any, Union, get_args, get_origin
 
 from pydantic import BaseModel
 
-from agent_lab.runner.records import AbortRecord, AttemptRecord, RunSummary
+from agent_lab.runner.records import AbortRecord, AttemptRecord, ConfigRecord, RunSummary
 from agent_lab.runner.storage import ResultsStore
 
 _PAIRS_VIEW = """
@@ -37,7 +37,8 @@ class RebuildReport:
     attempts: int
     runs: int
     aborts: int
-    corrupt_lines: int
+    configs: int
+    corrupt_lines: int  # unreadable lines and files, over every kind of result
 
 
 class ResultsDatabase:
@@ -46,8 +47,9 @@ class ResultsDatabase:
     def rebuild(self, store: ResultsStore, db_path: Path) -> RebuildReport:
         """Build into a temp file and atomically replace db_path (a derived artifact)."""
         attempts, corrupt = store.read_all_attempts()
-        runs = store.read_summaries()
-        aborts = store.read_aborts()
+        runs, bad_runs = store.read_summaries()
+        aborts, bad_aborts = store.read_aborts()
+        configs, bad_configs = store.read_configs()
         db_path.parent.mkdir(parents=True, exist_ok=True)
         fd, temp_name = tempfile.mkstemp(dir=db_path.parent, suffix=".tmp")
         os.close(fd)
@@ -56,12 +58,19 @@ class ResultsDatabase:
                 self._load(conn, "attempts", AttemptRecord, attempts)
                 self._load(conn, "runs", RunSummary, runs)
                 self._load(conn, "aborts", AbortRecord, aborts)
+                self._load(conn, "configs", ConfigRecord, configs)
                 conn.execute(_PAIRS_VIEW)
             conn.close()
             os.replace(temp_name, db_path)
         finally:
             Path(temp_name).unlink(missing_ok=True)
-        return RebuildReport(len(attempts), len(runs), len(aborts), corrupt)
+        return RebuildReport(
+            len(attempts),
+            len(runs),
+            len(aborts),
+            len(configs),
+            corrupt + bad_runs + bad_aborts + bad_configs,
+        )
 
     def _load(
         self, conn: sqlite3.Connection, table: str, model: type[BaseModel], rows: list[Any]

@@ -33,7 +33,8 @@ from agent_lab.runner.estimator import CostEstimator
 from agent_lab.runner.experiment import ExperimentRunner
 from agent_lab.runner.plan import PlanOptions, RunPlan, RunPlanner
 from agent_lab.runner.provenance import Provenance
-from agent_lab.runner.run_command import DbCommand, RunCommand, RunDependencies
+from agent_lab.runner.publish import CommitMessageBuilder, ResultsPublisher
+from agent_lab.runner.run_command import DbCommand, ResultsCommand, RunCommand, RunDependencies
 from agent_lab.runner.schedule import ExperimentSchedule
 from agent_lab.runner.storage import ResultsStore, TranscriptStore
 from agent_lab.runner.warmup import CacheWarmer
@@ -373,6 +374,7 @@ def build_cli(
         TaskValidator(Grader.for_task),
         RunCommand(deps, out),
         DbCommand(ResultsDatabase(), out),
+        ResultsCommand(ResultsPublisher, CommitMessageBuilder(), out),
         out,
     )
     return CliWorld(cli, out, client, fake_grader, tmp_path, environ)

@@ -1,0 +1,151 @@
+name: Daily experiment
+
+# Runs the day's experiment unattended and publishes its results to main.
+# Two jobs on purpose: `experiment` executes agent code and holds the API key but can only
+# read; `publish` can push but runs no agent code and never sees the key. The only thing that
+# crosses between them is an artifact, which the publisher validates as untrusted input.
+
+on:
+  schedule:
+    # A primary and a backup run on the same UTC day, at non-round minutes. Both run the same
+    # thing: --resume makes the second a no-op on a finished day and a continuation after an abort.
+    - cron: "17 13 * * *"
+    - cron: "47 19 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print the plan and estimate only: no API calls, nothing published"
+        type: boolean
+        default: false
+
+concurrency:
+  group: daily-experiment
+  cancel-in-progress: false
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: experiment
+    permissions:
+      contents: read
+    env:
+      UV_PROJECT_ENVIRONMENT: /opt/agentlab/venv
+      UV_PYTHON_INSTALL_DIR: /opt/agentlab/python
+    outputs:
+      changed: ${{ steps.collect.outputs.changed }}
+      artifact: ${{ steps.collect.outputs.artifact }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Create /opt/agentlab for the venv and the Python install
+        run: |
+          sudo mkdir -p /opt/agentlab
+          sudo chown "$USER" /opt/agentlab
+      - run: uv python install
+      - run: uv sync --locked
+      - name: Create the sandbox user
+        run: sudo scripts/setup_sandbox_user.sh
+      - name: Run the experiment
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            uv run agent-lab run --resume --isolation linux-user --dry-run
+          else
+            uv run agent-lab run --resume --isolation linux-user
+          fi
+      - name: Collect new and changed result files
+        id: collect
+        if: ${{ !cancelled() }}
+        run: |
+          out="$RUNNER_TEMP/incoming"
+          mkdir -p "$out"
+          count=0
+          cd results
+          # Modified tracked files (appended JSONL) and untracked ones, one entry per file.
+          # .transcripts/ is gitignored and outside results/, so it can never be listed.
+          while IFS= read -r -d '' f; do
+            if [ -L "$f" ] || [ ! -f "$f" ]; then
+              echo "::error::unexpected non-regular result file: $f"
+              exit 1
+            fi
+            mkdir -p "$out/$(dirname "$f")"
+            cp -- "$f" "$out/$f"
+            count=$((count + 1))
+          done < <(git ls-files -z -m -o --exclude-standard -- runs configs)
+          echo "$count result file(s) new or changed"
+          if [ "$count" -gt 0 ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "artifact=results-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+      - name: Upload the result files
+        if: ${{ !cancelled() && steps.collect.outputs.changed == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.collect.outputs.artifact }}
+          path: ${{ runner.temp }}/incoming
+          retention-days: 3
+          if-no-files-found: error
+
+  publish:
+    needs: experiment
+    if: ${{ !cancelled() && needs.experiment.outputs.changed == 'true' && inputs.dry_run != true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Require the commit author variables
+        env:
+          NAME: ${{ vars.COMMIT_AUTHOR_NAME }}
+          EMAIL: ${{ vars.COMMIT_AUTHOR_EMAIL }}
+        run: |
+          if [ -z "$NAME" ] || [ -z "$EMAIL" ]; then
+            echo "::error::set the repository variables COMMIT_AUTHOR_NAME and COMMIT_AUTHOR_EMAIL"
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv python install
+      - run: uv sync --locked
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.experiment.outputs.artifact }}
+          path: ${{ runner.temp }}/incoming
+      - name: Validate and copy the results into results/
+        run: uv run agent-lab results publish "$RUNNER_TEMP/incoming"
+      - name: Commit and push
+        env:
+          GIT_AUTHOR_NAME: ${{ vars.COMMIT_AUTHOR_NAME }}
+          GIT_AUTHOR_EMAIL: ${{ vars.COMMIT_AUTHOR_EMAIL }}
+          GIT_COMMITTER_NAME: ${{ vars.COMMIT_AUTHOR_NAME }}
+          GIT_COMMITTER_EMAIL: ${{ vars.COMMIT_AUTHOR_EMAIL }}
+        run: |
+          if [ -z "$(git status --porcelain -- results/)" ]; then
+            echo "nothing new to commit"
+            exit 0
+          fi
+          uv run agent-lab results commit-message "$RUNNER_TEMP/incoming" > "$RUNNER_TEMP/message"
+          git add results/
+          git commit -F "$RUNNER_TEMP/message"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt); rebasing onto main"
+            git pull --rebase origin main
+          done
+          echo "::error::could not push to main after 3 attempts"
+          exit 1

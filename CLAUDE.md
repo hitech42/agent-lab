@@ -51,9 +51,13 @@ directly; no agent frameworks.
   - `database.py` — `ResultsDatabase`: derived SQLite database (never committed)
   - `wiring.py` — `AgentFactory`: client (`max_retries=0`, 300s request timeout), prices,
     redactor; shared with scripts
-  - `run_command.py` — `RunCommand` and `DbCommand`: the logic behind the CLI commands
-  - `cli.py` — `agent-lab` entry point (`validate-tasks`, `run`, `db rebuild`)
+  - `publish.py` — `ResultsPublisher` (validates an untrusted incoming directory, then copies it
+    into `results/`) and `CommitMessageBuilder`
+  - `run_command.py` — `RunCommand`, `DbCommand`, `ResultsCommand`: the logic behind the CLI commands
+  - `cli.py` — `agent-lab` entry point (`validate-tasks`, `run`, `db rebuild`,
+    `results publish|commit-message`)
 - `src/agent_lab/report/build.py` — report generation
+- `.github/workflows/` — `ci.yml` (checks, isolation tests) and `daily.yml` (the daily run)
 - `tasks/` — task fixtures (see Task authoring)
 - `experiments/schedule.yaml` — baseline, defaults and one track per ISO weekday
 - `experiments/prompts/` — system prompts referenced by the schedule
@@ -95,8 +99,9 @@ the `ANTHROPIC_API_KEY` environment variable only. `--dry-run` prints the track,
 resolved configs with their `config_hash`, the ordered plan and the cost estimate, makes no
 API calls and writes no files (no key needed).
 
-**Who writes `results/`:** only CI (the scheduled workflow). Local runs always use
-`--results-dir /tmp/somewhere` so they never pollute the repository. Transcripts
+**Who writes `results/`:** only CI, and only through the daily workflow's `publish` job (see
+Daily workflow). Local runs always use `--results-dir /tmp/somewhere` so they never pollute the
+repository. Transcripts
 (`.transcripts/`, gitignored) and the derived database (`*.db`, gitignored) are never committed.
 
 **Schedule:** `experiments/schedule.yaml` has the baseline config, defaults and exactly one
@@ -171,6 +176,52 @@ and warm-up totals cover all segments. To re-run a terminal day, remove its `.ru
 - `uv run agent-lab db rebuild [--db results.db] [--results-dir results]` rebuilds a derived SQLite
   database (tables `attempts`, `runs`, `aborts`, `configs`, view `pairs` of baseline/variant per
   run, task and trial). Nothing depends on it.
+
+## Daily workflow
+
+`.github/workflows/daily.yml` runs the experiment unattended and publishes the results to `main`.
+It has two jobs so that the job that executes agent code can never push:
+
+- **`experiment`** (`contents: read`, `environment: experiment`, 60 min): checkout with
+  `persist-credentials: false`; uv installs into `/opt/agentlab` (`UV_PROJECT_ENVIRONMENT`,
+  `UV_PYTHON_INSTALL_DIR`); `sudo scripts/setup_sandbox_user.sh`; then
+  `agent-lab run --resume --isolation linux-user` (plus `--dry-run` when the `dry_run` input is
+  set). `ANTHROPIC_API_KEY` is in the env of that one step only. Afterwards, even if the run failed,
+  it copies the files that are new or changed under `results/runs` and `results/configs`
+  (`git ls-files -m -o`) into an artifact (retention 3 days; skipped when nothing changed).
+  `.transcripts/` is never uploaded.
+- **`publish`** (`contents: write`, 10 min, no environment, no key, no sandbox, no agent code; runs
+  only if the artifact exists and `dry_run` is false): checks out `main`, downloads the artifact,
+  runs `agent-lab results publish`, and if `results/` changed commits only `results/` (author and
+  committer from the repository variables `COMMIT_AUTHOR_NAME` / `COMMIT_AUTHOR_EMAIL`, which
+  must be set), with the message from `agent-lab results commit-message`, then pushes; on a
+  rejected push it `pull --rebase`s and retries, three pushes at most.
+- **Triggers:** `schedule` twice per UTC day (13:17 and 19:47) and `workflow_dispatch` with
+  `dry_run`. Never `push` or `pull_request`. `concurrency: daily-experiment` (no cancelling) makes
+  the backup run start after the primary has published, so `--resume` sees its results: a
+  no-op on a finished day, a continuation after an abort.
+- **Publisher rules** (`ResultsPublisher`; the incoming directory is untrusted): only
+  `runs/<date>.jsonl`, `runs/<date>.run.json`, `runs/<date>.abort-<HHMMSS>.json` and
+  `configs/<12 hex>.json`; regular files only (no links, no other directories), at most 5 MB each
+  and 1000 files; every file parses with its model; record, summary and abort dates match the file
+  name, attempt ids are unique, tracks are slugs, and a config's name, `config_hash` field and
+  recomputed hash agree. Against `results/`: new files are copied, an existing JSONL must be a
+  byte-for-byte prefix of the incoming one (only the suffix is appended), any other existing file
+  must be identical. Unreadable JSONL lines (a fragment from a killed writer, which the store
+  also tolerates) are counted, up to 5 per file, and reported in the output and the commit message;
+  more is a violation, as is any other unparseable file or a blank line. Any violation rejects the
+  whole set and nothing is copied (exit 1).
+- **Commit message** (one redacted line): `eval(<track>): baseline P/N vs variant P/N passed,
+  $<cost> [<status>]` for a terminal day, `eval(<track>): aborted (<reason>: <status>), day
+  resumable` after an abort, `…partial results, N attempts, day resumable` for a killed run,
+  `eval: register configs`; `, N unreadable line(s)` is appended when there are fragments.
+- **Manual setup (not automated):** create the Environment `experiment`, restricted to `main`,
+  with the secret `ANTHROPIC_API_KEY`; set the repository variables `COMMIT_AUTHOR_NAME` and
+  `COMMIT_AUTHOR_EMAIL`; make sure nothing (branch protection, workflow permission limits) blocks
+  the `publish` job's push to `main`.
+- **Running it manually:** Actions, "Daily experiment", "Run workflow" (use `dry_run` first).
+  Locally: `agent-lab run --dry-run`, or a real run with `--results-dir /tmp/x`, then
+  `agent-lab results publish /tmp/x` into a scratch results directory to try the publisher.
 
 ## Sandbox isolation
 
@@ -265,8 +316,11 @@ Rules:
   the first manual run.
 - The 300s request timeout applies to each HTTP call, and timeouts are retried (up to 4 calls),
   so one stuck attempt can take a long time and a timed-out call may still be billed.
-- Two simultaneous runs for the same date are not locked against each other (Phase 4: use a CI
-  `concurrency` group).
+- Two simultaneous runs for the same date are not locked against each other; the daily
+  workflow's `concurrency` group serializes its own runs, but a manual local run against the same
+  results directory is not covered.
+- A day whose publish fails is not in `main`, so the backup run (which resumes from committed
+  results) redoes it and spends again. The artifact survives 3 days for a manual recovery.
 
 ## HARD RULES
 

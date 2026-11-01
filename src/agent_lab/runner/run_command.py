@@ -1,4 +1,4 @@
-"""The `run` and `db` commands: idempotency, planning, dry-run, and running a day."""
+"""The `run`, `db` and `results` commands: planning, dry-run, running a day, publishing."""
 
 import re
 import sysconfig
@@ -24,6 +24,7 @@ from agent_lab.runner.estimator import CostEstimator
 from agent_lab.runner.experiment import Clock, ExperimentRunner, RunOutcome, SystemClock
 from agent_lab.runner.plan import PlanOptions, RunPlan, RunPlanner
 from agent_lab.runner.provenance import ProvenanceReader
+from agent_lab.runner.publish import CommitMessageBuilder, PublishRejected, ResultsPublisher
 from agent_lab.runner.schedule import ExperimentSchedule, ScheduleError
 from agent_lab.runner.storage import ResultsStore, TranscriptStore
 from agent_lab.runner.warmup import CacheWarmer
@@ -311,4 +312,46 @@ class DbCommand:
                 f"warning: skipped {report.corrupt_lines} unreadable line(s)/file(s)",
                 file=self._out,
             )
+        return 0
+
+
+class ResultsCommand:
+    """`agent-lab results publish|commit-message`: move results out of an untrusted directory."""
+
+    def __init__(
+        self,
+        publisher_for: Callable[[Path], ResultsPublisher],
+        messages: CommitMessageBuilder,
+        stdout: TextIO,
+    ) -> None:
+        self._publisher_for = publisher_for
+        self._messages = messages
+        self._out = stdout
+
+    def publish(self, incoming: Path, results_dir: Path) -> int:
+        publisher = self._publisher_for(results_dir)
+        try:
+            plan = publisher.plan(incoming)
+        except PublishRejected as exc:
+            print(f"error: rejected {incoming}: nothing was copied", file=self._out)
+            for violation in exc.violations[:50]:
+                print(f"  - {violation}", file=self._out)
+            if len(exc.violations) > 50:
+                print(f"  ... and {len(exc.violations) - 50} more", file=self._out)
+            return 1
+        report = publisher.apply(plan)
+        if not report.changed:
+            print("nothing new to publish", file=self._out)
+        else:
+            print(
+                f"published {len(report.copied)} new and {len(report.appended)} appended "
+                f"file(s); {len(report.skipped)} already present",
+                file=self._out,
+            )
+        if report.unreadable_lines:
+            print(f"warning: {report.unreadable_lines} unreadable line(s)", file=self._out)
+        return 0
+
+    def commit_message(self, incoming: Path) -> int:
+        print(self._messages.build(incoming), file=self._out)
         return 0

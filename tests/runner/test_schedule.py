@@ -191,22 +191,24 @@ def test_hash_is_pinned_so_accidental_changes_to_the_scheme_are_noticed() -> Non
         name="anything",
         model="m",
         system_prompt="p",
+        effort="medium",
         tool_set="structured",
         max_turns=1,
         max_tokens_per_call=2,
         tool_output_max_chars=3,
     )
     # Changing this value means every historical config_hash stops matching new runs.
-    assert ExperimentSchedule.config_hash(fixed) == "0c55d68aa5d8"
+    assert ExperimentSchedule.config_hash(fixed) == "2e9f929c5def"
     again = fixed.model_copy(update={"name": "other"})
-    assert ExperimentSchedule.config_hash(fixed) == "0c55d68aa5d8"
-    assert ExperimentSchedule.config_hash(again) == "0c55d68aa5d8"
+    assert ExperimentSchedule.config_hash(fixed) == "2e9f929c5def"
+    assert ExperimentSchedule.config_hash(again) == "2e9f929c5def"
 
 
 @pytest.mark.parametrize(
     "change",
     [
         {"model": "claude-sonnet-5-5"},
+        {"effort": "high"},
         {"tool_set": "bash_only"},
         {"max_turns": 14},
         {"max_tokens_per_call": 3999},
@@ -231,3 +233,27 @@ def test_hash_ignores_the_name_but_not_a_one_character_prompt_edit() -> None:
 
 def test_real_schedule_path_exists() -> None:
     assert SCHEDULE_PATH.is_file()
+
+
+def test_the_baseline_runs_at_medium_effort_with_room_for_long_replies() -> None:
+    base = schedule().baseline
+    assert (base.effort, base.max_tokens_per_call) == ("medium", 16000)
+    assert all(
+        schedule().track_for(date(2026, 11, d)).baseline == base for d in range(2, 9)
+    )  # every track compares against that same baseline
+
+
+def test_effort_is_required_in_the_baseline(tmp_path: Path) -> None:
+    text = problems(tmp_path, lambda raw: raw["baseline"].pop("effort"))
+    assert "effort" in text and "Field required" in text
+
+
+def test_a_track_can_override_effort_with_a_valid_level(tmp_path: Path) -> None:
+    path = write_schedule(
+        tmp_path, lambda raw: raw["tracks"][3]["variant"].update({"effort": "max"})
+    )
+    assert load(path).track_for(date(2026, 11, 4)).variant.effort == "max"
+    text = problems(
+        tmp_path / "bad", lambda raw: raw["tracks"][3]["variant"].update({"effort": "extreme"})
+    )
+    assert "track 3 (turn-budget)" in text and "effort" in text

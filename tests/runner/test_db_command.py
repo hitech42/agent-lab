@@ -143,3 +143,39 @@ def test_the_default_database_name_is_gitignored() -> None:
 
     patterns = (REPO / ".gitignore").read_text().splitlines()
     assert "*.db" in patterns and ".transcripts/" in patterns
+
+
+def test_configs_are_loaded_into_their_own_table(tmp_path: Path) -> None:
+    world = finished_day(tmp_path)
+    db = tmp_path / "results.db"
+    assert "2 configs" in rebuild(world, db)
+    assert rows(db, "SELECT count(*) FROM configs") == [(2,)]
+    assert rows(db, "SELECT DISTINCT effort, max_tokens_per_call FROM configs") == [
+        ("medium", 16000)
+    ]
+    joined = rows(
+        db,
+        "SELECT count(*) FROM attempts a JOIN configs c ON c.config_hash = a.config_hash",
+    )
+    assert joined == [(12,)]  # every attempt can be explained by a registered config
+    prompt = rows(db, "SELECT system_prompt FROM configs WHERE first_name = 'baseline'")[0][0]
+    assert prompt.strip() and "name" not in {r[1] for r in rows(db, "PRAGMA table_info(configs)")}
+
+
+def test_attempts_and_the_database_expose_effort_and_dirty_flag(tmp_path: Path) -> None:
+    world = finished_day(tmp_path)
+    db = tmp_path / "results.db"
+    rebuild(world, db)
+    assert rows(db, "SELECT DISTINCT effort FROM attempts") == [("medium",)]
+    # the real repository is read here, so clean or dirty depends on the checkout: but known
+    assert rows(db, "SELECT count(*) FROM attempts WHERE git_dirty IS NULL") == [(0,)]
+
+
+def test_unreadable_files_of_every_kind_are_counted(tmp_path: Path) -> None:
+    world = finished_day(tmp_path)
+    runs = world.results_dir / "runs"
+    (runs / "2026-11-03.run.json").write_text("{bad")
+    (runs / "2026-11-03.abort-090000.json").write_text("{bad")
+    (world.results_dir / "configs" / "broken.json").write_text("{bad")
+    output = rebuild(world, tmp_path / "results.db")
+    assert "skipped 3 unreadable line(s)/file(s)" in output

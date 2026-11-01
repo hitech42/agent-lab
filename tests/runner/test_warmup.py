@@ -86,4 +86,4 @@ def test_other_errors_are_retried_then_reported() -> None:
     factory = agent_factory(client)
     result = CacheWarmer(factory.client, prices()).warm(agents_for(make_plan(trials=1), factory))
     assert result.failure is not None and result.failure.error_status == 500
-    assert len(client.requests) == 3  # RetryPolicy's three attempts, then give up
+    assert len(client.requests) == 4  # RetryPolicy's four attempts, then give up

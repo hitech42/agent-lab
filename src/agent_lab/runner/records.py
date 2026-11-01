@@ -6,13 +6,21 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from agent_lab.benchmark.grader import GradeResult
 from agent_lab.harness.agent import AttemptResult
+from agent_lab.harness.config import AgentConfig
 from agent_lab.harness.redact import Redactor
 from agent_lab.runner.plan import PlannedAttempt
 from agent_lab.runner.provenance import Provenance
 
 SCHEMA_VERSION = 1
-AttemptStatus = Literal[
-    "completed", "max_turns", "budget_exceeded", "error", "environment_tampered"
+RecordStatus = Literal[
+    "completed",
+    "truncated",
+    "refused",
+    "incomplete",
+    "max_turns",
+    "budget_exceeded",
+    "error",
+    "environment_tampered",
 ]
 RunStatus = Literal["completed", "partial_budget", "aborted_tampered", "aborted_error"]
 SkipReason = Literal["skipped_budget", "skipped_aborted"]
@@ -34,11 +42,12 @@ class AttemptRecord(BaseModel):
     config_hash: str
     model: str
     tool_set: str
+    effort: str | None = None  # absent in records written before effort existed
     task_id: str
     task_category: str
     trial: int
     order: int
-    status: AttemptStatus
+    status: RecordStatus
     stop_reason: str | None
     # GradeResult, flattened
     passed: bool
@@ -71,10 +80,34 @@ class AttemptRecord(BaseModel):
     error_status: int | None
     # provenance
     git_sha: str
+    git_dirty: bool | None = None  # None: unknown (git unavailable) or an older record
     uv_lock_sha256: str
     python_version: str
     anthropic_sdk_version: str
     source: str
+
+
+class ConfigRecord(BaseModel):
+    """A resolved AgentConfig as stored in results/configs/<config_hash>.json (flat, data only).
+
+    Every AgentConfig field except ``name`` is present, prompt text included: exactly what
+    ``config_hash`` covers, so the hash can be recomputed from the file. ``first_name`` is
+    only the name the config had when it was first registered.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    schema_version: int = SCHEMA_VERSION
+    config_hash: str
+    first_name: str
+    model: str
+    system_prompt: str
+    effort: str
+    tool_set: str
+    max_turns: int
+    max_tokens_per_call: int
+    tool_output_max_chars: int
+    context_strategy: str
 
 
 class SkippedAttempt(BaseModel):
@@ -108,6 +141,7 @@ class RunSummary(BaseModel):
     skipped_aborted: int
     skipped_attempts: list[SkippedAttempt] = Field(default_factory=list)
     abort_count: int = 0
+    corrupt_lines: int = 0  # unreadable result lines/abort files found for this date
     warmup_cost_usd: float
     total_cost_usd: float
     estimate_usd: float
@@ -147,10 +181,8 @@ class RecordBuilder:
         planned: PlannedAttempt,
         task_id: str,
         task_category: str,
-        config_name: str,
+        config: AgentConfig,
         config_hash: str,
-        model: str,
-        tool_set: str,
         result: AttemptResult | None,
         grade: GradeResult | None,
         failure: Exception | None = None,
@@ -168,10 +200,11 @@ class RecordBuilder:
             question=self._question,
             attempt_id=planned.attempt_id,
             config_role=planned.config_role,
-            config_name=config_name,
+            config_name=config.name,
             config_hash=config_hash,
-            model=model,
-            tool_set=tool_set,
+            model=config.model,
+            tool_set=config.tool_set,
+            effort=config.effort,
             task_id=task_id,
             task_category=task_category,
             trial=planned.trial,

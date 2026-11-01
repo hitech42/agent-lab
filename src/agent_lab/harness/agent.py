@@ -16,7 +16,12 @@ from agent_lab.harness.sandbox import Sandbox
 from agent_lab.harness.tools import ToolRegistry
 from agent_lab.harness.tracing import AttemptTrace, ToolCallTrace, TurnTrace
 
-AttemptStatus = Literal["completed", "max_turns", "budget_exceeded", "error"]
+AttemptStatus = Literal[
+    "completed", "truncated", "refused", "incomplete", "max_turns", "budget_exceeded", "error"
+]
+
+_COMPLETED_STOPS = frozenset({"end_turn", "stop_sequence"})
+_TRUNCATED_STOPS = frozenset({"max_tokens", "model_context_window_exceeded"})
 
 
 class AttemptResult(BaseModel):
@@ -103,7 +108,7 @@ class Agent:
             attempt.turns.append(trace)
 
             if response.stop_reason != "tool_use":
-                attempt.status = "completed"
+                attempt.status = self._status_for(response.stop_reason)
                 break
             calls = response.tool_calls
             if not calls:
@@ -118,6 +123,22 @@ class Agent:
             self._execute_tool_calls(calls, sandbox, trace, attempt.conversation)
 
         return self._assemble_result(attempt, budget)
+
+    @staticmethod
+    def _status_for(stop_reason: str | None) -> AttemptStatus:
+        """The status of an attempt whose last reply was not a tool call.
+
+        Only a reply that ended on its own is ``completed``; a reply cut off by a token or
+        context limit is ``truncated``, a refusal is ``refused``, and anything else
+        (``pause_turn``, a missing or unknown reason) is ``incomplete``.
+        """
+        if stop_reason in _COMPLETED_STOPS:
+            return "completed"
+        if stop_reason in _TRUNCATED_STOPS:
+            return "truncated"
+        if stop_reason == "refusal":
+            return "refused"
+        return "incomplete"
 
     def warmup_request(self) -> ModelRequest:
         """A minimal request whose cached prefix (system + tools) matches a real attempt's."""
@@ -136,6 +157,7 @@ class Agent:
             system=[{"type": "text", "text": self._config.system_prompt, "cache_control": cache}],
             tools=self._tools.api_params(),
             messages=messages,
+            effort=self._config.effort,
         )
 
     def _execute_tool_calls(

@@ -43,6 +43,7 @@ SCHEDULE_PATH = REPO / "experiments" / "schedule.yaml"
 TASKS_DIR = REPO / "tasks"
 PROVENANCE = Provenance(
     git_sha="abc123",
+    git_dirty=False,
     uv_lock_sha256="f" * 64,
     python_version="3.14.0",
     anthropic_sdk_version="9.9.9",
@@ -105,13 +106,20 @@ def text_response(text: str = "done", u: Usage | None = None) -> Message:
     return _message([TextBlock(type="text", text=text)], "end_turn", u or usage())
 
 
+def stopped_response(stop_reason: str, text: str = "partial") -> Message:
+    """A reply that ended for the given stop reason (not a tool call)."""
+    return _message([TextBlock(type="text", text=text)], stop_reason, usage(i=1000, o=200))
+
+
 def tool_use_response(call_id: str, name: str, tool_input: dict[str, Any]) -> Message:
     block = ToolUseBlock(type="tool_use", id=call_id, name=name, input=tool_input)
     return _message([block], "tool_use", usage())
 
 
-def status_error(code: int) -> anthropic.APIStatusError:
-    response = httpx2.Response(code, request=httpx2.Request("POST", "https://example.invalid"))
+def status_error(code: int, headers: dict[str, str] | None = None) -> anthropic.APIStatusError:
+    response = httpx2.Response(
+        code, headers=headers, request=httpx2.Request("POST", "https://example.invalid")
+    )
     return anthropic.APIStatusError(f"http {code}", response=response, body=None)
 
 

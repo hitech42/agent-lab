@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, get_args
 
 import pytest
 from pydantic import ValidationError
@@ -8,14 +8,28 @@ from runner_support import PROVENANCE, make_plan
 from agent_lab.benchmark.grader import GradeResult
 from agent_lab.benchmark.manifest import ChangedFiles
 from agent_lab.harness.agent import AttemptResult
+from agent_lab.harness.agent import AttemptStatus as AgentStatus
+from agent_lab.harness.config import AgentConfig
 from agent_lab.harness.redact import Redactor
 from agent_lab.harness.tracing import AttemptTrace, ToolCallTrace, TurnTrace
 from agent_lab.runner.records import (
     AbortRecord,
     AttemptRecord,
     RecordBuilder,
+    RecordStatus,
     RunSummary,
     SkippedAttempt,
+)
+
+CONFIG = AgentConfig(
+    name="baseline",
+    model="m",
+    effort="high",
+    system_prompt="p",
+    tool_set="structured",
+    max_turns=3,
+    max_tokens_per_call=100,
+    tool_output_max_chars=100,
 )
 
 
@@ -77,7 +91,7 @@ def build(**kwargs: Any) -> AttemptRecord:
     planned = make_plan(trials=1).attempts[0]
     base: dict[str, Any] = {"result": result(), "grade": grade()}
     return builder().build(
-        planned, "fix-date-range", "bugfix", "baseline", "abc123abc123", "m", "structured",
+        planned, "fix-date-range", "bugfix", CONFIG, "abc123abc123",
         **{**base, **kwargs},
     )  # fmt: skip
 
@@ -142,12 +156,10 @@ def test_free_text_is_redacted() -> None:
     planned = make_plan(trials=1).attempts[0]
     leaky = grade(detail="key sk-ant-api03-LEAK_1 and plain-secret")
     redacting = builder(Redactor(["plain-secret"]))
-    record = redacting.build(
-        planned, "t", "bugfix", "baseline", "h", "m", "structured", result=result(), grade=leaky
-    )
+    record = redacting.build(planned, "t", "bugfix", CONFIG, "h", result=result(), grade=leaky)
     assert "LEAK" not in record.detail and "plain-secret" not in record.detail
     failed = redacting.build(
-        planned, "t", "bugfix", "baseline", "h", "m", "structured", result=None, grade=None,
+        planned, "t", "bugfix", CONFIG, "h", result=None, grade=None,
         failure=RuntimeError("plain-secret"),
     )  # fmt: skip
     assert "plain-secret" not in (failed.error or "")
@@ -171,7 +183,8 @@ def test_the_expected_columns_are_present() -> None:
         "stop_reason", "passed", "tests_passed", "tests_failed", "tests_errors", "tests_total",
         "protected_violations", "canaries_triggered", "injection_resisted",
         "environment_tampered", "turns", "input_tokens", "output_tokens", "cache_write_tokens",
-        "cache_read_tokens", "cost_usd", "latency_s", "total_latency_s", "retries", "tool_calls",
+        "cache_read_tokens", "cost_usd", "effort", "git_dirty", "latency_s", "total_latency_s",
+        "retries", "tool_calls",
         "tool_errors", "error", "error_type", "error_status", "git_sha", "uv_lock_sha256",
         "python_version", "anthropic_sdk_version", "source", "attempt_id",
     }  # fmt: skip
@@ -226,3 +239,26 @@ def test_an_abort_record_is_a_summary_plus_the_trigger() -> None:
         {k: v for k, v in abort.model_dump().items() if k in RunSummary.model_fields}
     )
     assert as_summary.abort_count == 2 and as_summary.status == "aborted_error"
+
+
+def test_a_record_carries_the_configs_effort_and_the_dirty_flag() -> None:
+    record = build()
+    assert (record.effort, record.git_dirty) == ("high", False)
+    failed = build(result=None, grade=None, failure=RuntimeError("boom"))
+    assert failed.effort == "high"  # known from the config even when the attempt failed
+
+
+def test_fields_added_after_the_first_schema_have_defaults() -> None:
+    assert AttemptRecord.model_fields["effort"].default is None
+    assert AttemptRecord.model_fields["git_dirty"].default is None
+    assert RunSummary.model_fields["corrupt_lines"].default == 0
+
+
+def test_record_statuses_are_the_agents_plus_environment_tampered() -> None:
+    assert set(get_args(RecordStatus)) == set(get_args(AgentStatus)) | {"environment_tampered"}
+
+
+@pytest.mark.parametrize("status", ["truncated", "refused", "incomplete"])
+def test_the_new_statuses_are_storable(status: str) -> None:
+    data = json.loads(build().model_dump_json())
+    assert AttemptRecord.model_validate({**data, "status": status}).status == status

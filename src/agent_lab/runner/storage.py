@@ -4,13 +4,15 @@ import gzip
 import json
 import os
 import sys
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
-from agent_lab.runner.records import AbortRecord, AttemptRecord, RunSummary
+from agent_lab.harness.config import AgentConfig
+from agent_lab.runner.records import AbortRecord, AttemptRecord, ConfigRecord, RunSummary
 
 
 class ResultsStore:
@@ -22,6 +24,7 @@ class ResultsStore:
 
     def __init__(self, results_dir: Path) -> None:
         self.runs_dir = results_dir / "runs"
+        self.configs_dir = results_dir / "configs"
 
     def attempts_path(self, day: str) -> Path:
         return self.runs_dir / f"{day}.jsonl"
@@ -43,7 +46,7 @@ class ResultsStore:
         prefix = "\n" if self._ends_mid_line(path) else ""  # a killed writer left a fragment
         fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
         try:
-            os.write(fd, (prefix + line).encode("utf-8"))
+            self._write_all(fd, (prefix + line).encode("utf-8"))
             os.fsync(fd)
         finally:
             os.close(fd)
@@ -83,16 +86,42 @@ class ResultsStore:
             else:
                 return path
 
-    def read_aborts(self, day: str | None = None) -> list[AbortRecord]:
+    def read_aborts(self, day: str | None = None) -> tuple[list[AbortRecord], int]:
+        """Readable abort events and the number of abort files that could not be read."""
         pattern = f"{day}.abort-*.json" if day else "*.abort-*.json"
-        return [self._load(AbortRecord, p) for p in sorted(self.runs_dir.glob(pattern))]
+        return self._load_files(AbortRecord, sorted(self.runs_dir.glob(pattern)))
 
-    def read_summaries(self) -> list[RunSummary]:
-        return [self._load(RunSummary, p) for p in sorted(self.runs_dir.glob("*.run.json"))]
+    def read_summaries(self) -> tuple[list[RunSummary], int]:
+        """Readable run summaries and the number of summary files that could not be read."""
+        return self._load_files(RunSummary, sorted(self.runs_dir.glob("*.run.json")))
+
+    def register_config(self, config_hash: str, config: AgentConfig) -> bool:
+        """Create results/configs/<hash>.json; False (nothing written) if it already exists."""
+        record = ConfigRecord(
+            config_hash=config_hash, first_name=config.name, **config.model_dump(exclude={"name"})
+        )
+        try:
+            self._create_exclusive(
+                self.configs_dir / f"{config_hash}.json", record.model_dump_json(indent=2)
+            )
+        except FileExistsError:
+            return False
+        return True
+
+    def read_configs(self) -> tuple[list[ConfigRecord], int]:
+        """Readable config records and the number of config files that could not be read."""
+        return self._load_files(ConfigRecord, sorted(self.configs_dir.glob("*.json")))
 
     @staticmethod
-    def _load(model: Any, path: Path) -> Any:
-        return model.model_validate_json(path.read_text())
+    def _load_files[M: BaseModel](model: type[M], paths: list[Path]) -> tuple[list[M], int]:
+        loaded: list[M] = []
+        unreadable = 0
+        for path in paths:
+            try:
+                loaded.append(model.model_validate_json(path.read_bytes().decode("utf-8")))
+            except ValidationError, UnicodeDecodeError, OSError:
+                unreadable += 1
+        return loaded, unreadable
 
     @staticmethod
     def _create_exclusive(path: Path, text: str) -> None:
@@ -111,17 +140,36 @@ class ResultsStore:
             return handle.read(1) != b"\n"
 
     @staticmethod
+    def _write_all(
+        fd: int, data: bytes, write: Callable[[int, memoryview], int] | None = None
+    ) -> None:
+        """Write every byte: ``os.write`` may accept fewer bytes than it was given."""
+        put = write or os.write
+        view = memoryview(data)
+        while view:
+            written = put(fd, view)
+            if written <= 0:
+                raise OSError("os.write made no progress")
+            view = view[written:]
+
+    @staticmethod
     def _read_file(path: Path) -> tuple[list[AttemptRecord], int]:
+        """Records of one JSONL file; each line is decoded and validated on its own.
+
+        Lines split on b"\\n" only (``str.splitlines`` would also split inside a record on
+        U+2028 and friends), so a truncated multi-byte character in one line only makes
+        that line unreadable.
+        """
         if not path.is_file():
             return [], 0
         records: list[AttemptRecord] = []
         corrupt = 0
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
+        for raw in path.read_bytes().split(b"\n"):
+            if not raw.strip():
                 continue
             try:
-                records.append(AttemptRecord.model_validate_json(line))
-            except ValidationError:
+                records.append(AttemptRecord.model_validate_json(raw.decode("utf-8")))
+            except ValidationError, UnicodeDecodeError:
                 corrupt += 1
         return records, corrupt
 

@@ -17,6 +17,7 @@ from runner_support import (
     make_plan,
     prices,
     status_error,
+    stopped_response,
     text_response,
     tool_use_response,
     usage,
@@ -64,10 +65,10 @@ def test_a_full_day_records_every_attempt_and_writes_a_terminal_summary(tmp_path
 
     assert outcome.kind == "summary" and outcome.summary.status == "completed"
     assert outcome.path == world.store.summary_path(MONDAY)
-    summary = world.store.read_summaries()[0]
+    summary = world.store.read_summaries()[0][0]
     assert (summary.planned, summary.completed, summary.errored) == (6, 6, 0)
     assert (summary.skipped_budget, summary.skipped_aborted, summary.skipped_attempts) == (0, 0, [])
-    assert summary.abort_count == 0 and not world.store.read_aborts()
+    assert summary.abort_count == 0 and not world.store.read_aborts()[0]
     assert summary.run_id == "2026-11-02-model-comparison" and summary.track == "model-comparison"
     assert summary.started <= summary.finished
     records = records_of(world)
@@ -183,7 +184,7 @@ def test_the_per_attempt_cost_cap_is_applied(tmp_path: Path) -> None:
     assert all(r.turns == 15 and r.tool_calls == 15 for r in records)
 
 
-# --- budget ----------------------------------------------------------------------------
+# --- budget ---------------------------------------------------------------------------
 
 
 def test_daily_budget_stops_the_run_without_leaving_half_a_pair(tmp_path: Path) -> None:
@@ -229,7 +230,7 @@ def test_history_replaces_the_default_estimates(tmp_path: Path) -> None:
     assert unseen.runner.run(tight).summary.status == "partial_budget"
 
 
-# --- errors ----------------------------------------------------------------------------
+# --- errors ---------------------------------------------------------------------------
 
 
 def test_an_exception_inside_one_attempt_is_recorded_and_the_run_continues(tmp_path: Path) -> None:
@@ -251,7 +252,7 @@ def test_failed_grades_never_count_as_errors(tmp_path: Path) -> None:
     outcome = world.runner.run(world.plan)
     assert outcome.summary.status == "completed" and outcome.summary.errored == 0
     assert not any(r.passed for r in records_of(world))
-    assert not world.store.read_aborts()
+    assert not world.store.read_aborts()[0]
 
 
 def test_three_consecutive_errors_abort_the_run_as_an_event(tmp_path: Path) -> None:
@@ -268,7 +269,7 @@ def test_three_consecutive_errors_abort_the_run_as_an_event(tmp_path: Path) -> N
     assert outcome.summary.status == "aborted_error"
     assert not world.store.has_summary(MONDAY)  # the day stays resumable
     assert outcome.path.name.startswith("2026-11-02.abort-")
-    abort = world.store.read_aborts(MONDAY)[0]
+    abort = world.store.read_aborts(MONDAY)[0][0]
     assert abort.reason == "consecutive_errors" and abort.abort_count == 1
     assert (abort.error_type, abort.error_status) == ("APIStatusError", 400)
     assert abort.completed == 5 and len(abort.completed_attempt_ids) == 5
@@ -296,7 +297,7 @@ def test_an_auth_error_during_the_attempts_aborts_immediately(tmp_path: Path) ->
     outcome = world.runner.run(world.plan)
     assert outcome.kind == "abort" and outcome.cause is not None
     assert outcome.cause.reason == "auth_error"
-    abort = world.store.read_aborts(MONDAY)[0]
+    abort = world.store.read_aborts(MONDAY)[0][0]
     assert (abort.error_type, abort.error_status) == ("AuthenticationError", 401)
     assert abort.completed == 2 and abort.skipped_aborted == 4
     records = records_of(world)
@@ -312,7 +313,7 @@ def test_an_auth_error_in_the_warmup_aborts_before_any_attempt(tmp_path: Path) -
     assert outcome.kind == "abort" and outcome.cause is not None
     assert outcome.cause.reason == "warmup_failed"
     assert not world.store.has_attempts(MONDAY) and not world.store.has_summary(MONDAY)
-    abort = world.store.read_aborts(MONDAY)[0]
+    abort = world.store.read_aborts(MONDAY)[0][0]
     assert (abort.error_type, abort.error_status) == ("AuthenticationError", 401)
     assert (abort.completed, abort.skipped_aborted) == (0, 6)
     assert [s.attempt_id for s in abort.skipped_attempts] == [
@@ -326,7 +327,7 @@ def test_other_warmup_errors_are_retried_then_abort(tmp_path: Path) -> None:
     outcome = world.runner.run(world.plan)
     assert outcome.kind == "abort" and outcome.cause is not None
     assert outcome.cause.error_status == 500
-    assert len(world.client.requests) == 3  # RetryPolicy: three tries, then abort
+    assert len(world.client.requests) == 4  # RetryPolicy: four tries, then abort
     assert not world.store.has_attempts(MONDAY)
 
 
@@ -353,7 +354,7 @@ def test_an_unexpected_failure_outside_an_attempt_is_an_abort_that_keeps_earlier
     assert not world.store.has_summary(MONDAY)
 
 
-# --- aborts are events: the day resumes -------------------------------------------------
+# --- aborts are events: the day resumes -----------------------------------------------
 
 
 def test_a_warmup_abort_does_not_block_a_later_run_the_same_day(tmp_path: Path) -> None:
@@ -366,7 +367,7 @@ def test_a_warmup_abort_does_not_block_a_later_run_the_same_day(tmp_path: Path) 
     assert outcome.kind == "summary" and outcome.summary.status == "completed"
     assert outcome.summary.abort_count == 1 and outcome.summary.completed == 6
     assert second.store.has_summary(MONDAY)
-    assert len(second.store.read_aborts(MONDAY)) == 1
+    assert len(second.store.read_aborts(MONDAY)[0]) == 1
 
 
 def test_a_mid_run_abort_then_resume_completes_the_remaining_attempts(tmp_path: Path) -> None:
@@ -419,7 +420,7 @@ def test_two_aborts_on_the_same_day_make_two_distinct_files(tmp_path: Path) -> N
     assert files == ["2026-11-02.abort-090000.json", "2026-11-02.abort-090001.json"]
     third = build_world(tmp_path / "three", results_dir=results)
     assert third.runner.run(third.plan).summary.abort_count == 2
-    stored = [a.abort_count for a in third.store.read_aborts(MONDAY)]
+    stored = [a.abort_count for a in third.store.read_aborts(MONDAY)[0]]
     assert stored == [1, 2]
 
 
@@ -435,7 +436,7 @@ def test_the_daily_budget_includes_what_earlier_segments_spent(tmp_path: Path) -
     assert first.runner.run(plan).kind == "abort"
     spent = (
         sum(r.cost_usd for r in records_of(first))
-        + first.store.read_aborts(MONDAY)[0].warmup_cost_usd
+        + first.store.read_aborts(MONDAY)[0][0].warmup_cost_usd
     )
     assert spent > 0
 
@@ -447,7 +448,7 @@ def test_the_daily_budget_includes_what_earlier_segments_spent(tmp_path: Path) -
     assert outcome.summary.abort_count == 1
 
 
-# --- tampering is final ----------------------------------------------------------------
+# --- tampering is final ---------------------------------------------------------------
 
 
 def test_tampering_writes_the_summary_and_stops_the_run(tmp_path: Path) -> None:
@@ -455,7 +456,7 @@ def test_tampering_writes_the_summary_and_stops_the_run(tmp_path: Path) -> None:
     outcome = world.runner.run(world.plan)
 
     assert outcome.kind == "summary" and outcome.summary.status == "aborted_tampered"
-    assert world.store.has_summary(MONDAY) and not world.store.read_aborts(MONDAY)
+    assert world.store.has_summary(MONDAY) and not world.store.read_aborts(MONDAY)[0]
     records = records_of(world)
     assert [r.status for r in records] == ["completed", "environment_tampered"]
     assert records[1].environment_tampered and not records[1].passed
@@ -469,3 +470,87 @@ def test_redaction_reaches_the_records(tmp_path: Path) -> None:
     world = build_world(tmp_path, grader=grader, redactor=Redactor([secret]))
     world.runner.run(world.plan)
     assert secret not in world.store.attempts_path(MONDAY).read_text()
+
+
+# --- effort, truncation and the config registry ---------------------------------------
+
+
+def test_every_request_including_the_warmups_carries_the_effort(tmp_path: Path) -> None:
+    world = build_world(tmp_path)
+    world.runner.run(world.plan)
+    assert world.client.warmups and world.client.attempts
+    assert all(r["output_config"] == {"effort": "medium"} for r in world.client.requests)
+
+
+def test_records_carry_effort_and_the_dirty_flag(tmp_path: Path) -> None:
+    world = build_world(tmp_path)
+    world.runner.run(world.plan)
+    assert {r.effort for r in records_of(world)} == {"medium"}
+    assert {r.git_dirty for r in records_of(world)} == {False}
+
+
+@pytest.mark.parametrize(
+    ("stop_reason", "status"),
+    [("max_tokens", "truncated"), ("refusal", "refused"), ("pause_turn", "incomplete")],
+)
+def test_attempts_that_did_not_finish_are_recorded_graded_and_never_abort(
+    tmp_path: Path, stop_reason: str, status: str
+) -> None:
+    def responder(request: dict[str, Any]) -> Any:
+        if is_warmup(request):
+            return default_responder(request)
+        return stopped_response(stop_reason)
+
+    world = build_world(tmp_path, responder=responder)
+    outcome = world.runner.run(world.plan)
+    records = records_of(world)
+    assert outcome.kind == "summary" and outcome.summary.status == "completed"
+    assert outcome.summary.errored == 0 and len(records) == 6  # 6 in a row never trip the abort
+    assert {r.status for r in records} == {status}
+    assert {r.stop_reason for r in records} == {stop_reason}
+    assert world.grader.calls == 6  # still graded: the workspace may be right anyway
+
+
+def test_configs_are_registered_before_the_first_api_call(tmp_path: Path) -> None:
+    seen: list[list[str]] = []
+
+    def responder(request: dict[str, Any]) -> Any:
+        directory = tmp_path / "results" / "configs"
+        seen.append(sorted(p.name for p in directory.glob("*.json")) if directory.exists() else [])
+        return default_responder(request)
+
+    world = build_world(tmp_path, responder=responder)
+    world.runner.run(world.plan)
+    resolved = world.plan.resolved
+    expected = sorted(
+        f"{ExperimentSchedule.config_hash(c)}.json" for c in (resolved.baseline, resolved.variant)
+    )
+    assert seen[0] == expected and len(expected) == 2
+
+
+def test_the_aa_test_registers_its_single_shared_config_once(tmp_path: Path) -> None:
+    world = build_world(tmp_path, plan=make_plan(SUNDAY, trials=1))
+    world.runner.run(world.plan)
+    configs, bad = world.store.read_configs()
+    assert len(configs) == 1 and bad == 0 and configs[0].first_name in {"baseline", "aa-test"}
+
+
+def test_a_resume_leaves_registered_configs_untouched(tmp_path: Path) -> None:
+    world = build_world(tmp_path, responder=lambda r: auth_error())
+    world.runner.run(world.plan)  # aborts at the warm-up, after registering the configs
+    directory = world.store.configs_dir
+    before = {p.name: p.read_bytes() for p in directory.glob("*.json")}
+    assert len(before) == 2
+    again = build_world(tmp_path, store=world.store)
+    again.runner.run(again.plan)
+    assert {p.name: p.read_bytes() for p in directory.glob("*.json")} == before
+
+
+def test_an_unreadable_abort_file_does_not_crash_the_run_and_still_counts(tmp_path: Path) -> None:
+    store = ResultsStore(tmp_path / "results")
+    store.runs_dir.mkdir(parents=True)
+    (store.runs_dir / f"{MONDAY}.abort-080000.json").write_text("{truncated")
+    world = build_world(tmp_path, store=store)
+    outcome = world.runner.run(world.plan)
+    assert outcome.summary.abort_count == 1 and outcome.summary.corrupt_lines == 1
+    assert outcome.summary.status == "completed"

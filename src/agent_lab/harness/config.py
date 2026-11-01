@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 ToolSet = Literal["structured", "bash_only"]
 ContextStrategyName = Literal["full", "truncate_tool_outputs", "summarize"]
+Effort = Literal["low", "medium", "high", "xhigh", "max"]
 
 
 class AgentConfig(BaseModel):
@@ -16,6 +17,7 @@ class AgentConfig(BaseModel):
     name: str = Field(min_length=1)
     model: str = Field(min_length=1)
     system_prompt: str
+    effort: Effort  # sent as output_config.effort on every request; no default on purpose
     tool_set: ToolSet
     max_turns: int = Field(gt=0)
     max_tokens_per_call: int = Field(gt=0)

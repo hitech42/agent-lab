@@ -22,6 +22,7 @@ def config(model: str = "claude-haiku-5-5") -> AgentConfig:
         name="c",
         model=model,
         system_prompt="p",
+        effort="medium",
         tool_set="structured",
         max_turns=3,
         max_tokens_per_call=100,
@@ -43,7 +44,11 @@ def test_the_real_client_is_built_from_the_environment_key_with_sdk_retries_off(
     monkeypatch.setattr(wiring.anthropic, "Anthropic", RecordingAnthropic)
     factory = AgentFactory.from_env({"ANTHROPIC_API_KEY": "sk-ant-test-key-1"})
     (instance,) = RecordingAnthropic.instances
-    assert instance.kwargs == {"api_key": "sk-ant-test-key-1", "max_retries": 0}
+    assert instance.kwargs == {
+        "api_key": "sk-ant-test-key-1",
+        "max_retries": 0,
+        "timeout": 300.0,
+    }
     assert factory.redactor.redact("leak sk-ant-test-key-1") == "leak [REDACTED]"
 
 
@@ -60,3 +65,10 @@ def test_an_unknown_model_fails_when_the_budget_is_built(monkeypatch: pytest.Mon
     factory = AgentFactory.from_env({"ANTHROPIC_API_KEY": "k"})
     with pytest.raises(PricingError, match="no pricing for model 'gpt-9'"):
         factory.budget(config("gpt-9"), max_cost_usd=1.0)
+
+
+def test_the_request_timeout_is_a_constructor_argument(monkeypatch: pytest.MonkeyPatch) -> None:
+    RecordingAnthropic.instances.clear()
+    monkeypatch.setattr(wiring.anthropic, "Anthropic", RecordingAnthropic)
+    AgentFactory.from_env({"ANTHROPIC_API_KEY": "k"}, timeout_s=45.0)
+    assert RecordingAnthropic.instances[0].kwargs["timeout"] == 45.0

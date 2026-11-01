@@ -1,5 +1,6 @@
 import hashlib
 import platform
+import subprocess
 from pathlib import Path
 
 import anthropic
@@ -66,3 +67,42 @@ def test_a_directory_that_is_not_a_repository_gives_unknown(tmp_path: Path) -> N
     # tmp_path normally sits outside any repository; if the machine's temp dir is inside one,
     # git legitimately answers, so only check the shape.
     assert sha == "unknown" or len(sha) >= 7
+
+
+def test_the_dirty_flag_comes_from_the_lookup(tmp_path: Path) -> None:
+    for answer in (True, False, None):
+        prov = ProvenanceReader(tmp_path, {}, lambda root: None, lambda root, a=answer: a).read()
+        assert prov.git_dirty is answer
+
+
+def git(repo: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=repo, check=True
+    )
+
+
+def test_dirty_means_uncommitted_changes_outside_results(tmp_path: Path) -> None:
+    git(tmp_path, "init", "-q")
+    (tmp_path / "tracked.txt").write_text("one\n")
+    (tmp_path / ".gitignore").write_text("ignored.txt\n")
+    git(tmp_path, "add", ".")
+    git(tmp_path, "commit", "-q", "-m", "x")
+
+    def dirty() -> bool | None:
+        return ProvenanceReader(tmp_path, {}).read().git_dirty
+
+    assert dirty() is False
+    (tmp_path / "ignored.txt").write_text("x")  # gitignored files do not count
+    (tmp_path / "results" / "runs").mkdir(parents=True)
+    (tmp_path / "results" / "runs" / "2026-11-02.jsonl").write_text("{}\n")  # nor does results/
+    assert dirty() is False
+    (tmp_path / "untracked.txt").write_text("x")  # a new file does
+    assert dirty() is True
+    (tmp_path / "untracked.txt").unlink()
+    (tmp_path / "tracked.txt").write_text("two\n")  # and so does an edit
+    assert dirty() is True
+
+
+def test_dirty_is_unknown_when_git_cannot_answer(tmp_path: Path) -> None:
+    missing = tmp_path / "does-not-exist"
+    assert ProvenanceReader(missing, {})._git_dirty_lookup(missing) is None

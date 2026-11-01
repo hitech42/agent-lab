@@ -61,6 +61,8 @@ class _Segment:
 
     remaining: list[PlannedAttempt]
     budget: DailyBudget
+    prior_aborts: list[AbortRecord]
+    unreadable_aborts: int
     warmup_cost: float = 0.0
     next_index: int = 0
     consecutive_errors: int = 0
@@ -108,7 +110,7 @@ class ExperimentRunner:
     def run(self, plan: RunPlan) -> RunOutcome:
         """Run every attempt of the plan that is not already recorded for its date."""
         day = plan.date
-        prior_aborts = self._store.read_aborts(day)
+        prior_aborts, unreadable_aborts = self._store.read_aborts(day)
         recorded, _ = self._store.read_attempts(day)
         done_ids = {r.attempt_id for r in recorded}
         segment = _Segment(
@@ -117,6 +119,8 @@ class ExperimentRunner:
                 plan.resolved.daily_max_cost_usd,
                 sum(r.cost_usd for r in recorded) + sum(a.warmup_cost_usd for a in prior_aborts),
             ),
+            prior_aborts=prior_aborts,
+            unreadable_aborts=unreadable_aborts,
             started=self._clock.now().isoformat(timespec="seconds"),
         )
         try:
@@ -135,6 +139,8 @@ class ExperimentRunner:
         configs = {"baseline": resolved.baseline, "variant": resolved.variant}
         agents = {role: self._agents.agent(config) for role, config in configs.items()}
         self._integrity.capture()
+        for config in configs.values():  # before any API call, so every result has its config
+            self._store.register_config(ExperimentSchedule.config_hash(config), config)
         roles = {a.config_role for a in segment.remaining}
         to_warm = {
             ExperimentSchedule.config_hash(configs[role]): agents[role] for role in sorted(roles)
@@ -231,10 +237,8 @@ class ExperimentRunner:
                 planned,
                 task_id,
                 category,
-                config.name,
+                config,
                 config_hash,
-                config.model,
-                config.tool_set,
                 result=result,
                 grade=grade,
             )
@@ -244,10 +248,8 @@ class ExperimentRunner:
                 planned,
                 task_id,
                 category,
-                config.name,
+                config,
                 config_hash,
-                config.model,
-                config.tool_set,
                 result=None,
                 grade=None,
                 failure=exc,
@@ -256,8 +258,8 @@ class ExperimentRunner:
 
     def _finish(self, plan: RunPlan, segment: _Segment) -> RunOutcome:
         day = plan.date
-        prior_aborts = self._store.read_aborts(day)
-        records, _ = self._store.read_attempts(day)
+        prior_aborts = segment.prior_aborts
+        records, corrupt_lines = self._store.read_attempts(day)
         unrun = segment.remaining[segment.next_index :]
         stopped = segment.cause is not None or segment.tampered
         reason: SkipReason = "skipped_aborted" if stopped else "skipped_budget"
@@ -292,6 +294,7 @@ class ExperimentRunner:
             "skipped_budget": len(skipped) if reason == "skipped_budget" else 0,
             "skipped_aborted": len(skipped) if reason == "skipped_aborted" else 0,
             "skipped_attempts": skipped,
+            "corrupt_lines": corrupt_lines + segment.unreadable_aborts,
             "warmup_cost_usd": warmup_total,
             "total_cost_usd": sum(r.cost_usd for r in records) + warmup_total,
             "estimate_usd": self._estimator.plan_cost(plan)
@@ -300,7 +303,7 @@ class ExperimentRunner:
         if segment.cause is not None and not segment.tampered:
             abort = AbortRecord(
                 **fields,
-                abort_count=len(prior_aborts) + 1,
+                abort_count=len(prior_aborts) + segment.unreadable_aborts + 1,
                 reason=segment.cause.reason,
                 error_type=segment.cause.error_type,
                 error_status=segment.cause.error_status,
@@ -309,5 +312,5 @@ class ExperimentRunner:
             )
             path = self._store.write_abort(abort, self._clock.now())
             return RunOutcome("abort", path, abort, segment.cause)
-        summary = RunSummary(**fields, abort_count=len(prior_aborts))
+        summary = RunSummary(**fields, abort_count=len(prior_aborts) + segment.unreadable_aborts)
         return RunOutcome("summary", self._store.write_summary(summary), summary)

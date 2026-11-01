@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "run_id": "2026-11-01-aa-test",
+  "date": "2026-11-01",
+  "track": "aa-test",
+  "status": "completed",
+  "started": "2026-11-01T20:14:30+00:00",
+  "finished": "2026-11-01T20:19:36+00:00",
+  "planned": 24,
+  "completed": 24,
+  "errored": 0,
+  "skipped_budget": 0,
+  "skipped_aborted": 0,
+  "skipped_attempts": [],
+  "abort_count": 0,
+  "corrupt_lines": 0,
+  "warmup_cost_usd": 0.00011055,
+  "total_cost_usd": 0.06331875000000001,
+  "estimate_usd": 0.1200520625
+}

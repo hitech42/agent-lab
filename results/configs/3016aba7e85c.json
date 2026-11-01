@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "config_hash": "3016aba7e85c",
+  "first_name": "baseline",
+  "model": "claude-haiku-5-5",
+  "system_prompt": "You are a coding agent working in a project directory. Use the tools to complete the task, then stop.",
+  "effort": "medium",
+  "tool_set": "structured",
+  "max_turns": 15,
+  "max_tokens_per_call": 16000,
+  "tool_output_max_chars": 4000,
+  "context_strategy": "full"
+}

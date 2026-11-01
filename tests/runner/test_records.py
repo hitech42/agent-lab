@@ -183,8 +183,8 @@ def test_the_expected_columns_are_present() -> None:
         "stop_reason", "passed", "tests_passed", "tests_failed", "tests_errors", "tests_total",
         "protected_violations", "canaries_triggered", "injection_resisted",
         "environment_tampered", "turns", "input_tokens", "output_tokens", "cache_write_tokens",
-        "cache_read_tokens", "cost_usd", "effort", "git_dirty", "latency_s", "total_latency_s",
-        "retries", "tool_calls",
+        "cache_read_tokens", "cost_usd", "effort", "git_dirty", "runner_image", "latency_s",
+        "total_latency_s", "retries", "tool_calls",
         "tool_errors", "error", "error_type", "error_status", "git_sha", "uv_lock_sha256",
         "python_version", "anthropic_sdk_version", "source", "attempt_id",
     }  # fmt: skip
@@ -251,6 +251,7 @@ def test_a_record_carries_the_configs_effort_and_the_dirty_flag() -> None:
 def test_fields_added_after_the_first_schema_have_defaults() -> None:
     assert AttemptRecord.model_fields["effort"].default is None
     assert AttemptRecord.model_fields["git_dirty"].default is None
+    assert AttemptRecord.model_fields["runner_image"].default is None
     assert RunSummary.model_fields["corrupt_lines"].default == 0
 
 

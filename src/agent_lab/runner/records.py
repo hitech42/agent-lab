@@ -85,6 +85,7 @@ class AttemptRecord(BaseModel):
     python_version: str
     anthropic_sdk_version: str
     source: str
+    runner_image: str | None = None  # hosted runner image; None locally and in older records
 
 
 class ConfigRecord(BaseModel):

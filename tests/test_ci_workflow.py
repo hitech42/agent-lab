@@ -181,3 +181,33 @@ def test_the_publish_job_checks_out_main_and_downloads_the_experiments_artifact(
     assert checkout["with"]["ref"] == "main"
     download = next(s for s in steps if str(s.get("uses", "")).startswith("actions/download"))
     assert download["with"]["name"] == "${{ needs.experiment.outputs.artifact }}"
+
+
+# --- pinned runner and actions ---------------------------------------------------------------
+
+WORKFLOWS = {"ci": WORKFLOW, "daily": DAILY}
+# Node.js 24 releases. setup-uv publishes no major tags any more, so it is pinned exactly.
+ACTION_VERSIONS = {
+    "actions/checkout": "v7",
+    "actions/upload-artifact": "v7",
+    "actions/download-artifact": "v8",
+    "astral-sh/setup-uv": "v10.3.3",
+}
+
+
+def test_every_job_in_every_workflow_runs_on_the_pinned_runner_image() -> None:
+    for name, path in WORKFLOWS.items():
+        for job_name, job in yaml.safe_load(path.read_text())["jobs"].items():
+            assert job["runs-on"] == "ubuntu-24.04", f"{name}/{job_name}"
+
+
+def test_actions_are_on_their_node24_versions_everywhere() -> None:
+    seen: set[str] = set()
+    for path in WORKFLOWS.values():
+        for job in yaml.safe_load(path.read_text())["jobs"].values():
+            for step in job["steps"]:
+                if "uses" in step:
+                    action, _, version = step["uses"].partition("@")
+                    assert ACTION_VERSIONS[action] == version, step["uses"]
+                    seen.add(action)
+    assert seen == set(ACTION_VERSIONS)

@@ -22,6 +22,15 @@ def test_ci_values_come_from_the_environment(tmp_path: Path) -> None:
     assert prov.anthropic_sdk_version == anthropic.__version__
 
 
+def test_the_hosted_runner_image_is_recorded_when_available(tmp_path: Path) -> None:
+    env = {"ImageOS": "ubuntu24", "ImageVersion": "20251020.1"}
+    assert reader(tmp_path, env).read().runner_image == "ubuntu24/20251020.1"
+    assert reader(tmp_path, {"ImageOS": "ubuntu24"}).read().runner_image == "ubuntu24"
+    assert reader(tmp_path, {"ImageVersion": "1.2"}).read().runner_image == "1.2"
+    assert reader(tmp_path, {"ImageOS": "", "ImageVersion": ""}).read().runner_image is None
+    assert reader(tmp_path, {}).read().runner_image is None
+
+
 def test_local_runs_fall_back_to_git(tmp_path: Path) -> None:
     prov = reader(tmp_path, {}, lambda root: f"git-{root.name}").read()
     assert prov.git_sha == f"git-{tmp_path.name}" and prov.source == "local"

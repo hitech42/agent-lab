@@ -44,4 +44,5 @@ def test_repo_pricing_yaml_loads() -> None:
     table = PriceTable.from_yaml(path)
     for model in ("claude-haiku-5-5", "claude-sonnet-5-5"):
         table.price(model)
-    assert "VERIFY" in path.read_text()
+    assert "verified" in path.read_text()  # records where the numbers came from
+    assert 0 < table.price("claude-haiku-5-5").input < table.price("claude-sonnet-5-5").input

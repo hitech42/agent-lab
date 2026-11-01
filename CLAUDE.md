@@ -35,15 +35,25 @@ directly; no agent frameworks.
   - `environment.py` — `EnvironmentIntegrity`: detects site-packages changes between attempts
   - `validation.py` — `TaskValidator`: checks a task is solvable and not already solved
 - `src/agent_lab/runner/`
-  - `experiment.py` — baseline vs. variant experiment orchestration
-  - `budget.py` — budget enforcement
-  - `storage.py` — append-only results storage
-  - `cli.py` — `agent-lab` entry point (`validate-tasks`)
+  - `schedule.py` — `ExperimentSchedule`: validated baseline, weekday tracks, `config_hash`
+  - `plan.py` — `RunPlanner`: deterministic, interleaved `RunPlan` for a date
+  - `estimator.py` — `CostEstimator`: history-based cost estimates with per-model defaults
+  - `warmup.py` — `CacheWarmer`: one cache warm-up call per distinct config (also the canary)
+  - `budget.py` — `DailyBudget`: the day's spending cap
+  - `experiment.py` — `ExperimentRunner`: runs a plan, records each attempt immediately
+  - `records.py` — `AttemptRecord`, `RunSummary`, `AbortRecord`, `RecordBuilder`
+  - `provenance.py` — `ProvenanceReader`: git sha, lockfile hash, versions, ci|local
+  - `storage.py` — `ResultsStore` (append-only results) and `TranscriptStore`
+  - `database.py` — `ResultsDatabase`: derived SQLite database (never committed)
+  - `wiring.py` — `AgentFactory`: client (`max_retries=0`), prices, redactor; shared with scripts
+  - `run_command.py` — `RunCommand` and `DbCommand`: the logic behind the CLI commands
+  - `cli.py` — `agent-lab` entry point (`validate-tasks`, `run`, `db rebuild`)
 - `src/agent_lab/report/build.py` — report generation
 - `tasks/` — task fixtures (see Task authoring)
-- `experiments/schedule.yaml` — experiment schedule
+- `experiments/schedule.yaml` — baseline, defaults and one track per ISO weekday
+- `experiments/prompts/` — system prompts referenced by the schedule
 - `config/pricing.yaml` — model pricing data
-- `results/runs/` — committed run results
+- `results/runs/` — committed results: `<date>.jsonl`, `<date>.run.json`, `<date>.abort-*.json`
 - `tests/` — pytest tests
 - `scripts/` — manual scripts: `smoke.py`, `run_task.py` (real API; never run in CI)
 
@@ -65,6 +75,69 @@ directly; no agent frameworks.
   `uv run pytest` skips them (`addopts = -m 'not slow'`) for a fast local loop. Run everything,
   as CI does, with `uv run pytest -m "slow or not slow"`; run only the slow ones with
   `uv run pytest -m slow`. Run the full suite before opening a PR.
+
+## Running experiments
+
+`uv run agent-lab run [--date YYYY-MM-DD] [--track NAME] [--trials N] [--tasks id,id]
+[--results-dir DIR] [--transcripts-dir DIR] [--resume] [--dry-run]`. The API key comes from
+the `ANTHROPIC_API_KEY` environment variable only. `--dry-run` prints the track, question,
+resolved configs with their `config_hash`, the ordered plan and the cost estimate, makes no
+API calls and writes no files (no key needed).
+
+**Who writes `results/`:** only CI (the scheduled workflow). Local runs always use
+`--results-dir /tmp/somewhere` so they never pollute the repository. Transcripts
+(`.transcripts/`, gitignored) and the derived database (`*.db`, gitignored) are never committed.
+
+**Schedule:** `experiments/schedule.yaml` has the baseline config, defaults and exactly one
+track per ISO weekday (Mon=1). A track is a name, a one-sentence question, `variant` overrides
+of the baseline, and optional caps. Overrides must be real `AgentConfig` fields with registered
+values (models in `config/pricing.yaml`, existing prompt files in `experiments/prompts/`).
+`config_hash` is the first 12 hex of sha256 over the canonical JSON of the resolved config
+(prompt text included, `name` excluded), so identical configs group across days and renames.
+
+**Run lifecycle:**
+1. If `<date>.run.json` exists the day is done: print "already done", exit 0, no API call.
+2. If `<date>.jsonl` exists without a `.run.json` and `--resume` is absent: refuse (exit 1).
+3. Load and validate schedule and tasks, pick the track (UTC date, or `--track`), plan the
+   attempts: for each trial and task the baseline and variant run back to back, in an order
+   shuffled with `random.Random(<date string>)`, so a date always gives the same plan.
+4. Estimate the cost (history per config/task, else per-model defaults) and capture
+   `EnvironmentIntegrity` once.
+5. Warm the prompt cache with one minimal call per distinct config. Its cost counts against
+   the daily budget. It is also the canary: any warm-up failure aborts before any attempt.
+6. Run the attempts. Before the first attempt of a pair, check that spent + the estimate of
+   both attempts fits the daily cap; otherwise stop and mark the rest `skipped_budget`. Each
+   attempt gets its own `Budget` (attempt cap), is graded on a snapshot, and its record is
+   appended and fsynced immediately. An exception inside an attempt is recorded as that
+   attempt's `error` and the run continues. A transcript is written per attempt.
+7. Outcomes. **Terminal** outcomes write `<date>.run.json` (exclusive create) and the day is
+   done: `completed`, `partial_budget` (budget stop), `aborted_tampered` (site-packages
+   changed; final). **Aborts are events**: an authentication/permission error (in the warm-up
+   or an attempt), a warm-up failure, or 3 consecutive attempts with `status == "error"`
+   (failed grades never count) write `<date>.abort-<HHMMSS>.json` (exclusive create; the
+   summary fields plus `reason`, `error_type`, `error_status`, completed ids and
+   `skipped_attempts`) and do NOT write `.run.json`, so the day stays resumable.
+8. Exit 0 whenever a record was written or the day was already done; nonzero only for
+   configuration errors or crashes before any record could be written.
+
+**Resuming:** Phase 4 always calls `agent-lab run --resume`, which is safe unconditionally: with
+no JSONL for the date it is a normal run, with a finished day it prints "already done", and
+after an abort it skips attempt ids already recorded and appends the rest to the same
+JSONL. The final `RunSummary` of a day that had aborts has `abort_count` > 0, and its cost
+and warm-up totals cover all segments. To re-run a terminal day, remove its `.run.json` by hand.
+
+**Results layout and rules** (`results/runs/`):
+- `<date>.jsonl`: one flat `AttemptRecord` per line (attempts that ran; skipped attempts are
+  never written here). Fields include the full `GradeResult`, usage, cost, latency, retries,
+  `error_type`/`error_status`, and provenance (`git_sha`, `uv_lock_sha256`, versions, `source`).
+- `<date>.run.json`: the terminal `RunSummary`, including `skipped_attempts` (id, task, role,
+  trial, reason) because the plan cannot be re-derived once the schedule changes.
+- `<date>.abort-<HHMMSS>.json`: one per abort event.
+- Append-only: the store only appends or creates exclusively; nothing deletes, truncates or
+  rewrites a result file. Never edit past days' files.
+- `uv run agent-lab db rebuild [--db results.db] [--results-dir results]` rebuilds a derived SQLite
+  database (tables `attempts`, `runs`, `aborts`, view `pairs` of baseline/variant per run, task
+  and trial). Nothing depends on it.
 
 ## Task authoring
 
@@ -117,6 +190,11 @@ Rules:
   needs containers. The sandbox also remains writable outside the workspace.
 - Grading uses a snapshot, so processes that outlive an attempt cannot change its grade,
   but they can still run during later attempts.
+- Prompt caching only helps if the shared prefix (tools + system prompt) reaches the model's
+  minimum cacheable length. With five short tool definitions it may not, which would make the
+  warm-up a harmless no-op. Check `cache_write_tokens`/`cache_read_tokens` in the first day's records.
+- Two simultaneous runs for the same date are not locked against each other (Phase 4: use a CI
+  `concurrency` group).
 
 ## HARD RULES
 

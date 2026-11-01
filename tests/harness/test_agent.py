@@ -244,3 +244,48 @@ def test_total_latency_includes_backoff_sleep(config: AgentConfig, sandbox: Sand
     turn = result.trace.turns[0]
     assert turn.total_latency_s >= 0.2  # the backoff sleep counts
     assert turn.latency_s < 0.2  # the successful call alone does not
+
+
+def test_error_results_carry_the_exception_class_and_http_status(
+    config: AgentConfig, sandbox: Sandbox
+) -> None:
+    result, _ = run(config, sandbox, [status_error(529), status_error(529), status_error(529)])
+    assert result.status == "error"
+    assert (result.error_type, result.error_status) == ("APIStatusError", 529)
+
+
+def test_an_exception_without_an_http_status_has_none(
+    config: AgentConfig, sandbox: Sandbox
+) -> None:
+    result, _ = run(config, sandbox, [ValueError("nope")])
+    assert (result.error_type, result.error_status) == ("ValueError", None)
+
+
+def test_successful_results_have_no_error_type(config: AgentConfig, sandbox: Sandbox) -> None:
+    result, _ = run(config, sandbox, [text_response()])
+    assert (result.error, result.error_type, result.error_status) == (None, None, None)
+
+
+def test_tool_use_without_tool_blocks_is_typed_as_an_invalid_response(
+    config: AgentConfig, sandbox: Sandbox
+) -> None:
+    from conftest import _message
+
+    empty = _message([], "tool_use", usage())
+    result, _ = run(config, sandbox, [empty])
+    assert result.status == "error" and result.error_type == "InvalidResponse"
+
+
+def test_warmup_request_shares_the_cached_prefix_with_real_requests(
+    config: AgentConfig, sandbox: Sandbox
+) -> None:
+    client = FakeClient([text_response()])
+    agent = Agent.from_config(config, ModelClient(client, RetryPolicy()), Redactor([]))
+    agent.run("do it", sandbox, Budget())
+    real = client.requests[0]
+    warm = agent.warmup_request()
+    assert (warm.model, warm.max_tokens) == (real["model"], 1)
+    assert warm.system == real["system"] and warm.tools == real["tools"]
+    assert warm.messages == [{"role": "user", "content": "ok"}]
+    assert warm.system[0]["cache_control"] == {"type": "ephemeral"}
+    assert warm.tools[-1]["cache_control"] == {"type": "ephemeral"}

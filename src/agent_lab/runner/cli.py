@@ -1,6 +1,7 @@
-"""Command-line entry point: ``agent-lab validate-tasks``."""
+"""Command-line entry point: ``agent-lab validate-tasks | run | db rebuild``."""
 
 import argparse
+import os
 import sys
 from pathlib import Path
 from typing import TextIO
@@ -8,11 +9,21 @@ from typing import TextIO
 from agent_lab.benchmark.grader import Grader
 from agent_lab.benchmark.loader import TaskLoadError, TaskSuite
 from agent_lab.benchmark.validation import TaskValidator
+from agent_lab.runner.database import ResultsDatabase
+from agent_lab.runner.run_command import DbCommand, RunArgs, RunCommand, RunDependencies
 
 
 class Cli:
-    def __init__(self, validator: TaskValidator, stdout: TextIO) -> None:
+    def __init__(
+        self,
+        validator: TaskValidator,
+        run_command: RunCommand,
+        db_command: DbCommand,
+        stdout: TextIO,
+    ) -> None:
         self._validator = validator
+        self._run_command = run_command
+        self._db_command = db_command
         self._stdout = stdout
 
     def run(self, argv: list[str]) -> int:
@@ -20,6 +31,10 @@ class Cli:
         match args.command:
             case "validate-tasks":
                 return self._validate_tasks(Path(args.tasks_dir))
+            case "run":
+                return self._run_command.execute(self._run_args(args))
+            case "db":
+                return self._db_command.rebuild(Path(args.results_dir), Path(args.db))
         return 2  # unreachable: argparse requires a command
 
     def _validate_tasks(self, tasks_dir: Path) -> int:
@@ -51,8 +66,46 @@ class Cli:
         commands = parser.add_subparsers(dest="command", required=True)
         validate = commands.add_parser("validate-tasks", help="validate every task fixture")
         validate.add_argument("--tasks-dir", default="tasks")
+        run = commands.add_parser("run", help="run today's experiment")
+        run.add_argument("--date", help="UTC date YYYY-MM-DD (default: today)")
+        run.add_argument("--track", help="track name (default: the date's weekday track)")
+        run.add_argument("--trials", type=int, help="trials per task (default: from the schedule)")
+        run.add_argument("--tasks", help="comma-separated task ids (default: all)")
+        run.add_argument("--results-dir", default="results")
+        run.add_argument("--transcripts-dir", default=".transcripts")
+        run.add_argument("--tasks-dir", default="tasks")
+        run.add_argument("--schedule", default="experiments/schedule.yaml")
+        run.add_argument("--resume", action="store_true", help="continue an interrupted day")
+        run.add_argument("--dry-run", action="store_true", help="print the plan only")
+        db = commands.add_parser("db", help="derived SQLite database")
+        db_commands = db.add_subparsers(dest="db_command", required=True)
+        rebuild = db_commands.add_parser("rebuild", help="rebuild results.db from the JSONL")
+        rebuild.add_argument("--db", default="results.db")
+        rebuild.add_argument("--results-dir", default="results")
         return parser
+
+    @staticmethod
+    def _run_args(args: argparse.Namespace) -> RunArgs:
+        return RunArgs(
+            date=args.date,
+            track=args.track,
+            trials=args.trials,
+            tasks=args.tasks.split(",") if args.tasks else None,
+            results_dir=Path(args.results_dir),
+            transcripts_dir=Path(args.transcripts_dir),
+            tasks_dir=Path(args.tasks_dir),
+            schedule=Path(args.schedule),
+            resume=args.resume,
+            dry_run=args.dry_run,
+        )
 
 
 def main() -> None:
-    sys.exit(Cli(TaskValidator(Grader.for_task), sys.stdout).run(sys.argv[1:]))
+    deps = RunDependencies.default(os.environ, Path.cwd())
+    cli = Cli(
+        TaskValidator(Grader.for_task),
+        RunCommand(deps, sys.stdout),
+        DbCommand(ResultsDatabase(), sys.stdout),
+        sys.stdout,
+    )
+    sys.exit(cli.run(sys.argv[1:]))

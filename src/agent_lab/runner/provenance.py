@@ -19,6 +19,7 @@ class Provenance(BaseModel):
     python_version: str
     anthropic_sdk_version: str
     source: str  # "ci" or "local"
+    runner_image: str | None = None  # e.g. "ubuntu24/20251020.1" on hosted runners
 
 
 class ProvenanceReader:
@@ -45,7 +46,14 @@ class ProvenanceReader:
             python_version=platform.python_version(),
             anthropic_sdk_version=anthropic.__version__,
             source="ci" if self._environ.get("GITHUB_ACTIONS") == "true" else "local",
+            runner_image=self._runner_image(),
         )
+
+    def _runner_image(self) -> str | None:
+        """The hosted runner image (ImageOS/ImageVersion), when those variables are set."""
+        parts = [self._environ.get(name) for name in ("ImageOS", "ImageVersion")]
+        found = [p for p in parts if p]
+        return "/".join(found) if found else None
 
     def _lock_sha(self) -> str:
         lock = self._repo_root / "uv.lock"

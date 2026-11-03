@@ -205,10 +205,14 @@ It has two jobs so that the job that executes agent code can never push:
   committer from the repository variables `COMMIT_AUTHOR_NAME` / `COMMIT_AUTHOR_EMAIL`, which
   must be set), with the message from `agent-lab results commit-message`, then pushes; on a
   rejected push it `pull --rebase`s and retries, three pushes at most.
-- **Triggers:** `schedule` twice per UTC day (13:17 and 19:47) and `workflow_dispatch` with
-  `dry_run`. Never `push` or `pull_request`. `concurrency: daily-experiment` (no cancelling) makes
-  the backup run start after the primary has published, so `--resume` sees its results: a
-  no-op on a finished day, a continuation after an abort.
+- **Triggers:** `schedule` with eight slots per UTC day, three hours apart at non-round minutes
+  (01:37, 04:53, 07:11, 10:29, 13:17, 16:41, 19:47, 22:23), and `workflow_dispatch` with `dry_run`.
+  Never `push` or `pull_request`. GitHub starts scheduled runs best-effort: the first ones began
+  6 to 9 hours after their slot, so there are many slots and the first to start does the day.
+  `concurrency: daily-experiment` (no cancelling) makes each later run start after the previous
+  one has published, so `--resume` sees its results: a no-op on a finished day (about 20 s), a
+  continuation after an abort. Check the "Daily experiment" runs' start times against the slots
+  if a day is missing; Run workflow by hand is the fallback.
 - **Publisher rules** (`ResultsPublisher`; the incoming directory is untrusted): only
   `runs/<date>.jsonl`, `runs/<date>.run.json`, `runs/<date>.abort-<HHMMSS>.json` and
   `configs/<12 hex>.json`; regular files only (no links, no other directories), at most 5 MB each

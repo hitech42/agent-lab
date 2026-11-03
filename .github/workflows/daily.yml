@@ -7,10 +7,19 @@ name: Daily experiment
 
 on:
   schedule:
-    # A primary and a backup run on the same UTC day, at non-round minutes. Both run the same
-    # thing: --resume makes the second a no-op on a finished day and a continuation after an abort.
+    # Eight slots, three hours apart, at non-round minutes. GitHub starts scheduled runs on a
+    # best-effort basis: this repository's first scheduled runs began 6 to 9 hours late. Many
+    # slots mean some run soon after midnight UTC however the queue behaves. All run the same
+    # thing: --resume makes every run after the first a no-op on a finished day and a
+    # continuation after an abort, and `concurrency` below serializes them.
+    - cron: "37 1 * * *"
+    - cron: "53 4 * * *"
+    - cron: "11 7 * * *"
+    - cron: "29 10 * * *"
     - cron: "17 13 * * *"
+    - cron: "41 16 * * *"
     - cron: "47 19 * * *"
+    - cron: "23 22 * * *"
   workflow_dispatch:
     inputs:
       dry_run:

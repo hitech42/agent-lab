@@ -85,6 +85,13 @@ def test_another_process_environment_with_the_key_is_unreadable(
     key = "sk-ant-integration-control-key"
     holder = subprocess.Popen(["sleep", "60"], env={"ANTHROPIC_API_KEY": key})
     try:
+        # Popen returns once exec has closed its error pipe, which the kernel does before it
+        # sets up the new process's environment: reading /proc/<pid>/environ in that window
+        # gives an empty file. Wait until the key is really there so the control is not flaky.
+        deadline = time.monotonic() + 10
+        while key.encode() not in Path(f"/proc/{holder.pid}/environ").read_bytes():
+            assert time.monotonic() < deadline, "the holder's environment never became readable"
+            time.sleep(0.05)
         command = f"cat /proc/{holder.pid}/environ"
         (tmp_path / "open").mkdir()
         (tmp_path / "closed").mkdir()

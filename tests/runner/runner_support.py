@@ -27,6 +27,11 @@ from agent_lab.harness.isolation import NoIsolation
 from agent_lab.harness.model_client import ModelClient, RetryPolicy
 from agent_lab.harness.pricing import PriceTable
 from agent_lab.harness.redact import Redactor
+from agent_lab.report.analysis import ResultsAnalyzer
+from agent_lab.report.build import ReportBuilder
+from agent_lab.report.charts import DailySpendChart, TracksChart
+from agent_lab.report.command import ReportCommand
+from agent_lab.report.markdown import MarkdownRenderer, ReadmeUpdater
 from agent_lab.runner.cli import Cli
 from agent_lab.runner.database import ResultsDatabase
 from agent_lab.runner.estimator import CostEstimator
@@ -369,12 +374,24 @@ def build_cli(
         integrity=lambda tasks_dir: EnvironmentIntegrity([site_dir]),
         grader_factory=lambda integrity: lambda task: fake_grader,  # type: ignore[arg-type,return-value]
         isolation=isolation or (lambda args: NoIsolation()),
+        git_sha_lookup=lambda root: "abc123",  # independent of where the tests run
+        git_dirty_lookup=lambda root: False,
     )
     cli = Cli(
         TaskValidator(Grader.for_task),
         RunCommand(deps, out),
         DbCommand(ResultsDatabase(), out),
         ResultsCommand(ResultsPublisher, CommitMessageBuilder(), out),
+        ReportCommand(
+            ReportBuilder(
+                ResultsAnalyzer(resamples=200),
+                MarkdownRenderer(),
+                ReadmeUpdater(),
+                TracksChart(),
+                DailySpendChart(),
+            ),
+            out,
+        ),
         out,
     )
     return CliWorld(cli, out, client, fake_grader, tmp_path, environ)

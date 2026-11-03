@@ -66,6 +66,8 @@ class RunDependencies:
     integrity: Callable[[Path], EnvironmentIntegrity]  # given the tasks directory to watch
     grader_factory: Callable[[EnvironmentIntegrity], Callable[[Task], Grader]]
     isolation: Callable[[RunArgs], CommandIsolation] = make_isolation
+    git_sha_lookup: Callable[[Path], str | None] | None = None  # None: ask git
+    git_dirty_lookup: Callable[[Path], bool | None] | None = None
 
     @classmethod
     def default(cls, environ: Mapping[str, str], repo_root: Path) -> RunDependencies:
@@ -150,7 +152,12 @@ class RunCommand:
             transcripts=TranscriptStore(args.transcripts_dir),
             estimator=estimator,
             warmer=CacheWarmer(agents.client, agents.prices),
-            provenance=ProvenanceReader(self._deps.repo_root, self._deps.environ).read(),
+            provenance=ProvenanceReader(
+                self._deps.repo_root,
+                self._deps.environ,
+                self._deps.git_sha_lookup,
+                self._deps.git_dirty_lookup,
+            ).read(),
             clock=self._deps.clock,
             isolation=isolation,
         )

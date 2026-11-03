@@ -55,8 +55,16 @@ directly; no agent frameworks.
     into `results/`) and `CommitMessageBuilder`
   - `run_command.py` — `RunCommand`, `DbCommand`, `ResultsCommand`: the logic behind the CLI commands
   - `cli.py` — `agent-lab` entry point (`validate-tasks`, `run`, `db rebuild`,
-    `results publish|commit-message`)
-- `src/agent_lab/report/build.py` — report generation
+    `results publish|commit-message`, `report build`)
+- `src/agent_lab/report/` — the dashboard and charts built from `results/` (see Report)
+  - `stats.py` — pure statistics: Wilson, Newcombe (paired difference), bootstrap, verdict wording
+  - `model.py` — pydantic data models; `ReportData` is what `summary.json` serializes
+  - `analysis.py` — `ResultsAnalyzer`: pairs, exclusions, series, spend
+  - `markdown.py` — `MarkdownRenderer` and `ReadmeUpdater` (the README markers)
+  - `charts.py` — `TracksChart` and `DailySpendChart` (SVG)
+  - `build.py` — `ReportBuilder` (pure: files in memory); `command.py` — `ReportCommand` (I/O, `--check`)
+- `README.md` — hand-written text plus the generated dashboard between the report markers
+- `report/` — generated: `tracks.svg`, `daily.svg`, `summary.json` (committed)
 - `.github/workflows/` — `ci.yml` (checks, isolation tests) and `daily.yml` (the daily run)
 - `tasks/` — task fixtures (see Task authoring)
 - `experiments/schedule.yaml` — baseline, defaults and one track per ISO weekday
@@ -192,7 +200,8 @@ It has two jobs so that the job that executes agent code can never push:
   `.transcripts/` is never uploaded.
 - **`publish`** (`contents: write`, 10 min, no environment, no key, no sandbox, no agent code; runs
   only if the artifact exists and `dry_run` is false): checks out `main`, downloads the artifact,
-  runs `agent-lab results publish`, and if `results/` changed commits only `results/` (author and
+  runs `agent-lab results publish`, then `agent-lab report build`, and if `results/` changed commits
+  only `results/`, `report/` and `README.md` (author and
   committer from the repository variables `COMMIT_AUTHOR_NAME` / `COMMIT_AUTHOR_EMAIL`, which
   must be set), with the message from `agent-lab results commit-message`, then pushes; on a
   rejected push it `pull --rebase`s and retries, three pushes at most.
@@ -233,6 +242,53 @@ It has two jobs so that the job that executes agent code can never push:
 - **Running it manually:** Actions, "Daily experiment", "Run workflow" (use `dry_run` first).
   Locally: `agent-lab run --dry-run`, or a real run with `--results-dir /tmp/x`, then
   `agent-lab results publish /tmp/x` into a scratch results directory to try the publisher.
+
+## Report
+
+`uv run agent-lab report build [--results-dir results] [--readme README.md] [--out report] [--check]`
+turns `results/` into the dashboard in `README.md` (only the text between
+`<!-- agent-lab:report:start -->` and `<!-- agent-lab:report:end -->`; missing, duplicated or
+reversed markers fail), `report/tracks.svg`, `report/daily.svg` and `report/summary.json` (every
+number shown, sorted keys). The publish job runs it after each publish and commits `results/`,
+`report/` and `README.md`; CI runs it with `--check` (writes nothing, exits 1 if any output would
+change), so a PR that changes report code must include the regenerated output. To rebuild locally:
+`uv run agent-lab report build`. Standard library only.
+
+- **Deterministic:** the same results give byte-identical files. Dates come from the data, never
+  the clock; the bootstrap is seeded from a hash of its input; sums use `math.fsum` so input
+  order does not matter. Unchanged files are not rewritten.
+- **Pairs and exclusions:** a pair is the baseline and variant record with the same
+  `(run_id, task_id, trial)`. It is excluded (and counted per series) when either side has status
+  `error` or `environment_tampered` (infrastructure, not agent behaviour) or when a side is
+  missing. `truncated`, `refused`, `incomplete`, `max_turns` and `budget_exceeded` are agent
+  outcomes: they stay in and count as failures unless the attempt passed.
+- **Series:** grouped by `(track, baseline config_hash, variant config_hash)`, so editing a config
+  or prompt starts a new series. The current series per track (latest date) is shown first, older
+  ones in a collapsed block. Variants are described by a field diff from the configs registry
+  ("system prompt changed" links to the config file). The `aa-test` track is labelled the
+  noise-floor reference.
+- **Statistics (`stats.py`):** pass rate per side with a Wilson 95% interval. Pass-rate difference:
+  Newcombe's hybrid score interval for paired proportions (method 10, with its continuity
+  corrected phi), because a bootstrap collapses to [0, 0] when no pair is discordant, which would
+  claim certainty. Cost, turns and output-token differences: 95% percentile bootstrap over pairs
+  (2000 resamples). A series with at least 8 distinct tasks switches automatically to a
+  task-clustered bootstrap for every metric, pass rate included (trials of one task are
+  correlated); the method used is printed. A series with fewer than 10 included pairs shows
+  point estimates with "insufficient data" and that verdict, for every interval. Verdicts use
+  neutral words ("no detectable difference", "variant higher/lower") because "higher" is good for
+  pass rate and bad for cost. A ceiling flag marks both sides at 95% or more pass rate.
+- **Caveats written into the README:** sample size, ceiling, the independence assumption, multiple
+  comparisons (the number shown is in `summary.json` as `comparisons_shown`: roughly 1 in 20
+  will differ by chance, aa-test should show none), what the exclusions mean.
+- **Data-dependent text lives inside the markers only.** Hand-written README text stays timeless
+  (no counts or dates); the generated section states the data range.
+- **Untrusted text:** `results/` comes from a job that ran agent code, so everything interpolated
+  into the README or SVGs (questions, config values, names) is escaped and length-capped, prompts
+  are never embedded, and links are built only from validated hashes.
+- **Charts:** transparent SVGs with a `prefers-color-scheme` style and `<title>`/`<desc>`. GitHub
+  displays README SVGs as images, so they follow the viewer's OS/browser scheme, not GitHub's
+  own theme toggle. With no results only a placeholder section and an empty `summary.json` are
+  written; a chart that has nothing to draw is not written (and a stale one is removed).
 
 ## Sandbox isolation
 

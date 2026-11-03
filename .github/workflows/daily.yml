@@ -126,6 +126,8 @@ jobs:
           path: ${{ runner.temp }}/incoming
       - name: Validate and copy the results into results/
         run: uv run agent-lab results publish "$RUNNER_TEMP/incoming"
+      - name: Rebuild the README dashboard and the report
+        run: uv run agent-lab report build
       - name: Commit and push
         env:
           GIT_AUTHOR_NAME: ${{ vars.COMMIT_AUTHOR_NAME }}
@@ -138,7 +140,7 @@ jobs:
             exit 0
           fi
           uv run agent-lab results commit-message "$RUNNER_TEMP/incoming" > "$RUNNER_TEMP/message"
-          git add results/
+          git add results/ report/ README.md
           git commit -F "$RUNNER_TEMP/message"
           for attempt in 1 2 3; do
             if git push origin HEAD:main; then

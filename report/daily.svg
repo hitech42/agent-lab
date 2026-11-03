@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 250" width="760" height="250" role="img" aria-labelledby="title desc">
+<title id="title">Daily spend</title>
+<desc id="desc">Total spend per day in USD (attempts and warm-ups), labelled by track. 2026-11-01 aa-test $0.0633; 2026-11-02 model-comparison $0.2795</desc>
+<style>
+  :root { --fg: #57606a; --grid: #afb8c1; --accent: #0969da; --band: rgba(140,149,159,0.18); }
+  @media (prefers-color-scheme: dark) {
+    :root { --fg: #9198a1; --grid: #3d444d; --accent: #4493f8; --band: rgba(145,152,161,0.18); }
+  }
+  text { fill: var(--fg); font: 12px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+  .small { font-size: 10px; }
+  .head { font-weight: 600; }
+  .axis, .zero { stroke: var(--grid); stroke-width: 1; }
+  .zero { stroke-dasharray: 4 3; }
+  .band { fill: var(--band); }
+  .whisker { stroke: var(--accent); stroke-width: 2; }
+  .point { fill: var(--accent); }
+  .hollow { fill: none; stroke: var(--accent); stroke-width: 2; }
+  .bar { fill: var(--accent); }
+</style>
+<line class="axis" x1="64.0" y1="190.0" x2="744.0" y2="190.0"/>
+<text class="small" x="58.0" y="194.0" text-anchor="end">$0</text>
+<text class="small" x="58.0" y="84.0" text-anchor="end">$0.2935</text>
+<text class="small" x="234.0" y="206.0" text-anchor="middle">11-01</text>
+<rect class="bar" x="221.0" y="166.3" width="26.0" height="23.7"/>
+<text class="small" transform="translate(237.0 162.3) rotate(-90)">aa-test</text>
+<text class="small" x="574.0" y="206.0" text-anchor="middle">11-02</text>
+<rect class="bar" x="561.0" y="85.2" width="26.0" height="104.8"/>
+<text class="small" transform="translate(577.0 81.2) rotate(-90)">model-comparis</text>
+</svg>

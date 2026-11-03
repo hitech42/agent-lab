@@ -1,12 +1,12 @@
 {
-  "attempts": 48,
+  "attempts": 72,
   "cluster_min_tasks": 8,
   "comparisons_by_metric": {
-    "cost": 2,
-    "pass": 2,
-    "turns": 2
+    "cost": 3,
+    "pass": 3,
+    "turns": 3
   },
-  "comparisons_shown": 6,
+  "comparisons_shown": 9,
   "daily": [
     {
       "date": "2026-11-01",
@@ -17,16 +17,21 @@
       "date": "2026-11-02",
       "spend_usd": 0.279501,
       "track": "model-comparison"
+    },
+    {
+      "date": "2026-11-03",
+      "spend_usd": 0.059645,
+      "track": "tool-design"
     }
   ],
-  "days_run": 2,
-  "latest_date": "2026-11-02",
-  "latest_day": "eval(model-comparison): baseline 12/12 vs variant 12/12 passed, $0.2795 [completed]",
+  "days_run": 3,
+  "latest_date": "2026-11-03",
+  "latest_day": "eval(tool-design): baseline 12/12 vs variant 11/12 passed, $0.0596 [completed]",
   "min_pairs": 10,
   "resamples": 2000,
-  "spend_attempts_usd": 0.340388,
-  "spend_usd": 0.34282,
-  "spend_warmups_usd": 0.002432,
+  "spend_attempts_usd": 0.399881,
+  "spend_usd": 0.402465,
+  "spend_warmups_usd": 0.002584,
   "tracks": [
     {
       "current": {
@@ -162,6 +167,74 @@
       },
       "older": [],
       "track": "model-comparison",
+      "unattributed_exclusions": 0
+    },
+    {
+      "current": {
+        "baseline": {
+          "ci_high": 1.0,
+          "ci_low": 0.757506,
+          "cost_per_solved_usd": 0.002766,
+          "mean_cost_usd": 0.002766,
+          "n": 12,
+          "passed": 12,
+          "rate": 1.0
+        },
+        "baseline_hash": "3016aba7e85c",
+        "ceiling": false,
+        "current": true,
+        "days": 1,
+        "delta_cost_usd": {
+          "high": -0.000264,
+          "low": -0.00087,
+          "mean": -0.000574,
+          "verdict": "variant lower"
+        },
+        "delta_output_tokens": {
+          "high": 218.416667,
+          "low": -552.666667,
+          "mean": -153.5,
+          "verdict": "no detectable difference"
+        },
+        "delta_pass_pp": {
+          "high": 16.864135,
+          "low": -35.387991,
+          "mean": -8.333333,
+          "verdict": "no detectable difference"
+        },
+        "delta_turns": {
+          "high": -1.333333,
+          "low": -2.333333,
+          "mean": -1.833333,
+          "verdict": "variant lower"
+        },
+        "description": "tool_set: structured \u2192 bash_only",
+        "excluded": {
+          "error": 0,
+          "tampered": 0,
+          "unpaired": 0
+        },
+        "first_date": "2026-11-03",
+        "last_date": "2026-11-03",
+        "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
+        "noise_floor": false,
+        "pairs": 12,
+        "question": "Do the structured tools beat a single bash tool?",
+        "tasks": 3,
+        "track": "tool-design",
+        "variant": {
+          "ci_high": 0.985135,
+          "ci_low": 0.64612,
+          "cost_per_solved_usd": 0.002391,
+          "mean_cost_usd": 0.002192,
+          "n": 12,
+          "passed": 11,
+          "rate": 0.916667
+        },
+        "variant_hash": "8e13fb1371da"
+      },
+      "older": [],
+      "track": "tool-design",
       "unattributed_exclusions": 0
     }
   ],

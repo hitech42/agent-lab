@@ -1,12 +1,12 @@
 {
-  "attempts": 72,
+  "attempts": 96,
   "cluster_min_tasks": 8,
   "comparisons_by_metric": {
-    "cost": 3,
-    "pass": 3,
-    "turns": 3
+    "cost": 4,
+    "pass": 4,
+    "turns": 4
   },
-  "comparisons_shown": 9,
+  "comparisons_shown": 12,
   "daily": [
     {
       "date": "2026-11-01",
@@ -22,16 +22,21 @@
       "date": "2026-11-03",
       "spend_usd": 0.059645,
       "track": "tool-design"
+    },
+    {
+      "date": "2026-11-04",
+      "spend_usd": 0.062827,
+      "track": "turn-budget"
     }
   ],
-  "days_run": 3,
-  "latest_date": "2026-11-03",
-  "latest_day": "eval(tool-design): baseline 12/12 vs variant 11/12 passed, $0.0596 [completed]",
+  "days_run": 4,
+  "latest_date": "2026-11-04",
+  "latest_day": "eval(turn-budget): baseline 12/12 vs variant 10/12 passed, $0.0628 [completed]",
   "min_pairs": 10,
   "resamples": 2000,
-  "spend_attempts_usd": 0.399881,
-  "spend_usd": 0.402465,
-  "spend_warmups_usd": 0.002584,
+  "spend_attempts_usd": 0.462581,
+  "spend_usd": 0.465292,
+  "spend_warmups_usd": 0.002711,
   "tracks": [
     {
       "current": {
@@ -235,6 +240,74 @@
       },
       "older": [],
       "track": "tool-design",
+      "unattributed_exclusions": 0
+    },
+    {
+      "current": {
+        "baseline": {
+          "ci_high": 1.0,
+          "ci_low": 0.757506,
+          "cost_per_solved_usd": 0.002824,
+          "mean_cost_usd": 0.002824,
+          "n": 12,
+          "passed": 12,
+          "rate": 1.0
+        },
+        "baseline_hash": "3016aba7e85c",
+        "ceiling": false,
+        "current": true,
+        "days": 1,
+        "delta_cost_usd": {
+          "high": -1e-06,
+          "low": -0.00086,
+          "mean": -0.000422,
+          "verdict": "variant lower"
+        },
+        "delta_output_tokens": {
+          "high": 144.583333,
+          "low": -243.0,
+          "mean": -56.583333,
+          "verdict": "no detectable difference"
+        },
+        "delta_pass_pp": {
+          "high": 10.376225,
+          "low": -44.803086,
+          "mean": -16.666667,
+          "verdict": "no detectable difference"
+        },
+        "delta_turns": {
+          "high": -0.083333,
+          "low": -1.75,
+          "mean": -0.916667,
+          "verdict": "variant lower"
+        },
+        "description": "max_turns: 15 \u2192 6",
+        "excluded": {
+          "error": 0,
+          "tampered": 0,
+          "unpaired": 0
+        },
+        "first_date": "2026-11-04",
+        "last_date": "2026-11-04",
+        "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
+        "noise_floor": false,
+        "pairs": 12,
+        "question": "How much does cutting the turn budget from 15 to 6 hurt success?",
+        "tasks": 3,
+        "track": "turn-budget",
+        "variant": {
+          "ci_high": 0.953035,
+          "ci_low": 0.551969,
+          "cost_per_solved_usd": 0.002882,
+          "mean_cost_usd": 0.002401,
+          "n": 12,
+          "passed": 10,
+          "rate": 0.833333
+        },
+        "variant_hash": "5a96dad5b0b1"
+      },
+      "older": [],
+      "track": "turn-budget",
       "unattributed_exclusions": 0
     }
   ],

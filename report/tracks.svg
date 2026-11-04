@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 182" width="760" height="182" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 212" width="760" height="212" role="img" aria-labelledby="title desc">
 <title id="title">Variant minus baseline by track</title>
-<desc id="desc">Point estimates with 95% intervals, variant minus baseline. aa-test: pass 0.0 pp, cost 0.0000 USD; model-comparison: pass 0.0 pp, cost 0.0176 USD; tool-design: pass -8.3 pp, cost -0.0006 USD</desc>
+<desc id="desc">Point estimates with 95% intervals, variant minus baseline. aa-test: pass 0.0 pp, cost 0.0000 USD; model-comparison: pass 0.0 pp, cost 0.0176 USD; tool-design: pass -8.3 pp, cost -0.0006 USD; turn-budget: pass -16.7 pp, cost -0.0004 USD</desc>
 <style>
   :root { --fg: #57606a; --grid: #afb8c1; --accent: #0969da; --band: rgba(140,149,159,0.18); }
   @media (prefers-color-scheme: dark) {
@@ -21,30 +21,35 @@
 <text x="160.0" y="77.0" text-anchor="end">aa-test (noise floor)</text>
 <text x="160.0" y="107.0" text-anchor="end">model-comparison</text>
 <text x="160.0" y="137.0" text-anchor="end">tool-design</text>
+<text x="160.0" y="167.0" text-anchor="end">turn-budget</text>
 <text class="head" x="300.0" y="22.0" text-anchor="middle">Delta pass rate (pp)</text>
-<line class="zero" x1="300.0" y1="52.0" x2="300.0" y2="154.0"/>
-<line class="axis" x1="170.0" y1="154.0" x2="430.0" y2="154.0"/>
-<text class="small" x="170.0" y="168.0" text-anchor="start">-38.9</text>
-<text class="small" x="300.0" y="168.0" text-anchor="middle">0</text>
-<text class="small" x="430.0" y="168.0" text-anchor="end">38.9</text>
-<line class="whisker" x1="219.0" y1="73.0" x2="381.0" y2="73.0"/>
-<line class="whisker" x1="219.0" y1="68.0" x2="219.0" y2="78.0"/>
-<line class="whisker" x1="381.0" y1="68.0" x2="381.0" y2="78.0"/>
+<line class="zero" x1="300.0" y1="52.0" x2="300.0" y2="184.0"/>
+<line class="axis" x1="170.0" y1="184.0" x2="430.0" y2="184.0"/>
+<text class="small" x="170.0" y="198.0" text-anchor="start">-49.3</text>
+<text class="small" x="300.0" y="198.0" text-anchor="middle">0</text>
+<text class="small" x="430.0" y="198.0" text-anchor="end">49.3</text>
+<line class="whisker" x1="236.0" y1="73.0" x2="364.0" y2="73.0"/>
+<line class="whisker" x1="236.0" y1="68.0" x2="236.0" y2="78.0"/>
+<line class="whisker" x1="364.0" y1="68.0" x2="364.0" y2="78.0"/>
 <circle class="point" cx="300.0" cy="73.0" r="4"/>
-<line class="whisker" x1="219.0" y1="103.0" x2="381.0" y2="103.0"/>
-<line class="whisker" x1="219.0" y1="98.0" x2="219.0" y2="108.0"/>
-<line class="whisker" x1="381.0" y1="98.0" x2="381.0" y2="108.0"/>
+<line class="whisker" x1="236.0" y1="103.0" x2="364.0" y2="103.0"/>
+<line class="whisker" x1="236.0" y1="98.0" x2="236.0" y2="108.0"/>
+<line class="whisker" x1="364.0" y1="98.0" x2="364.0" y2="108.0"/>
 <circle class="point" cx="300.0" cy="103.0" r="4"/>
-<line class="whisker" x1="181.8" y1="133.0" x2="356.3" y2="133.0"/>
-<line class="whisker" x1="181.8" y1="128.0" x2="181.8" y2="138.0"/>
-<line class="whisker" x1="356.3" y1="128.0" x2="356.3" y2="138.0"/>
-<circle class="point" cx="272.2" cy="133.0" r="4"/>
+<line class="whisker" x1="206.7" y1="133.0" x2="344.5" y2="133.0"/>
+<line class="whisker" x1="206.7" y1="128.0" x2="206.7" y2="138.0"/>
+<line class="whisker" x1="344.5" y1="128.0" x2="344.5" y2="138.0"/>
+<circle class="point" cx="278.0" cy="133.0" r="4"/>
+<line class="whisker" x1="181.8" y1="163.0" x2="327.4" y2="163.0"/>
+<line class="whisker" x1="181.8" y1="158.0" x2="181.8" y2="168.0"/>
+<line class="whisker" x1="327.4" y1="158.0" x2="327.4" y2="168.0"/>
+<circle class="point" cx="256.0" cy="163.0" r="4"/>
 <text class="head" x="620.0" y="22.0" text-anchor="middle">Delta cost per attempt (USD)</text>
-<line class="zero" x1="620.0" y1="52.0" x2="620.0" y2="154.0"/>
-<line class="axis" x1="500.0" y1="154.0" x2="740.0" y2="154.0"/>
-<text class="small" x="500.0" y="168.0" text-anchor="start">-0.0216</text>
-<text class="small" x="620.0" y="168.0" text-anchor="middle">0</text>
-<text class="small" x="740.0" y="168.0" text-anchor="end">0.0216</text>
+<line class="zero" x1="620.0" y1="52.0" x2="620.0" y2="184.0"/>
+<line class="axis" x1="500.0" y1="184.0" x2="740.0" y2="184.0"/>
+<text class="small" x="500.0" y="198.0" text-anchor="start">-0.0216</text>
+<text class="small" x="620.0" y="198.0" text-anchor="middle">0</text>
+<text class="small" x="740.0" y="198.0" text-anchor="end">0.0216</text>
 <line class="whisker" x1="618.1" y1="73.0" x2="621.7" y2="73.0"/>
 <line class="whisker" x1="618.1" y1="68.0" x2="618.1" y2="78.0"/>
 <line class="whisker" x1="621.7" y1="68.0" x2="621.7" y2="78.0"/>
@@ -57,4 +62,8 @@
 <line class="whisker" x1="615.2" y1="128.0" x2="615.2" y2="138.0"/>
 <line class="whisker" x1="618.5" y1="128.0" x2="618.5" y2="138.0"/>
 <circle class="point" cx="616.8" cy="133.0" r="4"/>
+<line class="whisker" x1="615.2" y1="163.0" x2="620.0" y2="163.0"/>
+<line class="whisker" x1="615.2" y1="158.0" x2="615.2" y2="168.0"/>
+<line class="whisker" x1="620.0" y1="158.0" x2="620.0" y2="168.0"/>
+<circle class="point" cx="617.7" cy="163.0" r="4"/>
 </svg>

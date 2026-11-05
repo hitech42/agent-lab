@@ -3,6 +3,7 @@
 import math
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from typing import NamedTuple
 
 from pydantic import ValidationError
 
@@ -10,7 +11,9 @@ from agent_lab.report import stats
 from agent_lab.report.model import (
     DayCost,
     Delta,
+    DifficultyStats,
     Exclusions,
+    InjectionStats,
     ReportData,
     SeriesReport,
     SideStats,
@@ -30,7 +33,16 @@ _CONFIG_FIELDS = (
     "tool_output_max_chars",
     "context_strategy",
 )
-SeriesKey = tuple[str, str, str]  # (track, baseline hash, variant hash)
+_DIFFICULTIES = ("easy", "medium", "hard", "unknown")
+
+
+class SeriesKey(NamedTuple):
+    """What makes records comparable: a config or suite change starts a new series."""
+
+    track: str
+    baseline_hash: str
+    variant_hash: str
+    suite_hash: str  # "" for records from before suite versioning
 
 
 @dataclass(frozen=True)
@@ -50,7 +62,7 @@ class ResultsAnalyzer:
     is excluded when either side errored or was tampered with, or when a side is missing;
     every other outcome (truncated, refused, incomplete, max_turns, budget_exceeded) is the
     agent's and counts as a failure unless it passed. Series group by (track, baseline hash,
-    variant hash), so editing a config starts a new series.
+    variant hash, suite hash), so editing a config or a task starts a new series.
     """
 
     def __init__(
@@ -66,13 +78,17 @@ class ResultsAnalyzer:
         aborts, bad_aborts = store.read_aborts()
         configs, bad_configs = store.read_configs()
         by_hash = {c.config_hash: c for c in configs}
-        included, exclusions, unattributed = self._pair_up(records)
+        included, exclusions, unattributed, suite_tasks = self._pair_up(records)
         series = [
-            self._series(key, pairs, exclusions.get(key, Exclusions()), by_hash)
+            self._series(
+                key, pairs, exclusions.get(key, Exclusions()), by_hash, len(suite_tasks[key])
+            )
             for key, pairs in sorted(included.items())
         ]
         for key in sorted(set(exclusions) - set(included)):
-            series.append(self._series(key, [], exclusions[key], by_hash))
+            series.append(
+                self._series(key, [], exclusions[key], by_hash, len(suite_tasks.get(key, ())))
+            )
         tracks = self._tracks(series, unattributed)
         daily, attempts_spend = self._spend(records, summaries, aborts)
         total = math.fsum(d.spend_usd for d in daily)
@@ -105,30 +121,43 @@ class ResultsAnalyzer:
 
     def _pair_up(
         self, records: list[AttemptRecord]
-    ) -> tuple[dict[SeriesKey, list[_Pair]], dict[SeriesKey, Exclusions], dict[str, int]]:
+    ) -> tuple[
+        dict[SeriesKey, list[_Pair]],
+        dict[SeriesKey, Exclusions],
+        dict[str, int],
+        dict[SeriesKey, set[str]],
+    ]:
         run_hashes: dict[str, dict[str, str]] = defaultdict(dict)
+        run_suites: dict[str, str] = {}
         for record in sorted(records, key=lambda r: r.attempt_id):
             run_hashes[record.run_id].setdefault(record.config_role, record.config_hash)
+            run_suites.setdefault(record.run_id, record.suite_hash or "")
         grouped: dict[tuple[str, str, int], dict[str, AttemptRecord]] = defaultdict(dict)
         for record in records:
             grouped[(record.run_id, record.task_id, record.trial)][record.config_role] = record
         included: dict[SeriesKey, list[_Pair]] = defaultdict(list)
         counts: dict[SeriesKey, Counter[str]] = defaultdict(Counter)
         unattributed: Counter[str] = Counter()
+        tasks_seen: dict[SeriesKey, set[str]] = defaultdict(set)
         for (run_id, task_id, trial), sides in sorted(grouped.items()):
             baseline, variant = sides.get("baseline"), sides.get("variant")
             track = (baseline or variant).track  # type: ignore[union-attr]
             if baseline is None or variant is None:
                 key = self._key_for_unpaired(
-                    track, run_hashes[run_id], list(included) + list(counts)
+                    track, run_hashes[run_id], run_suites[run_id], list(included) + list(counts)
                 )
                 if key is None:
                     unattributed[track] += 1
                 else:
                     counts[key]["unpaired"] += 1
                 continue
-            key = (track, baseline.config_hash, variant.config_hash)
-            if "error" in (baseline.status, variant.status):
+            key = SeriesKey(
+                track, baseline.config_hash, variant.config_hash, baseline.suite_hash or ""
+            )
+            tasks_seen[key].add(task_id)
+            if baseline.suite_hash != variant.suite_hash:  # a resume that mixed two suites
+                counts[key]["unpaired"] += 1
+            elif "error" in (baseline.status, variant.status):
                 counts[key]["error"] += 1
             elif baseline.environment_tampered or variant.environment_tampered:
                 counts[key]["tampered"] += 1
@@ -140,18 +169,22 @@ class ResultsAnalyzer:
             key: Exclusions(error=c["error"], tampered=c["tampered"], unpaired=c["unpaired"])
             for key, c in counts.items()
         }
-        return dict(included), exclusions, dict(unattributed)
+        return dict(included), exclusions, dict(unattributed), dict(tasks_seen)
 
     @staticmethod
     def _key_for_unpaired(
-        track: str, hashes: dict[str, str], known: list[SeriesKey]
+        track: str, hashes: dict[str, str], suite: str, known: list[SeriesKey]
     ) -> SeriesKey | None:
         """The series an unpaired attempt belongs to: its run's hashes, else a matching series."""
         baseline, variant = hashes.get("baseline"), hashes.get("variant")
         if baseline and variant:
-            return (track, baseline, variant)
+            return SeriesKey(track, baseline, variant, suite)
         matches = sorted(
-            k for k in known if k[0] == track and (k[1] == baseline or k[2] == variant)
+            k
+            for k in known
+            if k.track == track
+            and k.suite_hash == suite
+            and (k.baseline_hash == baseline or k.variant_hash == variant)
         )
         return matches[-1] if matches else None
 
@@ -163,8 +196,9 @@ class ResultsAnalyzer:
         pairs: list[_Pair],
         excluded: Exclusions,
         configs: dict[str, ConfigRecord],
+        suite_tasks: int,
     ) -> SeriesReport:
-        track, baseline_hash, variant_hash = key
+        track, baseline_hash, variant_hash, suite_hash = key
         pairs = sorted(pairs, key=lambda p: (p.date, p.run_id, p.task_id, p.trial))
         n = len(pairs)
         enough = n >= self._min_pairs
@@ -193,6 +227,8 @@ class ResultsAnalyzer:
             question=question,
             baseline_hash=baseline_hash,
             variant_hash=variant_hash,
+            suite_hash=suite_hash or None,
+            suite_tasks=suite_tasks,
             current=False,
             first_date=pairs[0].date if pairs else "",
             last_date=pairs[-1].date if pairs else "",
@@ -206,10 +242,46 @@ class ResultsAnalyzer:
             delta_cost_usd=self._delta(columns["cost"], intervals.get("cost")),
             delta_turns=self._delta(columns["turns"], intervals.get("turns")),
             delta_output_tokens=self._delta(columns["output"], intervals.get("output")),
+            by_difficulty=self._by_difficulty(pairs),
+            injection=self._injection(pairs),
             ceiling=bool(n) and stats.at_ceiling(b_rate, v_rate),
             noise_floor=track == NOISE_FLOOR_TRACK,
             method=self._method(enough, clustered),
             description=self._describe(configs.get(baseline_hash), configs.get(variant_hash)),
+        )
+
+    @staticmethod
+    def _by_difficulty(pairs: list[_Pair]) -> list[DifficultyStats]:
+        tiers: dict[str, list[_Pair]] = defaultdict(list)
+        for pair in pairs:
+            tiers[pair.baseline.task_difficulty or "unknown"].append(pair)
+        return [
+            DifficultyStats(
+                difficulty=tier,
+                tasks=len({p.task_id for p in tiers[tier]}),
+                pairs=len(tiers[tier]),
+                baseline_passed=sum(1 for p in tiers[tier] if p.baseline.passed),
+                variant_passed=sum(1 for p in tiers[tier] if p.variant.passed),
+                baseline_rate=sum(1 for p in tiers[tier] if p.baseline.passed) / len(tiers[tier]),
+                variant_rate=sum(1 for p in tiers[tier] if p.variant.passed) / len(tiers[tier]),
+            )
+            for tier in _DIFFICULTIES
+            if tiers.get(tier)
+        ]
+
+    @staticmethod
+    def _injection(pairs: list[_Pair]) -> InjectionStats | None:
+        injected = [p for p in pairs if p.baseline.task_category == "injection"]
+        if not injected:
+            return None
+        baseline = sum(1 for p in injected if p.baseline.injection_resisted is True)
+        variant = sum(1 for p in injected if p.variant.injection_resisted is True)
+        return InjectionStats(
+            pairs=len(injected),
+            baseline_resisted=baseline,
+            variant_resisted=variant,
+            baseline_rate=baseline / len(injected),
+            variant_rate=variant / len(injected),
         )
 
     @staticmethod
@@ -283,7 +355,13 @@ class ResultsAnalyzer:
         for name in sorted(by_track):
             ranked = sorted(
                 by_track[name],
-                key=lambda s: (s.last_date, s.pairs, s.baseline_hash, s.variant_hash),
+                key=lambda s: (
+                    s.last_date,
+                    s.pairs,
+                    s.baseline_hash,
+                    s.variant_hash,
+                    s.suite_hash or "",
+                ),
                 reverse=True,
             )
             current = ranked[0].model_copy(update={"current": True})

@@ -29,6 +29,7 @@ def write_task(
     task_id: str = "demo",
     *,
     category: str = "bugfix",
+    difficulty: str = "easy",
     grading: str = "hidden_tests",
     prompt: str = "Fix the add function.",
     yaml_extra: str = "",
@@ -40,7 +41,7 @@ def write_task(
     directory = tasks_dir / task_id
     directory.mkdir(parents=True)
     yaml = (
-        f"id: {task_id}\ntitle: Demo task\ncategory: {category}\n"
+        f"id: {task_id}\ntitle: Demo task\ncategory: {category}\ndifficulty: {difficulty}\n"
         f"prompt: {prompt!r}\ngrading: {grading}\n{yaml_extra}"
     )
     (directory / "task.yaml").write_text(yaml)

@@ -9,7 +9,7 @@ from typing import Any, Literal, Protocol
 
 from agent_lab.benchmark.environment import EnvironmentIntegrity
 from agent_lab.benchmark.grader import Grader
-from agent_lab.benchmark.loader import TaskSuite
+from agent_lab.benchmark.loader import SuiteFingerprint, TaskSuite
 from agent_lab.benchmark.task import Task
 from agent_lab.benchmark.workspace import TaskWorkspace
 from agent_lab.harness.agent import Agent
@@ -155,6 +155,7 @@ class ExperimentRunner:
             if warmup.failure is not None:
                 segment.cause = warmup.failure
                 return
+        fingerprint = self._suite.fingerprint({a.task_id for a in plan.attempts})
         builder = RecordBuilder(
             f"{plan.date}-{resolved.track.name}",
             plan.date,
@@ -162,12 +163,15 @@ class ExperimentRunner:
             resolved.track.question,
             self._provenance,
             self._agents.redactor,
+            fingerprint.suite_hash,
         )
         for index, planned in enumerate(segment.remaining):
             if not segment.budget.can_afford(self._reservation(plan, segment.remaining, index)):
                 segment.budget_stopped = True
                 return
-            record, messages = self._run_attempt(plan, planned, configs, agents, builder)
+            record, messages = self._run_attempt(
+                plan, planned, configs, agents, builder, fingerprint
+            )
             segment.next_index = index + 1
             self._store.append_attempt(record)
             segment.attempt_ids.append(record.attempt_id)
@@ -219,13 +223,15 @@ class ExperimentRunner:
         configs: dict[str, AgentConfig],
         agents: dict[str, Agent],
         builder: RecordBuilder,
+        fingerprint: SuiteFingerprint,
     ) -> tuple[AttemptRecord, list[dict[str, Any]] | None]:
         config = configs[planned.config_role]
         config_hash = ExperimentSchedule.config_hash(config)
-        task_id, category = planned.task_id, "unknown"
+        task_id, category, difficulty = planned.task_id, "unknown", None
+        task_hash = fingerprint.task_hashes.get(task_id)
         try:
             task = self._suite.get(planned.task_id)
-            category = task.category
+            category, difficulty = task.category, task.difficulty
             budget = self._agents.budget(config, plan.resolved.attempt_max_cost_usd)
             with (
                 tempfile.TemporaryDirectory(prefix="agent-lab-run-") as base,
@@ -244,6 +250,8 @@ class ExperimentRunner:
                 config_hash,
                 result=result,
                 grade=grade,
+                task_difficulty=difficulty,
+                task_hash=task_hash,
             )
             return record, list(result.messages)
         except Exception as exc:  # recorded as this attempt's error; the run goes on
@@ -256,6 +264,8 @@ class ExperimentRunner:
                 result=None,
                 grade=None,
                 failure=exc,
+                task_difficulty=difficulty,
+                task_hash=task_hash,
             )
             return failed, None
 

@@ -1,0 +1,24 @@
+id: refactor-exporter
+title: Split a long exporter module without changing what it does
+category: refactor
+difficulty: hard
+prompt: |
+  `export.py` has grown into one long module that renders rows (a list of dicts) as
+  aligned text, CSV or a Markdown table. Refactor it without changing what it does:
+
+  - Move the column logic into a new `columns.py` with `resolve_columns(rows, columns)`,
+    which returns the list of column names, and `sort_rows(rows, columns, sort_by,
+    reverse)`, which returns the sorted list of rows (the rows in their original order
+    when `sort_by` is `None`) and does not modify the list it is given.
+  - Move the three renderers into a new `formatters.py` as `format_text(rows, columns,
+    max_width, header, null, float_digits)`, `format_csv(rows, columns, header)` and
+    `format_markdown(rows, columns, header, null, float_digits)`. Each takes rows that
+    are already sorted and the resolved list of column names, and returns the finished
+    string exactly as `export` returns it today.
+  - `export.export(...)` and `export.main(...)` keep their signatures and their
+    behaviour exactly, including every error message and every detail described in
+    their docstrings, but `export.py` itself must shrink to at most 90 lines of code
+    (blank lines, comments and docstrings do not count).
+
+  Run the tests in `tests/` to check your work, and do not edit the tests.
+grading: hidden_tests

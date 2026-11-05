@@ -160,10 +160,11 @@ def test_stdlib_pytest_and_project_imports_are_allowed(tmp_path: Path) -> None:
     assert validate(task).problems == []
 
 
-def sized_task(tmp_path: Path, extra_lines: int) -> Task:
+def sized_task(tmp_path: Path, extra_lines: int, difficulty: str = "easy") -> Task:
     filler = "\n".join(f"V{i} = {i}" for i in range(extra_lines)) + "\n"
     return load_task(
         tmp_path,
+        difficulty=difficulty,
         project={"calc.py": BUGGY_CALC + filler, "tests/test_calc.py": VISIBLE_TEST},
         solution={"calc.py": FIXED_CALC + filler},
     )
@@ -184,8 +185,27 @@ def test_project_within_bounds_has_no_warning(tmp_path: Path) -> None:
 def test_project_over_the_maximum_size_is_an_error(tmp_path: Path) -> None:
     report = validate(sized_task(tmp_path, 400))
     assert not report.ok
-    assert any("maximum is 200" in p for p in report.problems)
+    assert any("maximum for a easy task is 200" in p for p in report.problems)
     assert report.warnings == []
+
+
+def test_medium_tasks_have_the_same_limit_as_easy_ones(tmp_path: Path) -> None:
+    report = validate(sized_task(tmp_path, 400, "medium"))
+    assert any("maximum for a medium task is 200" in p for p in report.problems)
+
+
+def test_hard_tasks_may_be_up_to_600_lines(tmp_path: Path) -> None:
+    assert validate(sized_task(tmp_path / "a", 400, "hard")).ok
+    over = validate(sized_task(tmp_path / "b", 700, "hard"))
+    assert any("maximum for a hard task is 600" in p for p in over.problems)
+
+
+def test_the_limits_are_constructor_arguments(tmp_path: Path) -> None:
+    task = sized_task(tmp_path, 100, "easy")
+    validator = TaskValidator(
+        Grader.for_task, max_code_lines={"easy": 50, "medium": 50, "hard": 50}
+    )
+    assert any("maximum for a easy task is 50" in p for p in validator.validate(task).problems)
 
 
 def test_exact_answer_task_validates(tmp_path: Path) -> None:

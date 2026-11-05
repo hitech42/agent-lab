@@ -1,6 +1,7 @@
 """Builders for the report tests: real result files from the real writers, plus data models."""
 
 import shutil
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ from runner_support import (
 
 from agent_lab.report.model import Delta, Exclusions, SeriesReport, SideStats
 from agent_lab.runner.plan import RunPlan
+from agent_lab.runner.records import AttemptRecord
 from agent_lab.runner.storage import ResultsStore
 
 MON, TUE, WED, SUN, NEXT_TUE = "2026-11-02", "2026-11-03", "2026-11-04", "2026-11-08", "2026-11-10"
@@ -76,6 +78,15 @@ def realistic(tmp: Path) -> Path:
     return results
 
 
+def edit_records(results: Path, change: Callable[[AttemptRecord], AttemptRecord]) -> None:
+    """Rewrite every attempt record in place (tests only: real results are append-only)."""
+    for path in sorted((results / "runs").glob("*.jsonl")):
+        records = [
+            AttemptRecord.model_validate_json(line) for line in path.read_text().splitlines()
+        ]
+        path.write_text("".join(change(r).model_dump_json() + "\n" for r in records))
+
+
 def copy_results(source: Path, dest: Path) -> Path:
     shutil.copytree(source, dest)
     return dest
@@ -114,6 +125,8 @@ def series(**overrides: Any) -> SeriesReport:
         "question": "Do the structured tools beat a single bash tool?",
         "baseline_hash": "a" * 12,
         "variant_hash": "b" * 12,
+        "suite_hash": "abc123def456",
+        "suite_tasks": 3,
         "current": True,
         "first_date": "2026-11-03",
         "last_date": "2026-11-10",

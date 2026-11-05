@@ -18,7 +18,8 @@ def test_validate_tasks_on_the_real_tasks() -> None:
     assert code == 0
     assert "PASS fix-date-range" in output and "PASS add-top-flag" in output
     assert "PASS fix-csv-total" in output
-    assert "3/3 tasks valid" in output
+    assert f"{len(list(REAL_TASKS_DIR.glob('*/task.yaml')))}/" in output and "tasks valid" in output
+    assert "FAIL" not in output
 
 
 def test_validate_tasks_reports_malformed_tasks(tmp_path: Path) -> None:
@@ -49,7 +50,7 @@ def test_oversized_projects_fail(tmp_path: Path) -> None:
     )
     code, output = run(["validate-tasks", "--tasks-dir", str(tmp_path)])
     assert code == 1
-    assert "FAIL huge" in output and "maximum is 200" in output
+    assert "FAIL huge" in output and "maximum for a easy task is 200" in output
     assert "0/1 tasks valid" in output
 
 

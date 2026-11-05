@@ -5,6 +5,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from agent_lab.benchmark.grader import GradeResult
+from agent_lab.benchmark.task import Difficulty
 from agent_lab.harness.agent import AttemptResult
 from agent_lab.harness.config import AgentConfig
 from agent_lab.harness.redact import Redactor
@@ -12,6 +13,7 @@ from agent_lab.runner.plan import PlannedAttempt
 from agent_lab.runner.provenance import Provenance
 
 SCHEMA_VERSION = 1
+HASH_PATTERN = r"^[0-9a-f]{12}$"
 RecordStatus = Literal[
     "completed",
     "truncated",
@@ -45,6 +47,9 @@ class AttemptRecord(BaseModel):
     effort: str | None = None  # absent in records written before effort existed
     task_id: str
     task_category: str
+    task_difficulty: Difficulty | None = None  # absent before tiers existed
+    suite_hash: str | None = Field(default=None, pattern=HASH_PATTERN)  # absent before versioning
+    task_hash: str | None = Field(default=None, pattern=HASH_PATTERN)
     trial: int
     order: int
     status: RecordStatus
@@ -169,8 +174,10 @@ class RecordBuilder:
         question: str,
         provenance: Provenance,
         redactor: Redactor,
+        suite_hash: str | None = None,
     ) -> None:
         self._redactor = redactor
+        self._suite_hash = suite_hash
         self._run_id = run_id
         self._date = date
         self._track = track
@@ -187,6 +194,8 @@ class RecordBuilder:
         result: AttemptResult | None,
         grade: GradeResult | None,
         failure: Exception | None = None,
+        task_difficulty: Difficulty | None = None,
+        task_hash: str | None = None,
     ) -> AttemptRecord:
         """A record from a finished attempt, or from the exception that stopped it."""
         values: dict[str, Any] = {}
@@ -208,6 +217,9 @@ class RecordBuilder:
             effort=config.effort,
             task_id=task_id,
             task_category=task_category,
+            task_difficulty=task_difficulty,
+            suite_hash=self._suite_hash,
+            task_hash=task_hash,
             trial=planned.trial,
             order=planned.order,
             **self._redacted(values),

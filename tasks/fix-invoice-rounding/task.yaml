@@ -1,0 +1,11 @@
+id: fix-invoice-rounding
+title: Fix invoice amounts that are a cent off
+category: bugfix
+difficulty: medium
+prompt: |
+  Customers report that our invoices are sometimes a cent off from what they work out
+  by hand. `invoice.build_invoice` prices the lines, applies a discount and adds tax, and
+  `invoice.render` prints the result. Find the cause and fix it so that every amount
+  behaves as the docstrings in the project describe. Run the tests in `tests/` to check
+  your work, and do not edit the tests.
+grading: hidden_tests

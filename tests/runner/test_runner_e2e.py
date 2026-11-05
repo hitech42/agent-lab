@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 from runner_support import (
-    TASKS_DIR,
+    REAL_TASKS_DIR,
     build_world,
     default_responder,
     is_warmup,
@@ -19,7 +19,7 @@ from agent_lab.benchmark.grader import Grader
 
 pytestmark = pytest.mark.slow  # real grading spawns pytest subprocesses
 
-SOLUTION = (TASKS_DIR / "fix-date-range" / "solution" / "daterange.py").read_text()
+SOLUTION = (REAL_TASKS_DIR / "fix-date-range" / "solution" / "daterange.py").read_text()
 TUESDAY = "2026-11-03"  # tool-design: baseline uses the structured tools, variant only bash
 
 
@@ -45,12 +45,13 @@ def solver(on_first_request: Any = None) -> Any:
 
 
 def test_a_day_with_real_grading(tmp_path: Path) -> None:
-    plan = make_plan(TUESDAY, trials=1, tasks=["fix-date-range"])
+    plan = make_plan(TUESDAY, REAL_TASKS_DIR, trials=1, tasks=["fix-date-range"])
     world = build_world(
         tmp_path,
         plan=plan,
         responder=solver(),
         grader_factory=lambda task, integrity: Grader.for_task(task, integrity),
+        tasks_dir=REAL_TASKS_DIR,
     )
     outcome = world.runner.run(plan)
 
@@ -68,12 +69,13 @@ def test_a_day_with_real_grading(tmp_path: Path) -> None:
 
 
 def test_unfixed_attempts_fail_the_real_hidden_tests(tmp_path: Path) -> None:
-    plan = make_plan(TUESDAY, trials=1, tasks=["fix-date-range"])
+    plan = make_plan(TUESDAY, REAL_TASKS_DIR, trials=1, tasks=["fix-date-range"])
     world = build_world(
         tmp_path,
         plan=plan,
         responder=default_responder,  # answers immediately without touching the project
         grader_factory=lambda task, integrity: Grader.for_task(task, integrity),
+        tasks_dir=REAL_TASKS_DIR,
     )
     world.runner.run(plan)
     for record in world.store.read_attempts(TUESDAY)[0]:
@@ -82,7 +84,7 @@ def test_unfixed_attempts_fail_the_real_hidden_tests(tmp_path: Path) -> None:
 
 
 def test_tampering_with_site_packages_is_final_and_recorded(tmp_path: Path) -> None:
-    plan = make_plan(TUESDAY, trials=1, tasks=["fix-date-range"])
+    plan = make_plan(TUESDAY, REAL_TASKS_DIR, trials=1, tasks=["fix-date-range"])
     holder: dict[str, Path] = {}
 
     def poison(first_request_number: int) -> None:
@@ -94,6 +96,7 @@ def test_tampering_with_site_packages_is_final_and_recorded(tmp_path: Path) -> N
         plan=plan,
         responder=solver(poison),
         grader_factory=lambda task, integrity: Grader.for_task(task, integrity),
+        tasks_dir=REAL_TASKS_DIR,
     )
     holder["site"] = world.site_dir
     outcome = world.runner.run(plan)

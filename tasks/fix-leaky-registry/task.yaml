@@ -1,0 +1,13 @@
+id: fix-leaky-registry
+title: Fix jobs that leak state between schedulers
+category: bugfix
+difficulty: medium
+prompt: |
+  The `jobs` module is a tiny in-memory scheduler. The tests in `tests/` pass, but users
+  report that things go wrong in real use: a second `Scheduler` seems to know about the
+  jobs of the first one, jobs created without tags end up with tags they were never
+  given, and when two jobs share the same interval, running one of them changes when
+  the other is due. Find the causes by running the code, not just by reading the tests,
+  and fix `jobs.py` so that it behaves as its docstrings describe. Do not edit the
+  tests.
+grading: hidden_tests

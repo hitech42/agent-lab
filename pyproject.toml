@@ -48,6 +48,8 @@ mypy_path = "src"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# fixtures/ holds data, including tiny task projects with test files that must not be collected.
+norecursedirs = ["fixtures", ".*", "build", "dist", "*.egg", "__pycache__"]
 # Helper modules (not conftests) shared between test directories: task_builders, runner_support.
 pythonpath = ["tests/benchmark", "tests/runner", "tests/report"]
 markers = [

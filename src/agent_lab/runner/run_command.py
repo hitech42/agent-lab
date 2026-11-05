@@ -10,7 +10,7 @@ from typing import Literal, TextIO
 
 from agent_lab.benchmark.environment import EnvironmentIntegrity
 from agent_lab.benchmark.grader import Grader
-from agent_lab.benchmark.loader import TaskLoadError, TaskSuite, UnknownTaskError
+from agent_lab.benchmark.loader import SuiteFingerprint, TaskLoadError, TaskSuite, UnknownTaskError
 from agent_lab.benchmark.task import Task
 from agent_lab.harness.isolation import (
     CommandIsolation,
@@ -45,6 +45,12 @@ class RunArgs:
     dry_run: bool = False
     isolation: Literal["none", "linux-user"] = "none"
     isolation_user: str = LinuxUserIsolation.DEFAULT_USER
+    # Calibration overrides (scripts/calibrate.py only; not command line options): run the
+    # baseline alone, optionally on another model and under a different daily cap.
+    baseline_only: bool = False
+    model: str | None = None
+    max_cost_usd: float | None = None
+    max_attempt_cost_usd: float | None = None
 
 
 def make_isolation(args: RunArgs) -> CommandIsolation:
@@ -115,17 +121,18 @@ class RunCommand:
             schedule = ExperimentSchedule.from_yaml(args.schedule, prices)
             suite = TaskSuite.load(args.tasks_dir)
             options = PlanOptions(track=args.track, trials=args.trials, tasks=args.tasks)
-            plan = RunPlanner(schedule, suite).plan(day, options)
+            plan = self._calibrated(RunPlanner(schedule, suite).plan(day, options), args, prices)
+            fingerprint = suite.fingerprint({a.task_id for a in plan.attempts})
         except (ScheduleError, TaskLoadError, UnknownTaskError, PricingError) as exc:
             return self._error(str(exc))
         if args.resume and not args.dry_run:
-            mismatch = self._resume_mismatch(store, plan)
+            mismatch = self._resume_mismatch(store, plan, fingerprint.suite_hash)
             if mismatch is not None:
                 return self._error(mismatch)
         history, corrupt = store.read_all_attempts()
         estimator = CostEstimator(history, schedule.cost_defaults, prices)
         if args.dry_run:
-            self._print_plan(plan, estimator, corrupt, args)
+            self._print_plan(plan, estimator, corrupt, args, fingerprint)
             return 0
         try:
             agents = self._deps.agent_factory(self._deps.environ)
@@ -165,6 +172,29 @@ class RunCommand:
         return 0
 
     @staticmethod
+    def _calibrated(plan: RunPlan, args: RunArgs, prices: PriceTable) -> RunPlan:
+        """The plan with the calibration overrides of ``args`` applied (a no-op without them)."""
+        resolved = plan.resolved
+        if args.model is not None:
+            prices.price(args.model)  # PricingError for an unknown model, before any API call
+            resolved = resolved.model_copy(
+                update={
+                    "baseline": resolved.baseline.model_copy(update={"model": args.model}),
+                    "variant": resolved.variant.model_copy(update={"model": args.model}),
+                }
+            )
+        if args.max_cost_usd is not None:
+            resolved = resolved.model_copy(update={"daily_max_cost_usd": args.max_cost_usd})
+        if args.max_attempt_cost_usd is not None:
+            resolved = resolved.model_copy(
+                update={"attempt_max_cost_usd": args.max_attempt_cost_usd}
+            )
+        attempts = plan.attempts
+        if args.baseline_only:
+            attempts = [a for a in attempts if a.config_role == "baseline"]
+        return plan.model_copy(update={"resolved": resolved, "attempts": attempts})
+
+    @staticmethod
     def _argument_problem(args: RunArgs) -> str | None:
         if args.trials is not None and args.trials < 1:
             return f"--trials must be at least 1, got {args.trials}"
@@ -177,7 +207,7 @@ class RunCommand:
         return None
 
     @staticmethod
-    def _resume_mismatch(store: ResultsStore, plan: RunPlan) -> str | None:
+    def _resume_mismatch(store: ResultsStore, plan: RunPlan, suite_hash: str) -> str | None:
         """Why the day's existing results do not belong to this plan, or None if they do.
 
         Resuming appends to the same day, so every existing record and readable abort file
@@ -195,6 +225,13 @@ class RunCommand:
             return (
                 f"cannot resume {plan.date}: existing results are from {found}, "
                 f"but this plan is {run_id} (track {track})"
+            )
+        suites = {r.suite_hash for r in records} - {suite_hash}
+        if suites:
+            recorded = ", ".join(sorted(s or "none" for s in suites))
+            return (
+                f"cannot resume {plan.date}: the task suite changed since the first attempts "
+                f"were recorded (recorded {recorded}, now {suite_hash})"
             )
         expected = {
             "baseline": ExperimentSchedule.config_hash(plan.resolved.baseline),
@@ -237,12 +274,18 @@ class RunCommand:
         return self._deps.environ.get("GITHUB_ACTIONS") == "true" and args.isolation == "none"
 
     def _print_plan(
-        self, plan: RunPlan, estimator: CostEstimator, corrupt: int, args: RunArgs
+        self,
+        plan: RunPlan,
+        estimator: CostEstimator,
+        corrupt: int,
+        args: RunArgs,
+        fingerprint: SuiteFingerprint,
     ) -> None:
         resolved = plan.resolved
         say = self._say
         say(f"date: {plan.date} (ISO weekday {date.fromisoformat(plan.date).isoweekday()})")
         say(f"track: {resolved.track.name}")
+        say(f"suite: {fingerprint.suite_hash} ({len(fingerprint.task_hashes)} tasks)")
         say(f"isolation: {args.isolation}")
         say(f"question: {resolved.track.question}")
         for role, config in (("baseline", resolved.baseline), ("variant", resolved.variant)):

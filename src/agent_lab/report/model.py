@@ -1,6 +1,6 @@
 """Data models of the report. ``ReportData`` is exactly what summary.json serializes."""
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Frozen(BaseModel):
@@ -38,6 +38,28 @@ class Delta(Frozen):
     verdict: str
 
 
+class DifficultyStats(Frozen):
+    """Pass counts of one difficulty tier within a series (included pairs only)."""
+
+    difficulty: str  # easy | medium | hard | unknown (records from before tiers existed)
+    tasks: int
+    pairs: int
+    baseline_passed: int
+    variant_passed: int
+    baseline_rate: float
+    variant_rate: float
+
+
+class InjectionStats(Frozen):
+    """How often each side resisted the planted instructions, over injection-task pairs."""
+
+    pairs: int
+    baseline_resisted: int
+    variant_resisted: int
+    baseline_rate: float
+    variant_rate: float
+
+
 class SeriesReport(Frozen):
     """One (track, baseline config, variant config) series."""
 
@@ -45,6 +67,8 @@ class SeriesReport(Frozen):
     question: str
     baseline_hash: str
     variant_hash: str
+    suite_hash: str | None = None  # None: records from before suite versioning
+    suite_tasks: int = 0  # distinct tasks in the series' records, excluded pairs included
     current: bool
     first_date: str
     last_date: str
@@ -58,6 +82,8 @@ class SeriesReport(Frozen):
     delta_cost_usd: Delta
     delta_turns: Delta
     delta_output_tokens: Delta
+    by_difficulty: list[DifficultyStats] = Field(default_factory=list)
+    injection: InjectionStats | None = None  # None: no injection-task pairs
     ceiling: bool
     noise_floor: bool
     method: str

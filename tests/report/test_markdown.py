@@ -13,7 +13,13 @@ from agent_lab.report.markdown import (
     ReadmeUpdater,
     escape,
 )
-from agent_lab.report.model import Exclusions, ReportData, TrackReport
+from agent_lab.report.model import (
+    DifficultyStats,
+    Exclusions,
+    InjectionStats,
+    ReportData,
+    TrackReport,
+)
 from agent_lab.runner.storage import ResultsStore
 
 README = f"# Title\n\nintro text\n\n{START}\nold generated text\n{END}\n\n## License\n\nMIT\n"
@@ -157,7 +163,7 @@ def test_the_notes_list_the_question_the_change_and_cost_per_solved() -> None:
     text = render(data())
     note = next(line for line in text.splitlines() if line.startswith("- **tool-design**"))
     assert "tool\\_set: structured → bash\\_only" in note
-    assert "$0.0060 → $0.0060" in note and "2 day(s), 3 task(s)" in note
+    assert "$0.0060 → $0.0060" in note and "Suite `abc123def456` (3 tasks); 2 day(s)" in note
 
 
 def test_a_prompt_change_links_to_the_variants_config_file() -> None:
@@ -172,11 +178,11 @@ def test_a_missing_cost_per_solved_is_n_a() -> None:
 
 
 def test_older_series_go_in_a_collapsed_block_after_the_current_ones() -> None:
-    old = series(current=False, first_date="2026-10-01", last_date="2026-10-20")
+    old = series(current=False, first_date="2026-10-01", last_date="2026-10-20", suite_hash=None)
     text = render(data([TrackReport(track="tool-design", current=series(), older=[old])]))
     assert text.index("| tool-design |") < text.index("<details>")
     assert "<details><summary>Older series (1)" in text and text.rstrip().count("</details>") == 1
-    assert "tool-design (2026-10-01 → 2026-10-20)" in text
+    assert "tool-design (2026-10-01 → 2026-10-20, suite unversioned)" in text
 
 
 def test_chart_links_appear_only_for_charts_that_exist() -> None:
@@ -257,3 +263,69 @@ def test_the_section_for_a_realistic_results_directory(tmp_path: Path) -> None:
         "<details>" in text
         and "turn-budget" not in text.split("**Caveats**")[0].split("| Track")[1]
     )
+
+
+def tier(name: str, baseline: int, variant: int, pairs: int = 8) -> DifficultyStats:
+    return DifficultyStats(
+        difficulty=name,
+        tasks=2,
+        pairs=pairs,
+        baseline_passed=baseline,
+        variant_passed=variant,
+        baseline_rate=baseline / pairs,
+        variant_rate=variant / pairs,
+    )
+
+
+def test_the_suite_is_shown_per_track_and_unversioned_data_says_so() -> None:
+    tracks = [
+        TrackReport(
+            track="tool-design",
+            current=series(suite_hash="0123456789ab", suite_tasks=8),
+            older=[],
+        ),
+        TrackReport(
+            track="aa-test",
+            current=series(track="aa-test", suite_hash=None, suite_tasks=3),
+            older=[],
+        ),
+    ]
+    text = render(data(tracks))
+    assert "Suite `0123456789ab` (8 tasks)" in text
+    assert "Suite unversioned (3 tasks)" in text
+
+
+def test_a_difficulty_line_lists_each_tier_with_rates_and_pair_counts() -> None:
+    current = series(by_difficulty=[tier("easy", 8, 8), tier("medium", 5, 6), tier("hard", 2, 4)])
+    text = render(data([TrackReport(track="tool-design", current=current, older=[])]))
+    line = next(line for line in text.splitlines() if "By difficulty" in line)
+    assert line.startswith("  - ")  # a sub-bullet of the track's note
+    for tiers in (
+        "easy 100% \u2192 100% (8 pairs)",
+        "medium 62% \u2192 75% (8 pairs)",
+        "hard 25% \u2192 50% (8 pairs)",
+    ):
+        assert tiers in line
+    assert "pass" in line
+
+
+def test_no_difficulty_or_injection_line_without_that_data() -> None:
+    text = render(data())
+    assert "By difficulty" not in text and "Injection tasks resisted" not in text
+
+
+def test_an_injection_line_gives_counts_and_rates_for_both_sides() -> None:
+    injection = InjectionStats(
+        pairs=8, baseline_resisted=6, variant_resisted=8, baseline_rate=0.75, variant_rate=1.0
+    )
+    text = render(
+        data([TrackReport(track="tool-design", current=series(injection=injection), older=[])])
+    )
+    line = next(line for line in text.splitlines() if "Injection tasks resisted" in line)
+    assert line.startswith("  - ") and "6/8 \u2192 8/8 (75% \u2192 100%)" in line
+
+
+def test_the_caveats_say_the_subset_lines_are_small_and_have_no_intervals() -> None:
+    text = render(data())
+    assert "per-difficulty and injection lines are point rates over small subsets" in text
+    assert "no intervals" in text

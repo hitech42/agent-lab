@@ -46,3 +46,80 @@ def test_top_flag_prompt_states_input_scope_empty_input_and_usage_errors() -> No
         "exit with status 2",
     ):
         assert phrase in prompt
+
+
+def test_invoice_rounding_is_stated_in_the_docstrings() -> None:
+    money = project_source("fix-invoice-rounding", "money.py")
+    for phrase in ("rounds away from zero", "exact for any amount", '"0.125"'):
+        assert phrase in money
+    invoice = project_source("fix-invoice-rounding", "invoice.py")
+    for phrase in (
+        "rounded once, after multiplying",
+        "A negative unit price is a credit",
+        "tax is computed on the subtotal after the discount",
+        "Discount: -<amount>",
+        "no trailing newline",
+    ):
+        assert phrase in invoice
+    assert "computed once, on the whole subtotal" in project_source(
+        "fix-invoice-rounding", "tax.py"
+    )
+    assert "rounded like every other amount" in project_source(
+        "fix-invoice-rounding", "discount.py"
+    )
+
+
+def test_leaky_registry_states_isolation_and_idempotence() -> None:
+    doc = project_source("fix-leaky-registry", "jobs.py")
+    for phrase in (
+        "The caller owns the result and may modify it",
+        "never modified, and no two jobs share a tags list",
+        "Each job has its own schedule, even when jobs share an interval",
+        "Every scheduler has its own jobs",
+        "same priority are in the order they were added",
+        "calling it twice with the same ``now`` gives the same answer",
+    ):
+        assert phrase in doc
+
+
+def test_unicode_usernames_states_the_matching_rule_and_every_edge() -> None:
+    doc = project_source("unicode-usernames", "directory.py")
+    for phrase in (
+        "NFKC",
+        "``str.casefold`` (not ``str.lower``)",
+        "normalized to NFKC again",
+        "Never raises: an empty or blank name matches nobody",
+        "A user may be renamed to another spelling of the same name",
+        "When it raises, nothing changes",
+        "sorted by key (plain code point order)",
+        "An empty or blank prefix matches every user",
+    ):
+        assert phrase in doc
+
+
+def test_refactor_exporter_prompt_states_the_new_modules_and_the_size_cap() -> None:
+    prompt = " ".join(real_task("refactor-exporter").prompt.split())
+    for phrase in (
+        "resolve_columns(rows, columns)",
+        "sort_rows(rows, columns, sort_by, reverse)",
+        "format_text(rows, columns, max_width, header, null, float_digits)",
+        "format_csv(rows, columns, header)",
+        "format_markdown(rows, columns, header, null, float_digits)",
+        "at most 90 lines of code",
+        "when `sort_by` is `None`",
+    ):
+        assert phrase in prompt
+
+
+def test_settings_merge_states_removal_isolation_naming_and_conversion() -> None:
+    doc = project_source("fix-settings-merge", "settings.py")
+    for phrase in (
+        "A value of ``None`` in ``override`` removes the key",
+        "shares no dict or list with either input",
+        "split on a double underscore",
+        "a single underscore stays part of a name",
+        "a whole number with an optional leading minus sign becomes an ``int``",
+        "``true`` and ``false`` in any case become booleans",
+        "the environment (see ``parse_env``) wins over everything",
+    ):
+        assert phrase in doc

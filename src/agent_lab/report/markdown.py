@@ -84,7 +84,11 @@ class MarkdownRenderer:
             "|---|---|---|---|---|---|---|---|---|",
         ]
         for s in series:
-            label = escape(s.track) + (f" ({s.first_date} → {s.last_date})" if dated else "")
+            label = escape(s.track) + (
+                f" ({s.first_date} → {s.last_date}, suite {s.suite_hash or 'unversioned'})"
+                if dated
+                else ""
+            )
             rows.append(
                 f"| {label} | {s.pairs} ({s.excluded.total}) | {self._rate(s.baseline)} | "
                 f"{self._rate(s.variant)} | {self._delta(s.delta_pass_pp, 1)} | "
@@ -111,7 +115,7 @@ class MarkdownRenderer:
             notes.append(
                 f"- **{escape(s.track)}**: {question}Variant vs baseline: {description}. "
                 f"Cost per solved task (baseline → variant): {solved}. "
-                f"{s.days} day(s), {s.tasks} task(s)"
+                f"Suite {self._suite(s)}; {s.days} day(s)"
                 + (
                     f", {t.unattributed_exclusions} unattributed exclusion(s)"
                     if t.unattributed_exclusions
@@ -119,7 +123,26 @@ class MarkdownRenderer:
                 )
                 + "."
             )
+            if s.by_difficulty:
+                tiers = "; ".join(
+                    f"{d.difficulty} {d.baseline_rate * 100:.0f}% \u2192 "
+                    f"{d.variant_rate * 100:.0f}% ({d.pairs} pairs)"
+                    for d in s.by_difficulty
+                )
+                notes.append(f"  - By difficulty (baseline \u2192 variant pass): {tiers}")
+            if s.injection is not None:
+                i = s.injection
+                notes.append(
+                    f"  - Injection tasks resisted (baseline \u2192 variant): "
+                    f"{i.baseline_resisted}/{i.pairs} \u2192 {i.variant_resisted}/{i.pairs} "
+                    f"({i.baseline_rate * 100:.0f}% \u2192 {i.variant_rate * 100:.0f}%)"
+                )
         return notes
+
+    @staticmethod
+    def _suite(s: SeriesReport) -> str:
+        label = f"`{s.suite_hash}`" if s.suite_hash else "unversioned"
+        return f"{label} ({s.suite_tasks} tasks)"
 
     # --- cells -------------------------------------------------------------------------------
 
@@ -195,6 +218,9 @@ class MarkdownRenderer:
             f"({by_metric}), re-evaluated daily. At 95%, roughly 1 in 20 will show a difference "
             "by chance. The aa-test row compares identical configurations: it is the noise-floor "
             "reference and should show none.",
+            "- Subsets: the per-difficulty and injection lines are point rates over small subsets "
+            "of the pairs, with no intervals; do not read a difference between tiers as "
+            "significant.",
             "- Exclusions: a pair is left out when either attempt ended in `error` (an API or "
             "harness failure), was environment-tampered, or its other side never ran; the number "
             "is in parentheses. Truncated, refused, incomplete, max-turn and over-budget outcomes "

@@ -1,11 +1,16 @@
 """Load and validate task fixtures from the tasks directory."""
 
+import hashlib
+import json
 import re
+from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
 from pydantic import ValidationError
 
+from agent_lab.benchmark.manifest import DirectoryManifest
 from agent_lab.benchmark.task import Task
 
 
@@ -22,6 +27,14 @@ class TaskLoadError(Exception):
 
 class UnknownTaskError(KeyError):
     """No task with the requested id is loaded."""
+
+
+@dataclass(frozen=True)
+class SuiteFingerprint:
+    """Content hashes (12 hex) of a set of tasks: what a result was measured against."""
+
+    suite_hash: str
+    task_hashes: dict[str, str]
 
 
 class TaskSuite:
@@ -60,6 +73,39 @@ class TaskSuite:
 
     def all(self) -> list[Task]:
         return [self._tasks[task_id] for task_id in sorted(self._tasks)]
+
+    def fingerprint(self, task_ids: Iterable[str] | None = None) -> SuiteFingerprint:
+        """Hashes of the given tasks (default: all), so a changed task changes the suite hash.
+
+        A task hash covers its id, ``task.yaml``, ``project/`` and ``hidden_tests/`` (file paths
+        and contents, never ``solution/``). The suite hash covers the sorted task ids and task
+        hashes. Caches, ``.pyc`` files and ``.DS_Store`` are skipped, so a macOS checkout and CI
+        agree; modification times and the checkout location do not matter.
+        """
+        ids = sorted(set(self._tasks if task_ids is None else task_ids))
+        hashes = {task_id: self._task_hash(self.get(task_id)) for task_id in ids}
+        return SuiteFingerprint(self._digest(sorted(hashes.items())), hashes)
+
+    @classmethod
+    def _task_hash(cls, task: Task) -> str:
+        entries = sorted(
+            (path, entry.kind, entry.sha256)
+            for path, entry in DirectoryManifest.scan(task.directory).entries().items()
+            if cls._is_hashed(path)
+        )
+        return cls._digest([task.id, entries])
+
+    @staticmethod
+    def _is_hashed(path: str) -> bool:
+        name = path.rsplit("/", 1)[-1]
+        if name == ".DS_Store" or name.endswith(".pyc"):
+            return False
+        return path == "task.yaml" or path.startswith((f"{Task.PROJECT}/", f"{Task.HIDDEN_TESTS}/"))
+
+    @staticmethod
+    def _digest(value: object) -> str:
+        canonical = json.dumps(value, separators=(",", ":"), ensure_ascii=True)
+        return hashlib.sha256(canonical.encode()).hexdigest()[:12]
 
     @classmethod
     def _load_one(cls, directory: Path) -> tuple[Task | None, list[str]]:

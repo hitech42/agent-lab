@@ -55,6 +55,17 @@
           "rate": 1.0
         },
         "baseline_hash": "3016aba7e85c",
+        "by_difficulty": [
+          {
+            "baseline_passed": 12,
+            "baseline_rate": 1.0,
+            "difficulty": "unknown",
+            "pairs": 12,
+            "tasks": 3,
+            "variant_passed": 12,
+            "variant_rate": 1.0
+          }
+        ],
         "ceiling": true,
         "current": true,
         "days": 1,
@@ -89,11 +100,20 @@
           "unpaired": 0
         },
         "first_date": "2026-11-01",
+        "injection": {
+          "baseline_rate": 1.0,
+          "baseline_resisted": 4,
+          "pairs": 4,
+          "variant_rate": 1.0,
+          "variant_resisted": 4
+        },
         "last_date": "2026-11-01",
         "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
         "noise_floor": true,
         "pairs": 12,
         "question": "How large is the day-to-day noise when both configurations are identical?",
+        "suite_hash": null,
+        "suite_tasks": 3,
         "tasks": 3,
         "track": "aa-test",
         "variant": {
@@ -123,6 +143,17 @@
           "rate": 1.0
         },
         "baseline_hash": "3016aba7e85c",
+        "by_difficulty": [
+          {
+            "baseline_passed": 12,
+            "baseline_rate": 1.0,
+            "difficulty": "unknown",
+            "pairs": 12,
+            "tasks": 3,
+            "variant_passed": 12,
+            "variant_rate": 1.0
+          }
+        ],
         "ceiling": true,
         "current": true,
         "days": 1,
@@ -157,11 +188,20 @@
           "unpaired": 0
         },
         "first_date": "2026-11-02",
+        "injection": {
+          "baseline_rate": 1.0,
+          "baseline_resisted": 4,
+          "pairs": 4,
+          "variant_rate": 1.0,
+          "variant_resisted": 4
+        },
         "last_date": "2026-11-02",
         "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
         "noise_floor": false,
         "pairs": 12,
         "question": "Does claude-sonnet-5-5 solve more tasks than claude-haiku-5-5, and at what cost?",
+        "suite_hash": null,
+        "suite_tasks": 3,
         "tasks": 3,
         "track": "model-comparison",
         "variant": {
@@ -191,6 +231,17 @@
           "rate": 1.0
         },
         "baseline_hash": "3016aba7e85c",
+        "by_difficulty": [
+          {
+            "baseline_passed": 12,
+            "baseline_rate": 1.0,
+            "difficulty": "unknown",
+            "pairs": 12,
+            "tasks": 3,
+            "variant_passed": 12,
+            "variant_rate": 1.0
+          }
+        ],
         "ceiling": true,
         "current": true,
         "days": 1,
@@ -225,11 +276,20 @@
           "unpaired": 0
         },
         "first_date": "2026-11-05",
+        "injection": {
+          "baseline_rate": 1.0,
+          "baseline_resisted": 4,
+          "pairs": 4,
+          "variant_rate": 1.0,
+          "variant_resisted": 4
+        },
         "last_date": "2026-11-05",
         "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
         "noise_floor": false,
         "pairs": 12,
         "question": "Does asking the agent to write a plan before acting improve results?",
+        "suite_hash": null,
+        "suite_tasks": 3,
         "tasks": 3,
         "track": "plan-first",
         "variant": {
@@ -259,6 +319,17 @@
           "rate": 1.0
         },
         "baseline_hash": "3016aba7e85c",
+        "by_difficulty": [
+          {
+            "baseline_passed": 12,
+            "baseline_rate": 1.0,
+            "difficulty": "unknown",
+            "pairs": 12,
+            "tasks": 3,
+            "variant_passed": 11,
+            "variant_rate": 0.916667
+          }
+        ],
         "ceiling": false,
         "current": true,
         "days": 1,
@@ -293,11 +364,20 @@
           "unpaired": 0
         },
         "first_date": "2026-11-03",
+        "injection": {
+          "baseline_rate": 1.0,
+          "baseline_resisted": 4,
+          "pairs": 4,
+          "variant_rate": 1.0,
+          "variant_resisted": 4
+        },
         "last_date": "2026-11-03",
         "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
         "noise_floor": false,
         "pairs": 12,
         "question": "Do the structured tools beat a single bash tool?",
+        "suite_hash": null,
+        "suite_tasks": 3,
         "tasks": 3,
         "track": "tool-design",
         "variant": {
@@ -327,6 +407,17 @@
           "rate": 1.0
         },
         "baseline_hash": "3016aba7e85c",
+        "by_difficulty": [
+          {
+            "baseline_passed": 12,
+            "baseline_rate": 1.0,
+            "difficulty": "unknown",
+            "pairs": 12,
+            "tasks": 3,
+            "variant_passed": 10,
+            "variant_rate": 0.833333
+          }
+        ],
         "ceiling": false,
         "current": true,
         "days": 1,
@@ -361,11 +452,20 @@
           "unpaired": 0
         },
         "first_date": "2026-11-04",
+        "injection": {
+          "baseline_rate": 1.0,
+          "baseline_resisted": 4,
+          "pairs": 4,
+          "variant_rate": 1.0,
+          "variant_resisted": 4
+        },
         "last_date": "2026-11-04",
         "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
         "noise_floor": false,
         "pairs": 12,
         "question": "How much does cutting the turn budget from 15 to 6 hurt success?",
+        "suite_hash": null,
+        "suite_tasks": 3,
         "tasks": 3,
         "track": "turn-budget",
         "variant": {

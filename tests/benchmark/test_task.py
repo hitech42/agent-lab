@@ -11,6 +11,7 @@ def make(**overrides: object) -> Task:
         "id": "demo-1",
         "title": "Demo",
         "category": "bugfix",
+        "difficulty": "easy",
         "prompt": "Fix it.",
         "grading": "hidden_tests",
         "directory": Path("tasks/demo-1"),
@@ -76,3 +77,23 @@ def test_custom_protected_and_canaries() -> None:
     task = make(protected=["src/**", "*.cfg"], canaries=["PWNED.txt"])
     assert task.protected == ["src/**", "*.cfg"]
     assert task.canaries == ["PWNED.txt"]
+
+
+@pytest.mark.parametrize("difficulty", ["easy", "medium", "hard"])
+def test_difficulty_tiers(difficulty: str) -> None:
+    assert make(difficulty=difficulty).difficulty == difficulty
+
+
+def test_difficulty_is_required_and_must_be_a_known_tier() -> None:
+    with pytest.raises(ValidationError, match="difficulty"):
+        make(difficulty="impossible")
+    data: dict[str, object] = {
+        "id": "demo-1",
+        "title": "Demo",
+        "category": "bugfix",
+        "prompt": "Fix it.",
+        "grading": "hidden_tests",
+        "directory": Path("tasks/demo-1"),
+    }
+    with pytest.raises(ValidationError, match="difficulty"):
+        Task.model_validate(data)

@@ -108,7 +108,7 @@ resolved configs with their `config_hash`, the ordered plan and the cost estimat
 API calls and writes no files (no key needed).
 
 **Who writes `results/`:** only CI, and only through the daily workflow's `publish` job (see
-Daily workflow). Local runs always use `--results-dir /tmp/somewhere` so they never pollute the
+Daily workflow; the `heartbeat` job appends to `results/heartbeat.log` only). Local runs always use `--results-dir /tmp/somewhere` so they never pollute the
 repository. Transcripts
 (`.transcripts/`, gitignored) and the derived database (`*.db`, gitignored) are never committed.
 
@@ -205,6 +205,14 @@ It has two jobs so that the job that executes agent code can never push:
   committer from the repository variables `COMMIT_AUTHOR_NAME` / `COMMIT_AUTHOR_EMAIL`, which
   must be set), with the message from `agent-lab results commit-message`, then pushes; on a
   rejected push it `pull --rebase`s and retries, three pushes at most.
+- **`heartbeat`** (`contents: write`, 5 min, no environment, no key, no sandbox, no agent code, no
+  uv; runs only if the `experiment` job succeeded, `changed` is `false` and `dry_run` is false, so
+  never together with `publish`): every slot after the first of a UTC day finds the day finished
+  and has nothing to publish, so this job appends one line to `results/heartbeat.log` and commits
+  and pushes it (`chore(heartbeat): no new results for <date> (run <id>)`, same author variables
+  and push retry as `publish`), so every run shows on the contribution graph. The log is outside
+  `results/runs` and `results/configs`, so nothing reads it; it is the one file in `results/` that
+  `publish` does not write, and it is only ever appended to.
 - **Triggers:** `schedule` with eight slots per UTC day, three hours apart at non-round minutes
   (01:37, 04:53, 07:11, 10:29, 13:17, 16:41, 19:47, 22:23), and `workflow_dispatch` with `dry_run`.
   Never `push` or `pull_request`. GitHub starts scheduled runs best-effort: the first ones began

@@ -189,6 +189,41 @@ def test_the_publish_job_checks_out_main_and_downloads_the_experiments_artifact(
     assert download["with"]["name"] == "${{ needs.experiment.outputs.artifact }}"
 
 
+def test_the_heartbeat_job_runs_only_after_a_successful_run_with_nothing_to_publish() -> None:
+    job = daily()["jobs"]["heartbeat"]
+    assert job["needs"] == "experiment"
+    condition = job["if"]
+    assert "needs.experiment.result == 'success'" in condition
+    assert "needs.experiment.outputs.changed == 'false'" in condition
+    assert "inputs.dry_run != true" in condition
+    # never both: publish needs changed == 'true'
+    assert "changed == 'true'" in daily()["jobs"]["publish"]["if"]
+
+
+def test_the_heartbeat_job_can_push_but_never_sees_the_key_or_runs_agent_code() -> None:
+    job = daily()["jobs"]["heartbeat"]
+    assert job["permissions"] == {"contents": "write"} and "environment" not in job
+    text = yaml.safe_dump(job)
+    for forbidden in ("ANTHROPIC", "secrets.", "setup_sandbox", "agent-lab", "isolation", "uv "):
+        assert forbidden not in text, forbidden
+
+
+def test_the_heartbeat_job_commits_only_its_log_with_the_configured_identity() -> None:
+    steps = steps_of("heartbeat")
+    text = "\n".join(s.get("run", "") for s in steps)
+    assert re.findall(r"git add .+", text) == ["git add results/heartbeat.log"]
+    assert ">> results/heartbeat.log" in text  # appended, never rewritten
+    assert "> results/heartbeat.log" not in text.replace(">> results/heartbeat.log", "")
+    assert text.count("git push") == 1 and "git pull --rebase" in text and "1 2 3" in text
+    checkout = next(s for s in steps if str(s.get("uses", "")).startswith("actions/checkout"))
+    assert checkout["with"]["ref"] == "main"
+    env = next(s for s in steps if "git commit" in s.get("run", ""))["env"]
+    for var in ("GIT_AUTHOR", "GIT_COMMITTER"):
+        assert env[f"{var}_NAME"] == "${{ vars.COMMIT_AUTHOR_NAME }}"
+        assert env[f"{var}_EMAIL"] == "${{ vars.COMMIT_AUTHOR_EMAIL }}"
+    assert "COMMIT_AUTHOR_EMAIL" in steps[0]["env"]["EMAIL"] and "::error::" in steps[0]["run"]
+
+
 # --- pinned runner and actions ---------------------------------------------------------------
 
 WORKFLOWS = {"ci": WORKFLOW, "daily": DAILY}

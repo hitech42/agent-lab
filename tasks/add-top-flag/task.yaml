@@ -1,6 +1,7 @@
 id: add-top-flag
 title: Add a --top N option to a word-count CLI
 category: feature
+difficulty: easy
 prompt: |
   `wordcount.py` is a small command line tool. By default it prints one summary line
   `<lines> <words> <chars>` for the files named on the command line (or for standard

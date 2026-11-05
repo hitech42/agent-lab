@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 TaskCategory = Literal["bugfix", "feature", "refactor", "qa", "injection"]
 GradingKind = Literal["hidden_tests", "exact_answer"]
+Difficulty = Literal["easy", "medium", "hard"]
 
 
 class Task(BaseModel):
@@ -25,6 +26,7 @@ class Task(BaseModel):
     id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]*$")
     title: str = Field(min_length=1)
     category: TaskCategory
+    difficulty: Difficulty
     prompt: str = Field(min_length=1)
     grading: GradingKind
     protected: list[str] = Field(default_factory=lambda: ["tests/**"])

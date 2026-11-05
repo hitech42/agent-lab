@@ -29,15 +29,17 @@ directly; no agent frameworks.
   - `tracing.py` — run traces
   - `pricing.py` — `PriceTable` and cost computation
 - `src/agent_lab/benchmark/`
-  - `task.py` — `Task` model (task.yaml, data only)
-  - `loader.py` — `TaskSuite`: loads and validates task fixtures from `tasks/`
+  - `task.py` — `Task` model (task.yaml, data only; `difficulty` easy | medium | hard)
+  - `loader.py` — `TaskSuite`: loads and validates task fixtures from `tasks/`; `fingerprint()`
+    gives the suite and task content hashes (see Suite versioning)
   - `manifest.py` — `DirectoryManifest` / `ChangedFiles`: sha256 manifests and diffs (no git)
   - `workspace.py` — `TaskWorkspace`: temp copy of `project/`, `diff()`, `snapshot()`
   - `checks.py` — `ProtectedFilesCheck` and `CanaryCheck`, applied to every grade
   - `pytest_runner.py` — `PytestRunner`: hardened pytest run, JUnit parsing
   - `grader.py` — `Grader` ABC, `HiddenTestsGrader`, `ExactAnswerGrader`, `GradeResult`
   - `environment.py` — `EnvironmentIntegrity`: detects site-packages and `tasks/` changes between attempts
-  - `validation.py` — `TaskValidator`: checks a task is solvable and not already solved
+  - `validation.py` — `TaskValidator`: checks a task is solvable and not already solved, within
+    the line limit of its difficulty tier
 - `src/agent_lab/runner/`
   - `schedule.py` — `ExperimentSchedule`: validated baseline, weekday tracks, `config_hash`
   - `plan.py` — `RunPlanner`: deterministic, interleaved `RunPlan` for a date
@@ -48,6 +50,8 @@ directly; no agent frameworks.
   - `records.py` — `AttemptRecord`, `RunSummary`, `AbortRecord`, `RecordBuilder`
   - `provenance.py` — `ProvenanceReader`: git sha, lockfile hash, versions, ci|local
   - `storage.py` — `ResultsStore` (append-only results) and `TranscriptStore`
+  - `calibration.py` — `CalibrationReport`: per-task pass rate, turns and cost of a config, for
+    `scripts/calibrate.py` (see Calibration)
   - `database.py` — `ResultsDatabase`: derived SQLite database (never committed)
   - `wiring.py` — `AgentFactory`: client (`max_retries=0`, 300s request timeout), prices,
     redactor; shared with scripts
@@ -74,7 +78,7 @@ directly; no agent frameworks.
 - `results/configs/<config_hash>.json` — committed registry of every resolved config that ran
   (prompt text included, `name` excluded: exactly what the hash covers)
 - `tests/` — pytest tests
-- `scripts/` — manual scripts: `smoke.py`, `run_task.py` (real API; never run in CI) and
+- `scripts/` — manual scripts: `smoke.py`, `run_task.py`, `calibrate.py` (real API; never run in CI) and
   `setup_sandbox_user.sh` (CI: creates the sandbox user for `--isolation linux-user`)
 
 ## Conventions
@@ -90,6 +94,9 @@ directly; no agent frameworks.
 - Tunable settings (caps, timeouts, limits) are constructor arguments with defaults, not module-level constants that tests monkeypatch.
 - Result and response types are plain data (frozen dataclasses or pydantic models), not wrappers that forward to another object through properties.
 - Tooling: `uv sync`, `uv run ruff check`, `uv run ruff format`, `uv run mypy`, `uv run pytest`.
+- Runner and report tests use the tiny stand-in tasks in `tests/runner/fixtures/tasks/` (same
+  ids, categories and tiers as the first three real tasks), so they do not change when the real
+  suite does; only tests that need real grading use `tasks/`.
 - Tests marked `@pytest.mark.isolation` (`tests/isolation/`) need Linux, passwordless sudo and
   the sandbox user, and are skipped everywhere else; CI runs them in their own job with
   `uv run pytest -m isolation`. They are also `slow`.
@@ -127,9 +134,11 @@ values (models in `config/pricing.yaml`, existing prompt files in `experiments/p
    shuffled with `random.Random(<date string>)`, so a date always gives the same plan.
 4. Estimate the cost (history per config/task, else per-model defaults) and capture
    `EnvironmentIntegrity` once. With `--resume`, refuse (exit 1) if the day's existing records or
-   readable abort files belong to another run id or track, or if a role's `config_hash` differs
-   from the one already recorded (the schedule or a prompt was edited since): resuming would
-   mix configurations in one day. `--trials` must be at least 1; `--tasks` must have no empty
+   readable abort files belong to another run id or track, if a role's `config_hash` differs
+   from the one already recorded (the schedule or a prompt was edited since), or if the records'
+   `suite_hash` differs from the current suite's (a task was edited since; records written before
+   suites were versioned count as different): resuming would mix configurations or suites in
+   one day. `--trials` must be at least 1; `--tasks` must have no empty
    or duplicate ids.
 5. Register each resolved config in `results/configs/<config_hash>.json` (exclusive create,
    skipped if it exists), then warm the prompt cache with one minimal call per distinct config. Its cost counts against
@@ -274,8 +283,10 @@ change), so a PR that changes report code must include the regenerated output. T
   `error` or `environment_tampered` (infrastructure, not agent behaviour) or when a side is
   missing. `truncated`, `refused`, `incomplete`, `max_turns` and `budget_exceeded` are agent
   outcomes: they stay in and count as failures unless the attempt passed.
-- **Series:** grouped by `(track, baseline config_hash, variant config_hash)`, so editing a config
-  or prompt starts a new series. The current series per track (latest date) is shown first, older
+- **Series:** grouped by `(track, baseline config_hash, variant config_hash, suite_hash)`, so
+  editing a config, a prompt or a task starts a new series; records from before suite versioning
+  form their own "unversioned" series. A pair whose two sides disagree on the suite is excluded as
+  unpaired. The current series per track (latest date) is shown first, older
   ones in a collapsed block. Variants are described by a field diff from the configs registry
   ("system prompt changed" links to the config file). The `aa-test` track is labelled the
   noise-floor reference.
@@ -289,6 +300,11 @@ change), so a PR that changes report code must include the regenerated output. T
   point estimates with "insufficient data" and that verdict, for every interval. Verdicts use
   neutral words ("no detectable difference", "variant higher/lower") because "higher" is good for
   pass rate and bad for cost. A ceiling flag marks both sides at 95% or more pass rate.
+- **Difficulty and injection lines:** every series carries pass rates by difficulty tier (easy,
+  medium, hard, unknown for old records) and, over injection-category pairs, how often each side
+  resisted (`injection_resisted` true / injection pairs). Both are in `summary.json` and shown as
+  one sub-bullet each under the track's note, as point rates with counts and no intervals; the
+  README caveats say the subsets are small. The suite hash and task count appear in the note too.
 - **Caveats written into the README:** sample size, ceiling, the independence assumption, multiple
   comparisons (the number shown is in `summary.json` as `comparisons_shown`: roughly 1 in 20
   will differ by chance, aa-test should show none), what the exclusions mean.
@@ -301,6 +317,41 @@ change), so a PR that changes report code must include the regenerated output. T
   displays README SVGs as images, so they follow the viewer's OS/browser scheme, not GitHub's
   own theme toggle. With no results only a placeholder section and an empty `summary.json` are
   written; a chart that has nothing to draw is not written (and a stale one is removed).
+
+## Suite versioning and calibration
+
+**Suite versioning.** `TaskSuite.fingerprint(task_ids)` returns `suite_hash` and per-task
+`task_hash` (12 hex of sha256). A task hash covers the id plus the paths and contents of
+`task.yaml`, `project/` and `hidden_tests/`, never `solution/`; caches, `.pyc` and `.DS_Store` are
+skipped, so modification times, the checkout location and a macOS checkout do not matter. The
+suite hash covers the sorted task ids and task hashes of the tasks *in the plan* (everything in
+`tasks/` normally, the chosen ids with `--tasks`), computed once before the first attempt. Every
+`AttemptRecord` carries `suite_hash`, `task_hash` and `task_difficulty` (all optional, `None` in
+older records), and `--dry-run` prints `suite: <hash> (N tasks)`. Adding, removing or editing a
+task, its prompt or its hidden tests therefore starts a new report series. Editing only
+`solution/` does not.
+
+**Difficulty tiers.** `difficulty: easy | medium | hard` in `task.yaml`; the validator allows 200
+lines of code for easy and medium and 600 for hard (`TaskValidator(max_code_lines=...)`).
+
+**Calibration** (manual, real API, never CI; `scripts/calibrate.py`). Goal: baseline (haiku,
+effort medium) passes about 60-75% overall, every non-easy task inside 30-75%, the easy tasks
+kept as they are. The script runs the baseline alone on the chosen tasks (`RunArgs.baseline_only`,
+not a command line option of `agent-lab run`) into a results directory that is not `results/`
+(temporary by default), prints the plan and estimate first, stops at `--max-cost` (default $2;
+the per-attempt cap is the schedule's, or $0.50 with `--model`, `--max-attempt-cost` overrides),
+and prints per-task pass rate, mean turns and cost, totals by tier, whether the overall rate is
+inside the target, and the projected cost of a day. Running it again into the same
+`--results-dir` (each run takes the next calendar day with no results there) shows configs side
+by side, for example `--model claude-sonnet-5-5 --trials 2` to see whether Monday's comparison is
+off the ceiling. Procedure: `uv run python scripts/calibrate.py --trials 4`; adjust tasks outside
+the band (too easy: add a second cause, move the contract into a docstring, add a decoy; too
+hard: state the requirement more plainly or drop an assertion that was not really stated); re-run
+only those tasks (`--tasks`, `--trials 6` for borderline ones); once the baseline is inside the
+band run the new tasks once with Sonnet. With 4 trials a rate moves in steps of 25%, so treat
+the band as a guide. After calibration update `cost_defaults` and the Monday `trials_per_task` in
+`experiments/schedule.yaml`: the estimator falls back to `cost_defaults` for tasks without
+history.
 
 ## Sandbox isolation
 
@@ -331,7 +382,7 @@ change), so a PR that changes report code must include the regenerated output. T
 A task is a directory `tasks/<task_id>/` (id is a lowercase slug and equals the directory name):
 
 - `task.yaml`: `id`, `title`, `category` (bugfix | feature | refactor | qa | injection),
-  `prompt`, `grading` (hidden_tests | exact_answer), `protected` (globs, default
+  `difficulty` (easy | medium | hard, required), `prompt`, `grading` (hidden_tests | exact_answer), `protected` (globs, default
   `["tests/**"]`), `canaries` (paths that must NOT exist after the attempt, default `[]`),
   `expected_answer` (exact_answer only).
 - `project/`: the codebase the agent works on, including visible tests.
@@ -343,8 +394,14 @@ A task is a directory `tasks/<task_id>/` (id is a lowercase slug and equals the 
 Rules:
 
 - Task code and tests import only the standard library and pytest (the sandbox runs the
-  harness venv's interpreter). Each project is 50-200 lines of code outside `tests/`:
-  over 200 fails validation, under 50 only prints a warning.
+  harness venv's interpreter). Each project is 50-200 lines of code outside `tests/` for an
+  easy or medium task, up to 600 for a hard one: over the limit fails validation, under 50 only
+  prints a warning. Difficulty is a calibrated label (see Calibration), not a size class.
+- One difficulty lever per task, named in its design: a bug whose symptom and cause are in
+  different modules, state that leaks only when the code is run, a spec edge case the visible
+  tests miss, a refactor with hidden tests on the public API, or an injection that arrives through
+  tool output. The shipped suite has all five (see the `tasks/` ids and `tests/benchmark/
+  test_task_traceability.py`).
 - Prompts never mention hidden tests or grading (the loader rejects them). They may say
   what the visible tests are for and tell the agent not to edit them.
 - Every hidden-test assertion must be traceable to the prompt or to project docstrings/comments.

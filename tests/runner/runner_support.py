@@ -47,7 +47,8 @@ from agent_lab.runner.wiring import AgentFactory, MissingApiKeyError
 
 REPO = Path(__file__).resolve().parents[2]
 SCHEDULE_PATH = REPO / "experiments" / "schedule.yaml"
-TASKS_DIR = REPO / "tasks"
+TASKS_DIR = Path(__file__).parent / "fixtures" / "tasks"  # tiny stand-ins, same ids
+REAL_TASKS_DIR = REPO / "tasks"
 PROVENANCE = Provenance(
     git_sha="abc123",
     git_dirty=False,
@@ -68,12 +69,13 @@ def schedule() -> ExperimentSchedule:
     return ExperimentSchedule.from_yaml(SCHEDULE_PATH, prices())
 
 
-def suite() -> TaskSuite:
-    return TaskSuite.load(TASKS_DIR)
+def suite(tasks_dir: Path | None = None) -> TaskSuite:
+    return TaskSuite.load(tasks_dir or TASKS_DIR)
 
 
-def make_plan(day: str = MONDAY, **options: Any) -> RunPlan:
-    return RunPlanner(schedule(), suite()).plan(date.fromisoformat(day), PlanOptions(**options))
+def make_plan(day: str = MONDAY, tasks_dir: Path | None = None, **options: Any) -> RunPlan:
+    planner = RunPlanner(schedule(), suite(tasks_dir))
+    return planner.plan(date.fromisoformat(day), PlanOptions(**options))
 
 
 def with_caps(plan: RunPlan, daily: float | None = None, attempt: float | None = None) -> RunPlan:
@@ -260,6 +262,7 @@ def build_world(
     results_dir: Path | None = None,
     store: ResultsStore | None = None,
     grader_factory: Callable[[Task, EnvironmentIntegrity], Any] | None = None,
+    tasks_dir: Path | None = None,
 ) -> World:
     """A runner over real tasks with a fake model and a fake grader, writing under tmp_path."""
     plan = plan or make_plan(trials=1)
@@ -273,7 +276,7 @@ def build_world(
     store = store or ResultsStore(results_dir or tmp_path / "results")
     runner = ExperimentRunner(
         agents=agents,
-        suite=suite(),
+        suite=suite(tasks_dir),
         grader_factory=(
             (lambda task: grader_factory(task, integrity))
             if grader_factory
@@ -321,6 +324,7 @@ class CliWorld:
     grader: FakeGrader
     tmp_path: Path
     environ: dict[str, str]
+    command: RunCommand
 
     @property
     def results_dir(self) -> Path:
@@ -377,9 +381,10 @@ def build_cli(
         git_sha_lookup=lambda root: "abc123",  # independent of where the tests run
         git_dirty_lookup=lambda root: False,
     )
+    command = RunCommand(deps, out)
     cli = Cli(
         TaskValidator(Grader.for_task),
-        RunCommand(deps, out),
+        command,
         DbCommand(ResultsDatabase(), out),
         ResultsCommand(ResultsPublisher, CommitMessageBuilder(), out),
         ReportCommand(
@@ -394,4 +399,4 @@ def build_cli(
         ),
         out,
     )
-    return CliWorld(cli, out, client, fake_grader, tmp_path, environ)
+    return CliWorld(cli, out, client, fake_grader, tmp_path, environ, command)

@@ -3,8 +3,9 @@
 import ast
 import sys
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
+from types import MappingProxyType
 
 from pydantic import BaseModel, Field
 
@@ -29,22 +30,27 @@ class TaskValidator:
     For every task: grading fails on the untouched project, passes with solution/
     applied, the protected and canary checks are clean for the solution, the visible
     tests pass on the solved project, task code imports only the standard library and
-    pytest, and the project's code is at most 200 lines. A project under 50 lines only
+    pytest, and the project's code stays within the line limit of its difficulty tier
+    (``max_code_lines``: 200 for easy and medium, 600 for hard). A project under 50 lines only
     produces a warning.
     """
 
     MIN_CODE_LINES = 50
-    MAX_CODE_LINES = 200
+    DEFAULT_MAX_CODE_LINES: Mapping[str, int] = MappingProxyType(
+        {"easy": 200, "medium": 200, "hard": 600}
+    )
 
     def __init__(
         self,
         grader_factory: Callable[[Task], Grader],
         base_dir: Path | None = None,
         visible_timeout_s: float = 120.0,
+        max_code_lines: Mapping[str, int] = DEFAULT_MAX_CODE_LINES,
     ) -> None:
         self._grader_factory = grader_factory
         self._base_dir = base_dir
         self._visible_timeout_s = visible_timeout_s
+        self._max_code_lines = dict(max_code_lines)
 
     def validate(self, task: Task) -> ValidationReport:
         problems = [
@@ -88,10 +94,11 @@ class TaskValidator:
                         rel = path.relative_to(task.directory).as_posix()
                         problems.append(f"{rel} imports {module!r}: only stdlib and pytest allowed")
         lines = self._code_lines(task.directory / Task.PROJECT)
-        if lines > self.MAX_CODE_LINES:
+        limit = self._max_code_lines[task.difficulty]
+        if lines > limit:
             problems.append(
                 f"project has {lines} lines of code outside tests/; "
-                f"maximum is {self.MAX_CODE_LINES}"
+                f"maximum for a {task.difficulty} task is {limit}"
             )
         return problems
 
@@ -100,7 +107,7 @@ class TaskValidator:
         if lines < self.MIN_CODE_LINES:
             return [
                 f"project has only {lines} lines of code outside tests/; "
-                f"{self.MIN_CODE_LINES}-{self.MAX_CODE_LINES} is the target"
+                f"{self.MIN_CODE_LINES}-{self._max_code_lines[task.difficulty]} is the target"
             ]
         return []
 

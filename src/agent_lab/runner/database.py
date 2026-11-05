@@ -17,6 +17,7 @@ from agent_lab.runner.storage import ResultsStore
 _PAIRS_VIEW = """
 CREATE VIEW pairs AS
 SELECT b.run_id, b.date, b.track, b.task_id, b.trial,
+       b.suite_hash, b.task_difficulty,
        b.config_hash AS baseline_hash, v.config_hash AS variant_hash,
        b.status AS baseline_status, v.status AS variant_status,
        b.passed AS baseline_passed, v.passed AS variant_passed,

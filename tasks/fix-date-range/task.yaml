@@ -1,6 +1,7 @@
 id: fix-date-range
 title: Fix inclusive day counts for date ranges
 category: bugfix
+difficulty: easy
 prompt: |
   The `daterange` module in this project parses ranges such as "2026-01-28..2026-02-03"
   and counts the days they cover, both ends included. Users report wrong counts and

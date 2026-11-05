@@ -56,6 +56,10 @@ class DirectoryManifest:
                 entries[cls._rel(root, path)] = cls._entry(path)
         return cls(entries)
 
+    def entries(self) -> dict[str, ManifestEntry]:
+        """A copy of the relative path -> entry mapping."""
+        return dict(self._entries)
+
     def diff_against(self, current: DirectoryManifest) -> ChangedFiles:
         """What changed going from this (baseline) manifest to ``current``."""
         before, after = self._entries, current._entries

@@ -148,5 +148,20 @@ def test_prompts_must_not_mention_hidden_tests_or_grading(tmp_path: Path, prompt
 
 
 def test_real_tasks_load() -> None:
-    ids = [t.id for t in TaskSuite.load(REAL_TASKS_DIR).all()]
-    assert ids == ["add-top-flag", "fix-csv-total", "fix-date-range"]
+    tasks = TaskSuite.load(REAL_TASKS_DIR).all()
+    assert [t.id for t in tasks] == [
+        "add-top-flag",
+        "fix-csv-total",
+        "fix-date-range",
+        "fix-invoice-rounding",
+        "fix-leaky-registry",
+        "fix-settings-merge",
+        "refactor-exporter",
+        "unicode-usernames",
+    ]
+    tiers = {t.id: t.difficulty for t in tasks}
+    assert [i for i, d in tiers.items() if d == "easy"] == [
+        "add-top-flag",
+        "fix-csv-total",
+        "fix-date-range",
+    ]

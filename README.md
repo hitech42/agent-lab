@@ -30,19 +30,21 @@ workflow; it states the data range it covers.
 <!-- agent-lab:report:start -->
 ## Results
 
-Data through **2026-11-04** · 4 day(s) run · 96 attempts · **$0.4653** total spend (attempts $0.4626 + warm-ups $0.0027).
+Data through **2026-11-05** · 5 day(s) run · 120 attempts · **$0.5393** total spend (attempts $0.5364 + warm-ups $0.0028).
 
-Latest day: eval\(turn-budget\): baseline 12/12 vs variant 10/12 passed, $0.0628 \[completed\]
+Latest day: eval\(plan-first\): baseline 12/12 vs variant 12/12 passed, $0.0740 \[completed\]
 
 | Track | Pairs (excl.) | Baseline pass | Variant pass | Δ pass (pp) | Δ cost / attempt | Δ turns | Verdict | Flags |
 |---|---|---|---|---|---|---|---|---|
 | aa-test | 12 (0) | 100% [76–100] | 100% [76–100] | +0.0 [-24.2, +24.2] | +$0.0000 [-$0.0003, +$0.0003] | +0.1 [-0.7, +0.8] | pass: no detectable difference; cost: no detectable difference | ceiling, noise-floor reference |
 | model-comparison | 12 (0) | 100% [76–100] | 100% [76–100] | +0.0 [-24.2, +24.2] | +$0.0176 [+$0.0159, +$0.0196] | -3.0 [-4.0, -2.1] | pass: no detectable difference; cost: variant higher | ceiling |
+| plan-first | 12 (0) | 100% [76–100] | 100% [76–100] | +0.0 [-24.2, +24.2] | +$0.0001 [-$0.0004, +$0.0004] | -0.2 [-1.1, +0.4] | pass: no detectable difference; cost: no detectable difference | ceiling |
 | tool-design | 12 (0) | 100% [76–100] | 92% [65–99] | -8.3 [-35.4, +16.9] | -$0.0006 [-$0.0009, -$0.0003] | -1.8 [-2.3, -1.3] | pass: no detectable difference; cost: variant lower |  |
 | turn-budget | 12 (0) | 100% [76–100] | 83% [55–95] | -16.7 [-44.8, +10.4] | -$0.0004 [-$0.0009, +$0.0000] | -0.9 [-1.8, -0.1] | pass: no detectable difference; cost: variant lower |  |
 
 - **aa-test**: How large is the day-to-day noise when both configurations are identical? Variant vs baseline: identical configs. Cost per solved task (baseline → variant): $0.0026 → $0.0026. 1 day(s), 3 task(s).
 - **model-comparison**: Does claude-sonnet-5-5 solve more tasks than claude-haiku-5-5, and at what cost? Variant vs baseline: model: claude-haiku-5-5 → claude-sonnet-5-5. Cost per solved task (baseline → variant): $0.0028 → $0.0203. 1 day(s), 3 task(s).
+- **plan-first**: Does asking the agent to write a plan before acting improve results? Variant vs baseline: [system prompt changed](results/configs/f155db74474c.json). Cost per solved task (baseline → variant): $0.0030 → $0.0031. 1 day(s), 3 task(s).
 - **tool-design**: Do the structured tools beat a single bash tool? Variant vs baseline: tool\_set: structured → bash\_only. Cost per solved task (baseline → variant): $0.0028 → $0.0024. 1 day(s), 3 task(s).
 - **turn-budget**: How much does cutting the turn budget from 15 to 6 hurt success? Variant vs baseline: max\_turns: 15 → 6. Cost per solved task (baseline → variant): $0.0028 → $0.0029. 1 day(s), 3 task(s).
 
@@ -56,7 +58,7 @@ Latest day: eval\(turn-budget\): baseline 12/12 vs variant 10/12 passed, $0.0628
 - Sample size: a series with fewer than 10 included pairs shows point estimates only ("insufficient data"). Intervals are wide until a series has many days of data.
 - Ceiling: when both sides pass at least 95% of attempts, a pass-rate comparison cannot show an improvement; look at cost and turns instead.
 - Independence: trials of the same task are correlated, so treating pairs as independent understates uncertainty with few tasks. A task-clustered bootstrap is used automatically for a series with at least 8 tasks.
-- Multiple comparisons: 12 comparisons are shown (cost: 4, pass: 4, turns: 4), re-evaluated daily. At 95%, roughly 1 in 20 will show a difference by chance. The aa-test row compares identical configurations: it is the noise-floor reference and should show none.
+- Multiple comparisons: 15 comparisons are shown (cost: 5, pass: 5, turns: 5), re-evaluated daily. At 95%, roughly 1 in 20 will show a difference by chance. The aa-test row compares identical configurations: it is the noise-floor reference and should show none.
 - Exclusions: a pair is left out when either attempt ended in `error` (an API or harness failure), was environment-tampered, or its other side never ran; the number is in parentheses. Truncated, refused, incomplete, max-turn and over-budget outcomes are agent outcomes: they stay in and count as failures unless the attempt passed.
 - Method: pass rate: Newcombe hybrid score interval \(paired, method 10\); cost, turns, output tokens: pair percentile bootstrap.
 - Charts are SVGs that follow your OS/browser colour scheme, which can differ from GitHub's own theme setting.

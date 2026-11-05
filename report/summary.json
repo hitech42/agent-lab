@@ -1,12 +1,12 @@
 {
-  "attempts": 96,
+  "attempts": 120,
   "cluster_min_tasks": 8,
   "comparisons_by_metric": {
-    "cost": 4,
-    "pass": 4,
-    "turns": 4
+    "cost": 5,
+    "pass": 5,
+    "turns": 5
   },
-  "comparisons_shown": 12,
+  "comparisons_shown": 15,
   "daily": [
     {
       "date": "2026-11-01",
@@ -27,16 +27,21 @@
       "date": "2026-11-04",
       "spend_usd": 0.062827,
       "track": "turn-budget"
+    },
+    {
+      "date": "2026-11-05",
+      "spend_usd": 0.073995,
+      "track": "plan-first"
     }
   ],
-  "days_run": 4,
-  "latest_date": "2026-11-04",
-  "latest_day": "eval(turn-budget): baseline 12/12 vs variant 10/12 passed, $0.0628 [completed]",
+  "days_run": 5,
+  "latest_date": "2026-11-05",
+  "latest_day": "eval(plan-first): baseline 12/12 vs variant 12/12 passed, $0.0740 [completed]",
   "min_pairs": 10,
   "resamples": 2000,
-  "spend_attempts_usd": 0.462581,
-  "spend_usd": 0.465292,
-  "spend_warmups_usd": 0.002711,
+  "spend_attempts_usd": 0.536439,
+  "spend_usd": 0.539287,
+  "spend_warmups_usd": 0.002847,
   "tracks": [
     {
       "current": {
@@ -172,6 +177,74 @@
       },
       "older": [],
       "track": "model-comparison",
+      "unattributed_exclusions": 0
+    },
+    {
+      "current": {
+        "baseline": {
+          "ci_high": 1.0,
+          "ci_low": 0.757506,
+          "cost_per_solved_usd": 0.003044,
+          "mean_cost_usd": 0.003044,
+          "n": 12,
+          "passed": 12,
+          "rate": 1.0
+        },
+        "baseline_hash": "3016aba7e85c",
+        "ceiling": true,
+        "current": true,
+        "days": 1,
+        "delta_cost_usd": {
+          "high": 0.00043,
+          "low": -0.000396,
+          "mean": 6.7e-05,
+          "verdict": "no detectable difference"
+        },
+        "delta_output_tokens": {
+          "high": 475.166667,
+          "low": -242.916667,
+          "mean": 136.083333,
+          "verdict": "no detectable difference"
+        },
+        "delta_pass_pp": {
+          "high": 24.249401,
+          "low": -24.249401,
+          "mean": 0.0,
+          "verdict": "no detectable difference"
+        },
+        "delta_turns": {
+          "high": 0.416667,
+          "low": -1.083333,
+          "mean": -0.25,
+          "verdict": "no detectable difference"
+        },
+        "description": "system prompt changed",
+        "excluded": {
+          "error": 0,
+          "tampered": 0,
+          "unpaired": 0
+        },
+        "first_date": "2026-11-05",
+        "last_date": "2026-11-05",
+        "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
+        "noise_floor": false,
+        "pairs": 12,
+        "question": "Does asking the agent to write a plan before acting improve results?",
+        "tasks": 3,
+        "track": "plan-first",
+        "variant": {
+          "ci_high": 1.0,
+          "ci_low": 0.757506,
+          "cost_per_solved_usd": 0.003111,
+          "mean_cost_usd": 0.003111,
+          "n": 12,
+          "passed": 12,
+          "rate": 1.0
+        },
+        "variant_hash": "f155db74474c"
+      },
+      "older": [],
+      "track": "plan-first",
       "unattributed_exclusions": 0
     },
     {

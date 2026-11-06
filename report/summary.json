@@ -1,12 +1,12 @@
 {
-  "attempts": 120,
+  "attempts": 184,
   "cluster_min_tasks": 8,
   "comparisons_by_metric": {
-    "cost": 5,
-    "pass": 5,
-    "turns": 5
+    "cost": 6,
+    "pass": 6,
+    "turns": 6
   },
-  "comparisons_shown": 15,
+  "comparisons_shown": 18,
   "daily": [
     {
       "date": "2026-11-01",
@@ -32,16 +32,21 @@
       "date": "2026-11-05",
       "spend_usd": 0.073995,
       "track": "plan-first"
+    },
+    {
+      "date": "2026-11-06",
+      "spend_usd": 0.285048,
+      "track": "self-verify"
     }
   ],
-  "days_run": 5,
-  "latest_date": "2026-11-05",
-  "latest_day": "eval(plan-first): baseline 12/12 vs variant 12/12 passed, $0.0740 [completed]",
+  "days_run": 6,
+  "latest_date": "2026-11-06",
+  "latest_day": "eval(self-verify): baseline 29/32 vs variant 28/32 passed, $0.2850 [completed]",
   "min_pairs": 10,
   "resamples": 2000,
-  "spend_attempts_usd": 0.536439,
-  "spend_usd": 0.539287,
-  "spend_warmups_usd": 0.002847,
+  "spend_attempts_usd": 0.821349,
+  "spend_usd": 0.824335,
+  "spend_warmups_usd": 0.002986,
   "tracks": [
     {
       "current": {
@@ -305,6 +310,112 @@
       },
       "older": [],
       "track": "plan-first",
+      "unattributed_exclusions": 0
+    },
+    {
+      "current": {
+        "baseline": {
+          "ci_high": 0.967598,
+          "ci_low": 0.757818,
+          "cost_per_solved_usd": 0.004222,
+          "mean_cost_usd": 0.003826,
+          "n": 32,
+          "passed": 29,
+          "rate": 0.90625
+        },
+        "baseline_hash": "3016aba7e85c",
+        "by_difficulty": [
+          {
+            "baseline_passed": 12,
+            "baseline_rate": 1.0,
+            "difficulty": "easy",
+            "pairs": 12,
+            "tasks": 3,
+            "variant_passed": 12,
+            "variant_rate": 1.0
+          },
+          {
+            "baseline_passed": 12,
+            "baseline_rate": 1.0,
+            "difficulty": "medium",
+            "pairs": 12,
+            "tasks": 3,
+            "variant_passed": 11,
+            "variant_rate": 0.916667
+          },
+          {
+            "baseline_passed": 5,
+            "baseline_rate": 0.625,
+            "difficulty": "hard",
+            "pairs": 8,
+            "tasks": 2,
+            "variant_passed": 5,
+            "variant_rate": 0.625
+          }
+        ],
+        "ceiling": false,
+        "current": true,
+        "days": 1,
+        "delta_cost_usd": {
+          "high": 0.00254,
+          "low": 0.000386,
+          "mean": 0.001251,
+          "verdict": "variant higher"
+        },
+        "delta_output_tokens": {
+          "high": 880.28125,
+          "low": 116.25,
+          "mean": 432.375,
+          "verdict": "variant higher"
+        },
+        "delta_pass_pp": {
+          "high": 0.0,
+          "low": -9.375,
+          "mean": -3.125,
+          "verdict": "no detectable difference"
+        },
+        "delta_turns": {
+          "high": 1.34375,
+          "low": 0.1875,
+          "mean": 0.75,
+          "verdict": "variant higher"
+        },
+        "description": "system prompt changed",
+        "excluded": {
+          "error": 0,
+          "tampered": 0,
+          "unpaired": 0
+        },
+        "first_date": "2026-11-06",
+        "injection": {
+          "baseline_rate": 1.0,
+          "baseline_resisted": 8,
+          "pairs": 8,
+          "variant_rate": 1.0,
+          "variant_resisted": 8
+        },
+        "last_date": "2026-11-06",
+        "method": "task-clustered percentile bootstrap for every metric, pass rate included",
+        "noise_floor": false,
+        "pairs": 32,
+        "question": "Does requiring the agent to run tests and re-read its changes improve results?",
+        "suite_hash": "37e677db05e7",
+        "suite_tasks": 8,
+        "tasks": 8,
+        "track": "self-verify",
+        "variant": {
+          "ci_high": 0.950299,
+          "ci_low": 0.719317,
+          "cost_per_solved_usd": 0.005802,
+          "mean_cost_usd": 0.005077,
+          "n": 32,
+          "passed": 28,
+          "rate": 0.875
+        },
+        "variant_hash": "55d2bd0df8d1"
+      },
+      "older": [],
+      "track": "self-verify",
       "unattributed_exclusions": 0
     },
     {

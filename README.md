@@ -30,15 +30,16 @@ workflow; it states the data range it covers.
 <!-- agent-lab:report:start -->
 ## Results
 
-Data through **2026-11-05** · 5 day(s) run · 120 attempts · **$0.5393** total spend (attempts $0.5364 + warm-ups $0.0028).
+Data through **2026-11-06** · 6 day(s) run · 184 attempts · **$0.8243** total spend (attempts $0.8213 + warm-ups $0.0030).
 
-Latest day: eval\(plan-first\): baseline 12/12 vs variant 12/12 passed, $0.0740 \[completed\]
+Latest day: eval\(self-verify\): baseline 29/32 vs variant 28/32 passed, $0.2850 \[completed\]
 
 | Track | Pairs (excl.) | Baseline pass | Variant pass | Δ pass (pp) | Δ cost / attempt | Δ turns | Verdict | Flags |
 |---|---|---|---|---|---|---|---|---|
 | aa-test | 12 (0) | 100% [76–100] | 100% [76–100] | +0.0 [-24.2, +24.2] | +$0.0000 [-$0.0003, +$0.0003] | +0.1 [-0.7, +0.8] | pass: no detectable difference; cost: no detectable difference | ceiling, noise-floor reference |
 | model-comparison | 12 (0) | 100% [76–100] | 100% [76–100] | +0.0 [-24.2, +24.2] | +$0.0176 [+$0.0159, +$0.0196] | -3.0 [-4.0, -2.1] | pass: no detectable difference; cost: variant higher | ceiling |
 | plan-first | 12 (0) | 100% [76–100] | 100% [76–100] | +0.0 [-24.2, +24.2] | +$0.0001 [-$0.0004, +$0.0004] | -0.2 [-1.1, +0.4] | pass: no detectable difference; cost: no detectable difference | ceiling |
+| self-verify | 32 (0) | 91% [76–97] | 88% [72–95] | -3.1 [-9.4, +0.0] | +$0.0013 [+$0.0004, +$0.0025] | +0.8 [+0.2, +1.3] | pass: no detectable difference; cost: variant higher |  |
 | tool-design | 12 (0) | 100% [76–100] | 92% [65–99] | -8.3 [-35.4, +16.9] | -$0.0006 [-$0.0009, -$0.0003] | -1.8 [-2.3, -1.3] | pass: no detectable difference; cost: variant lower |  |
 | turn-budget | 12 (0) | 100% [76–100] | 83% [55–95] | -16.7 [-44.8, +10.4] | -$0.0004 [-$0.0009, +$0.0000] | -0.9 [-1.8, -0.1] | pass: no detectable difference; cost: variant lower |  |
 
@@ -51,6 +52,9 @@ Latest day: eval\(plan-first\): baseline 12/12 vs variant 12/12 passed, $0.0740 
 - **plan-first**: Does asking the agent to write a plan before acting improve results? Variant vs baseline: [system prompt changed](results/configs/f155db74474c.json). Cost per solved task (baseline → variant): $0.0030 → $0.0031. Suite unversioned (3 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): unknown 100% → 100% (12 pairs)
   - Injection tasks resisted (baseline → variant): 4/4 → 4/4 (100% → 100%)
+- **self-verify**: Does requiring the agent to run tests and re-read its changes improve results? Variant vs baseline: [system prompt changed](results/configs/55d2bd0df8d1.json). Cost per solved task (baseline → variant): $0.0042 → $0.0058. Suite `37e677db05e7` (8 tasks); 1 day(s).
+  - By difficulty (baseline → variant pass): easy 100% → 100% (12 pairs); medium 100% → 92% (12 pairs); hard 62% → 62% (8 pairs)
+  - Injection tasks resisted (baseline → variant): 8/8 → 8/8 (100% → 100%)
 - **tool-design**: Do the structured tools beat a single bash tool? Variant vs baseline: tool\_set: structured → bash\_only. Cost per solved task (baseline → variant): $0.0028 → $0.0024. Suite unversioned (3 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): unknown 100% → 92% (12 pairs)
   - Injection tasks resisted (baseline → variant): 4/4 → 4/4 (100% → 100%)
@@ -68,10 +72,10 @@ Latest day: eval\(plan-first\): baseline 12/12 vs variant 12/12 passed, $0.0740 
 - Sample size: a series with fewer than 10 included pairs shows point estimates only ("insufficient data"). Intervals are wide until a series has many days of data.
 - Ceiling: when both sides pass at least 95% of attempts, a pass-rate comparison cannot show an improvement; look at cost and turns instead.
 - Independence: trials of the same task are correlated, so treating pairs as independent understates uncertainty with few tasks. A task-clustered bootstrap is used automatically for a series with at least 8 tasks.
-- Multiple comparisons: 15 comparisons are shown (cost: 5, pass: 5, turns: 5), re-evaluated daily. At 95%, roughly 1 in 20 will show a difference by chance. The aa-test row compares identical configurations: it is the noise-floor reference and should show none.
+- Multiple comparisons: 18 comparisons are shown (cost: 6, pass: 6, turns: 6), re-evaluated daily. At 95%, roughly 1 in 20 will show a difference by chance. The aa-test row compares identical configurations: it is the noise-floor reference and should show none.
 - Subsets: the per-difficulty and injection lines are point rates over small subsets of the pairs, with no intervals; do not read a difference between tiers as significant.
 - Exclusions: a pair is left out when either attempt ended in `error` (an API or harness failure), was environment-tampered, or its other side never ran; the number is in parentheses. Truncated, refused, incomplete, max-turn and over-budget outcomes are agent outcomes: they stay in and count as failures unless the attempt passed.
-- Method: pass rate: Newcombe hybrid score interval \(paired, method 10\); cost, turns, output tokens: pair percentile bootstrap.
+- Method: pass rate: Newcombe hybrid score interval \(paired, method 10\); cost, turns, output tokens: pair percentile bootstrap; task-clustered percentile bootstrap for every metric, pass rate included.
 - Charts are SVGs that follow your OS/browser colour scheme, which can differ from GitHub's own theme setting.
 <!-- agent-lab:report:end -->
 

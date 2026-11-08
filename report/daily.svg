@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 250" width="760" height="250" role="img" aria-labelledby="title desc">
 <title id="title">Daily spend</title>
-<desc id="desc">Total spend per day in USD (attempts and warm-ups), labelled by track. 2026-11-01 aa-test $0.0633; 2026-11-02 model-comparison $0.2795; 2026-11-03 tool-design $0.0596; 2026-11-04 turn-budget $0.0628; 2026-11-05 plan-first $0.0740; 2026-11-06 self-verify $0.2850; 2026-11-07 tool-design $0.2443; 2026-11-08 aa-test $0.0861</desc>
+<desc id="desc">Total spend per day in USD (attempts and warm-ups), labelled by track. 2026-11-01 aa-test $0.0633; 2026-11-02 model-comparison $0.2795; 2026-11-03 tool-design $0.0596; 2026-11-04 turn-budget $0.0628; 2026-11-05 plan-first $0.0740; 2026-11-06 self-verify $0.2850; 2026-11-07 tool-design $0.2443; 2026-11-08 aa-test $0.0865</desc>
 <style>
   :root { --fg: #57606a; --grid: #afb8c1; --accent: #0969da; --band: rgba(140,149,159,0.18); }
   @media (prefers-color-scheme: dark) {
@@ -42,6 +42,6 @@
 <rect class="bar" x="603.5" y="100.2" width="26.0" height="89.8"/>
 <text class="small" transform="translate(619.5 96.2) rotate(-90)">tool-design</text>
 <text class="small" x="701.5" y="206.0" text-anchor="middle">11-08</text>
-<rect class="bar" x="688.5" y="158.4" width="26.0" height="31.6"/>
-<text class="small" transform="translate(704.5 154.4) rotate(-90)">aa-test</text>
+<rect class="bar" x="688.5" y="158.2" width="26.0" height="31.8"/>
+<text class="small" transform="translate(704.5 154.2) rotate(-90)">aa-test</text>
 </svg>

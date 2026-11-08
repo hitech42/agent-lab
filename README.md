@@ -30,7 +30,7 @@ workflow; it states the data range it covers.
 <!-- agent-lab:report:start -->
 ## Results
 
-Data through **2026-11-08** · 8 day(s) run · 275 attempts · **$1.1547** total spend (attempts $1.1511 + warm-ups $0.0036).
+Data through **2026-11-08** · 8 day(s) run · 275 attempts · **$1.1551** total spend (attempts $1.1511 + warm-ups $0.0040).
 
 Latest day: eval\(aa-test\): aborted \(warmup\_failed: 400\), day resumable
 

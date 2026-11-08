@@ -45,7 +45,7 @@
     },
     {
       "date": "2026-11-08",
-      "spend_usd": 0.086052,
+      "spend_usd": 0.086494,
       "track": "aa-test"
     }
   ],
@@ -55,8 +55,8 @@
   "min_pairs": 10,
   "resamples": 2000,
   "spend_attempts_usd": 1.151094,
-  "spend_usd": 1.154673,
-  "spend_warmups_usd": 0.003579,
+  "spend_usd": 1.155115,
+  "spend_warmups_usd": 0.004022,
   "tracks": [
     {
       "current": {

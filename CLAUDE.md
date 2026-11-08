@@ -222,10 +222,11 @@ It has two jobs so that the job that executes agent code can never push:
   and push retry as `publish`), so every run shows on the contribution graph. The log is outside
   `results/runs` and `results/configs`, so nothing reads it; it is the one file in `results/` that
   `publish` does not write, and it is only ever appended to.
-- **Triggers:** `schedule` with eight slots per UTC day, three hours apart at non-round minutes
-  (01:37, 04:53, 07:11, 10:29, 13:17, 16:41, 19:47, 22:23), and `workflow_dispatch` with `dry_run`.
-  Never `push` or `pull_request`. GitHub starts scheduled runs best-effort: the first ones began
-  6 to 9 hours after their slot, so there are many slots and the first to start does the day.
+- **Triggers:** `schedule` with two slots per UTC day, a primary and a backup at non-round minutes
+  (13:17, 19:47), and `workflow_dispatch` with `dry_run`. Never `push` or `pull_request`. GitHub
+  starts scheduled runs best-effort: the first ones began 6 to 9 hours after their slot, and
+  an eight-slot schedule (every three hours) was tried and reverted to two; the first slot to
+  start does the day. If a run starts after 00:00 UTC it counts for the next UTC date.
   `concurrency: daily-experiment` (no cancelling) makes each later run start after the previous
   one has published, so `--resume` sees its results: a no-op on a finished day (about 20 s), a
   continuation after an abort. Check the "Daily experiment" runs' start times against the slots

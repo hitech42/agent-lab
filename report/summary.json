@@ -1,12 +1,12 @@
 {
-  "attempts": 248,
+  "attempts": 275,
   "cluster_min_tasks": 8,
   "comparisons_by_metric": {
-    "cost": 7,
-    "pass": 7,
-    "turns": 7
+    "cost": 8,
+    "pass": 8,
+    "turns": 8
   },
-  "comparisons_shown": 21,
+  "comparisons_shown": 24,
   "daily": [
     {
       "date": "2026-11-01",
@@ -42,102 +42,209 @@
       "date": "2026-11-07",
       "spend_usd": 0.244286,
       "track": "tool-design"
+    },
+    {
+      "date": "2026-11-08",
+      "spend_usd": 0.08572,
+      "track": "aa-test"
     }
   ],
-  "days_run": 7,
-  "latest_date": "2026-11-07",
-  "latest_day": "eval(tool-design): baseline 30/32 vs variant 24/32 passed, $0.2443 [completed]",
+  "days_run": 8,
+  "latest_date": "2026-11-08",
+  "latest_day": "eval(aa-test): aborted (consecutive_errors: 400), day resumable",
   "min_pairs": 10,
   "resamples": 2000,
-  "spend_attempts_usd": 1.065484,
-  "spend_usd": 1.068621,
-  "spend_warmups_usd": 0.003137,
+  "spend_attempts_usd": 1.151094,
+  "spend_usd": 1.154341,
+  "spend_warmups_usd": 0.003248,
   "tracks": [
     {
       "current": {
         "baseline": {
-          "ci_high": 1.0,
-          "ci_low": 0.757506,
-          "cost_per_solved_usd": 0.002631,
-          "mean_cost_usd": 0.002631,
+          "ci_high": 0.953035,
+          "ci_low": 0.551969,
+          "cost_per_solved_usd": 0.004409,
+          "mean_cost_usd": 0.003674,
           "n": 12,
-          "passed": 12,
-          "rate": 1.0
+          "passed": 10,
+          "rate": 0.833333
         },
         "baseline_hash": "3016aba7e85c",
         "by_difficulty": [
           {
-            "baseline_passed": 12,
+            "baseline_passed": 6,
             "baseline_rate": 1.0,
-            "difficulty": "unknown",
-            "pairs": 12,
+            "difficulty": "easy",
+            "pairs": 6,
             "tasks": 3,
-            "variant_passed": 12,
+            "variant_passed": 6,
             "variant_rate": 1.0
+          },
+          {
+            "baseline_passed": 3,
+            "baseline_rate": 0.75,
+            "difficulty": "medium",
+            "pairs": 4,
+            "tasks": 3,
+            "variant_passed": 4,
+            "variant_rate": 1.0
+          },
+          {
+            "baseline_passed": 1,
+            "baseline_rate": 0.5,
+            "difficulty": "hard",
+            "pairs": 2,
+            "tasks": 2,
+            "variant_passed": 1,
+            "variant_rate": 0.5
           }
         ],
-        "ceiling": true,
+        "ceiling": false,
         "current": true,
         "days": 1,
         "delta_cost_usd": {
-          "high": 0.00031,
-          "low": -0.000338,
-          "mean": 6e-06,
+          "high": 0.000207,
+          "low": -0.000877,
+          "mean": -0.000311,
           "verdict": "no detectable difference"
         },
         "delta_output_tokens": {
-          "high": 71.583333,
-          "low": -11.666667,
-          "mean": 31.75,
+          "high": 571.0,
+          "low": -216.333333,
+          "mean": 114.083333,
           "verdict": "no detectable difference"
         },
         "delta_pass_pp": {
-          "high": 24.249401,
-          "low": -24.249401,
-          "mean": 0.0,
+          "high": 30.0,
+          "low": 0.0,
+          "mean": 8.333333,
           "verdict": "no detectable difference"
         },
         "delta_turns": {
-          "high": 0.833333,
-          "low": -0.666667,
-          "mean": 0.083333,
-          "verdict": "no detectable difference"
+          "high": -0.333333,
+          "low": -1.7,
+          "mean": -0.916667,
+          "verdict": "variant lower"
         },
         "description": "identical configs",
         "excluded": {
-          "error": 0,
+          "error": 1,
           "tampered": 0,
-          "unpaired": 0
+          "unpaired": 1
         },
-        "first_date": "2026-11-01",
+        "first_date": "2026-11-08",
         "injection": {
           "baseline_rate": 1.0,
-          "baseline_resisted": 4,
-          "pairs": 4,
+          "baseline_resisted": 3,
+          "pairs": 3,
           "variant_rate": 1.0,
-          "variant_resisted": 4
+          "variant_resisted": 3
         },
-        "last_date": "2026-11-01",
-        "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
+        "last_date": "2026-11-08",
+        "method": "task-clustered percentile bootstrap for every metric, pass rate included",
         "noise_floor": true,
         "pairs": 12,
         "question": "How large is the day-to-day noise when both configurations are identical?",
-        "suite_hash": null,
-        "suite_tasks": 3,
-        "tasks": 3,
+        "suite_hash": "37e677db05e7",
+        "suite_tasks": 8,
+        "tasks": 8,
         "track": "aa-test",
         "variant": {
-          "ci_high": 1.0,
-          "ci_low": 0.757506,
-          "cost_per_solved_usd": 0.002637,
-          "mean_cost_usd": 0.002637,
+          "ci_high": 0.985135,
+          "ci_low": 0.64612,
+          "cost_per_solved_usd": 0.003669,
+          "mean_cost_usd": 0.003363,
           "n": 12,
-          "passed": 12,
-          "rate": 1.0
+          "passed": 11,
+          "rate": 0.916667
         },
         "variant_hash": "3016aba7e85c"
       },
-      "older": [],
+      "older": [
+        {
+          "baseline": {
+            "ci_high": 1.0,
+            "ci_low": 0.757506,
+            "cost_per_solved_usd": 0.002631,
+            "mean_cost_usd": 0.002631,
+            "n": 12,
+            "passed": 12,
+            "rate": 1.0
+          },
+          "baseline_hash": "3016aba7e85c",
+          "by_difficulty": [
+            {
+              "baseline_passed": 12,
+              "baseline_rate": 1.0,
+              "difficulty": "unknown",
+              "pairs": 12,
+              "tasks": 3,
+              "variant_passed": 12,
+              "variant_rate": 1.0
+            }
+          ],
+          "ceiling": true,
+          "current": false,
+          "days": 1,
+          "delta_cost_usd": {
+            "high": 0.00031,
+            "low": -0.000338,
+            "mean": 6e-06,
+            "verdict": "no detectable difference"
+          },
+          "delta_output_tokens": {
+            "high": 71.583333,
+            "low": -11.666667,
+            "mean": 31.75,
+            "verdict": "no detectable difference"
+          },
+          "delta_pass_pp": {
+            "high": 24.249401,
+            "low": -24.249401,
+            "mean": 0.0,
+            "verdict": "no detectable difference"
+          },
+          "delta_turns": {
+            "high": 0.833333,
+            "low": -0.666667,
+            "mean": 0.083333,
+            "verdict": "no detectable difference"
+          },
+          "description": "identical configs",
+          "excluded": {
+            "error": 0,
+            "tampered": 0,
+            "unpaired": 0
+          },
+          "first_date": "2026-11-01",
+          "injection": {
+            "baseline_rate": 1.0,
+            "baseline_resisted": 4,
+            "pairs": 4,
+            "variant_rate": 1.0,
+            "variant_resisted": 4
+          },
+          "last_date": "2026-11-01",
+          "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
+          "noise_floor": true,
+          "pairs": 12,
+          "question": "How large is the day-to-day noise when both configurations are identical?",
+          "suite_hash": null,
+          "suite_tasks": 3,
+          "tasks": 3,
+          "track": "aa-test",
+          "variant": {
+            "ci_high": 1.0,
+            "ci_low": 0.757506,
+            "cost_per_solved_usd": 0.002637,
+            "mean_cost_usd": 0.002637,
+            "n": 12,
+            "passed": 12,
+            "rate": 1.0
+          },
+          "variant_hash": "3016aba7e85c"
+        }
+      ],
       "track": "aa-test",
       "unattributed_exclusions": 0
     },

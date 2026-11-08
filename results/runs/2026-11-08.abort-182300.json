@@ -1,0 +1,313 @@
+{
+  "schema_version": 1,
+  "run_id": "2026-11-08-aa-test",
+  "date": "2026-11-08",
+  "track": "aa-test",
+  "status": "aborted_error",
+  "started": "2026-11-08T01:30:04+00:00",
+  "finished": "2026-11-08T18:23:00+00:00",
+  "planned": 64,
+  "completed": 27,
+  "errored": 3,
+  "skipped_budget": 0,
+  "skipped_aborted": 37,
+  "skipped_attempts": [
+    {
+      "attempt_id": "2026-11-08-fix-settings-merge-variant-t2",
+      "task_id": "fix-settings-merge",
+      "config_role": "variant",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-refactor-exporter-baseline-t2",
+      "task_id": "refactor-exporter",
+      "config_role": "baseline",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-refactor-exporter-variant-t2",
+      "task_id": "refactor-exporter",
+      "config_role": "variant",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-unicode-usernames-baseline-t2",
+      "task_id": "unicode-usernames",
+      "config_role": "baseline",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-unicode-usernames-variant-t2",
+      "task_id": "unicode-usernames",
+      "config_role": "variant",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-add-top-flag-baseline-t3",
+      "task_id": "add-top-flag",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-add-top-flag-variant-t3",
+      "task_id": "add-top-flag",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-csv-total-variant-t3",
+      "task_id": "fix-csv-total",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-csv-total-baseline-t3",
+      "task_id": "fix-csv-total",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-date-range-baseline-t3",
+      "task_id": "fix-date-range",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-date-range-variant-t3",
+      "task_id": "fix-date-range",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-invoice-rounding-baseline-t3",
+      "task_id": "fix-invoice-rounding",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-invoice-rounding-variant-t3",
+      "task_id": "fix-invoice-rounding",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-leaky-registry-baseline-t3",
+      "task_id": "fix-leaky-registry",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-leaky-registry-variant-t3",
+      "task_id": "fix-leaky-registry",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-settings-merge-variant-t3",
+      "task_id": "fix-settings-merge",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-settings-merge-baseline-t3",
+      "task_id": "fix-settings-merge",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-refactor-exporter-variant-t3",
+      "task_id": "refactor-exporter",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-refactor-exporter-baseline-t3",
+      "task_id": "refactor-exporter",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-unicode-usernames-baseline-t3",
+      "task_id": "unicode-usernames",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-unicode-usernames-variant-t3",
+      "task_id": "unicode-usernames",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-add-top-flag-variant-t4",
+      "task_id": "add-top-flag",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-add-top-flag-baseline-t4",
+      "task_id": "add-top-flag",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-csv-total-variant-t4",
+      "task_id": "fix-csv-total",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-csv-total-baseline-t4",
+      "task_id": "fix-csv-total",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-date-range-baseline-t4",
+      "task_id": "fix-date-range",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-date-range-variant-t4",
+      "task_id": "fix-date-range",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-invoice-rounding-baseline-t4",
+      "task_id": "fix-invoice-rounding",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-invoice-rounding-variant-t4",
+      "task_id": "fix-invoice-rounding",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-leaky-registry-baseline-t4",
+      "task_id": "fix-leaky-registry",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-leaky-registry-variant-t4",
+      "task_id": "fix-leaky-registry",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-settings-merge-variant-t4",
+      "task_id": "fix-settings-merge",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-fix-settings-merge-baseline-t4",
+      "task_id": "fix-settings-merge",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-refactor-exporter-variant-t4",
+      "task_id": "refactor-exporter",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-refactor-exporter-baseline-t4",
+      "task_id": "refactor-exporter",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-unicode-usernames-variant-t4",
+      "task_id": "unicode-usernames",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-08-unicode-usernames-baseline-t4",
+      "task_id": "unicode-usernames",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    }
+  ],
+  "abort_count": 6,
+  "corrupt_lines": 0,
+  "warmup_cost_usd": 0.0017688,
+  "total_cost_usd": 0.08737846,
+  "estimate_usd": 0.23414530419696972,
+  "reason": "warmup_failed",
+  "error_type": "BadRequestError",
+  "error_status": 400,
+  "message": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011CgqvjLdZgrsrueuWXWtWg'}",
+  "completed_attempt_ids": [
+    "2026-11-08-add-top-flag-baseline-t1",
+    "2026-11-08-add-top-flag-variant-t1",
+    "2026-11-08-fix-csv-total-baseline-t1",
+    "2026-11-08-fix-csv-total-variant-t1",
+    "2026-11-08-fix-date-range-baseline-t1",
+    "2026-11-08-fix-date-range-variant-t1",
+    "2026-11-08-fix-invoice-rounding-baseline-t1",
+    "2026-11-08-fix-invoice-rounding-variant-t1",
+    "2026-11-08-fix-leaky-registry-baseline-t1",
+    "2026-11-08-fix-leaky-registry-variant-t1",
+    "2026-11-08-fix-settings-merge-baseline-t1",
+    "2026-11-08-fix-settings-merge-variant-t1",
+    "2026-11-08-refactor-exporter-baseline-t1",
+    "2026-11-08-refactor-exporter-variant-t1",
+    "2026-11-08-unicode-usernames-baseline-t1",
+    "2026-11-08-unicode-usernames-variant-t1",
+    "2026-11-08-add-top-flag-variant-t2",
+    "2026-11-08-add-top-flag-baseline-t2",
+    "2026-11-08-fix-csv-total-baseline-t2",
+    "2026-11-08-fix-csv-total-variant-t2",
+    "2026-11-08-fix-date-range-baseline-t2",
+    "2026-11-08-fix-date-range-variant-t2",
+    "2026-11-08-fix-invoice-rounding-variant-t2",
+    "2026-11-08-fix-invoice-rounding-baseline-t2",
+    "2026-11-08-fix-leaky-registry-baseline-t2",
+    "2026-11-08-fix-leaky-registry-variant-t2",
+    "2026-11-08-fix-settings-merge-baseline-t2"
+  ]
+}

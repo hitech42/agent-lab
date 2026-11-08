@@ -51,7 +51,7 @@
   ],
   "days_run": 8,
   "latest_date": "2026-11-08",
-  "latest_day": "eval(aa-test): aborted (consecutive_errors: 400), day resumable",
+  "latest_day": "eval(aa-test): aborted (warmup_failed: 400), day resumable",
   "min_pairs": 10,
   "resamples": 2000,
   "spend_attempts_usd": 1.151094,

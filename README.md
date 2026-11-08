@@ -32,7 +32,7 @@ workflow; it states the data range it covers.
 
 Data through **2026-11-08** · 8 day(s) run · 275 attempts · **$1.1543** total spend (attempts $1.1511 + warm-ups $0.0032).
 
-Latest day: eval\(aa-test\): aborted \(consecutive\_errors: 400\), day resumable
+Latest day: eval\(aa-test\): aborted \(warmup\_failed: 400\), day resumable
 
 | Track | Pairs (excl.) | Baseline pass | Variant pass | Δ pass (pp) | Δ cost / attempt | Δ turns | Verdict | Flags |
 |---|---|---|---|---|---|---|---|---|

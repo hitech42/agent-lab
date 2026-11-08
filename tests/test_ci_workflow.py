@@ -71,10 +71,10 @@ def test_daily_triggers_are_only_schedule_and_manual_dispatch() -> None:
     assert inputs["dry_run"]["type"] == "boolean" and inputs["dry_run"]["default"] is False
 
 
-def test_daily_has_many_evenly_spread_slots_at_non_round_minutes() -> None:
-    """GitHub starts scheduled runs late or not at all, so there are many slots a day."""
+def test_daily_has_a_primary_and_a_backup_slot_at_non_round_minutes() -> None:
+    """GitHub starts scheduled runs late or not at all, so there is a backup slot."""
     crons = [entry["cron"] for entry in daily()[True]["schedule"]]
-    assert len(crons) >= 8
+    assert len(crons) == 2
     hours = []
     for cron in crons:
         minute, hour, *rest = cron.split()
@@ -84,7 +84,7 @@ def test_daily_has_many_evenly_spread_slots_at_non_round_minutes() -> None:
     assert len(set(hours)) == len(hours)  # one slot per hour at most
     hours.sort()
     gaps = [(b - a) for a, b in zip(hours, [*hours[1:], hours[0] + 24], strict=True)]
-    assert max(gaps) <= 3  # a missed slot never leaves more than 6 hours without one
+    assert max(gaps) <= 18  # the backup is hours after the primary, not in the same hour
 
 
 def test_daily_runs_are_serialized_and_never_cancelled() -> None:

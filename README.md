@@ -9,7 +9,7 @@ attempts with hidden pytest tests, and commits the results and an updated report
 ## How it runs
 
 A scheduled GitHub Actions workflow (`.github/workflows/daily.yml`) runs the experiment from
-eight slots a day (GitHub starts scheduled runs late); every run after the first is a no-op once
+two slots a day (GitHub starts scheduled runs late); the second run is a no-op once
 the day is finished. Each weekday has
 one question (for example "does the structured tool set beat a single bash tool?"): the harness
 runs a baseline agent configuration and one variant on the same small Python tasks, several

@@ -30,22 +30,22 @@ workflow; it states the data range it covers.
 <!-- agent-lab:report:start -->
 ## Results
 
-Data through **2026-11-08** · 8 day(s) run · 275 attempts · **$1.1578** total spend (attempts $1.1511 + warm-ups $0.0067).
+Data through **2026-11-08** · 8 day(s) run · 312 attempts · **$1.3031** total spend (attempts $1.2928 + warm-ups $0.0103).
 
-Latest day: eval\(aa-test\): aborted \(warmup\_failed: 400\), day resumable
+Latest day: eval\(aa-test\): baseline 26/32 vs variant 28/32 passed, $0.2345 \[completed\]
 
 | Track | Pairs (excl.) | Baseline pass | Variant pass | Δ pass (pp) | Δ cost / attempt | Δ turns | Verdict | Flags |
 |---|---|---|---|---|---|---|---|---|
-| aa-test | 12 (2) | 83% [55–95] | 92% [65–99] | +8.3 [+0.0, +30.0] | -$0.0003 [-$0.0009, +$0.0002] | -0.9 [-1.7, -0.3] | pass: no detectable difference; cost: no detectable difference | noise-floor reference |
+| aa-test | 30 (2) | 87% [70–95] | 93% [79–98] | +6.7 [+0.0, +18.5] | -$0.0002 [-$0.0005, +$0.0002] | -0.5 [-1.1, +0.0] | pass: no detectable difference; cost: no detectable difference | noise-floor reference |
 | model-comparison | 12 (0) | 100% [76–100] | 100% [76–100] | +0.0 [-24.2, +24.2] | +$0.0176 [+$0.0159, +$0.0196] | -3.0 [-4.0, -2.1] | pass: no detectable difference; cost: variant higher | ceiling |
 | plan-first | 12 (0) | 100% [76–100] | 100% [76–100] | +0.0 [-24.2, +24.2] | +$0.0001 [-$0.0004, +$0.0004] | -0.2 [-1.1, +0.4] | pass: no detectable difference; cost: no detectable difference | ceiling |
 | self-verify | 32 (0) | 91% [76–97] | 88% [72–95] | -3.1 [-9.4, +0.0] | +$0.0013 [+$0.0004, +$0.0025] | +0.8 [+0.2, +1.3] | pass: no detectable difference; cost: variant higher |  |
 | tool-design | 32 (0) | 94% [80–98] | 75% [58–87] | -18.8 [-37.5, +0.0] | +$0.0008 [-$0.0001, +$0.0018] | +0.9 [-0.5, +2.3] | pass: no detectable difference; cost: no detectable difference |  |
 | turn-budget | 12 (0) | 100% [76–100] | 83% [55–95] | -16.7 [-44.8, +10.4] | -$0.0004 [-$0.0009, +$0.0000] | -0.9 [-1.8, -0.1] | pass: no detectable difference; cost: variant lower |  |
 
-- **aa-test**: How large is the day-to-day noise when both configurations are identical? Variant vs baseline: identical configs. Cost per solved task (baseline → variant): $0.0044 → $0.0037. Suite `37e677db05e7` (8 tasks); 1 day(s).
-  - By difficulty (baseline → variant pass): easy 100% → 100% (6 pairs); medium 75% → 100% (4 pairs); hard 50% → 50% (2 pairs)
-  - Injection tasks resisted (baseline → variant): 3/3 → 3/3 (100% → 100%)
+- **aa-test**: How large is the day-to-day noise when both configurations are identical? Variant vs baseline: identical configs. Cost per solved task (baseline → variant): $0.0044 → $0.0039. Suite `37e677db05e7` (8 tasks); 1 day(s).
+  - By difficulty (baseline → variant pass): easy 100% → 100% (12 pairs); medium 91% → 100% (11 pairs); hard 57% → 71% (7 pairs)
+  - Injection tasks resisted (baseline → variant): 7/7 → 7/7 (100% → 100%)
 - **model-comparison**: Does claude-sonnet-5-5 solve more tasks than claude-haiku-5-5, and at what cost? Variant vs baseline: model: claude-haiku-5-5 → claude-sonnet-5-5. Cost per solved task (baseline → variant): $0.0028 → $0.0203. Suite unversioned (3 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): unknown 100% → 100% (12 pairs)
   - Injection tasks resisted (baseline → variant): 4/4 → 4/4 (100% → 100%)

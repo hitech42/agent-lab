@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "run_id": "2026-11-09-model-comparison",
+  "date": "2026-11-09",
+  "track": "model-comparison",
+  "status": "completed",
+  "started": "2026-11-09T22:59:50+00:00",
+  "finished": "2026-11-09T23:16:43+00:00",
+  "planned": 64,
+  "completed": 64,
+  "errored": 0,
+  "skipped_budget": 0,
+  "skipped_aborted": 0,
+  "skipped_attempts": [],
+  "abort_count": 0,
+  "corrupt_lines": 0,
+  "warmup_cost_usd": 0.00232155,
+  "total_cost_usd": 1.25118719,
+  "estimate_usd": 1.5612234755
+}

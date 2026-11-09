@@ -1,12 +1,12 @@
 {
-  "attempts": 312,
+  "attempts": 376,
   "cluster_min_tasks": 8,
   "comparisons_by_metric": {
-    "cost": 8,
-    "pass": 8,
-    "turns": 8
+    "cost": 9,
+    "pass": 9,
+    "turns": 9
   },
-  "comparisons_shown": 24,
+  "comparisons_shown": 27,
   "daily": [
     {
       "date": "2026-11-01",
@@ -47,16 +47,21 @@
       "date": "2026-11-08",
       "spend_usd": 0.234506,
       "track": "aa-test"
+    },
+    {
+      "date": "2026-11-09",
+      "spend_usd": 1.251187,
+      "track": "model-comparison"
     }
   ],
-  "days_run": 8,
-  "latest_date": "2026-11-08",
-  "latest_day": "eval(aa-test): baseline 26/32 vs variant 28/32 passed, $0.2345 [completed]",
+  "days_run": 9,
+  "latest_date": "2026-11-09",
+  "latest_day": "eval(model-comparison): baseline 30/32 vs variant 32/32 passed, $1.2512 [completed]",
   "min_pairs": 10,
   "resamples": 2000,
-  "spend_attempts_usd": 1.292804,
-  "spend_usd": 1.303127,
-  "spend_warmups_usd": 0.010323,
+  "spend_attempts_usd": 2.54167,
+  "spend_usd": 2.554314,
+  "spend_warmups_usd": 0.012644,
   "tracks": [
     {
       "current": {
@@ -251,51 +256,69 @@
     {
       "current": {
         "baseline": {
-          "ci_high": 1.0,
-          "ci_low": 0.757506,
-          "cost_per_solved_usd": 0.002753,
-          "mean_cost_usd": 0.002753,
-          "n": 12,
-          "passed": 12,
-          "rate": 1.0
+          "ci_high": 0.982689,
+          "ci_low": 0.798529,
+          "cost_per_solved_usd": 0.003745,
+          "mean_cost_usd": 0.003511,
+          "n": 32,
+          "passed": 30,
+          "rate": 0.9375
         },
         "baseline_hash": "3016aba7e85c",
         "by_difficulty": [
           {
             "baseline_passed": 12,
             "baseline_rate": 1.0,
-            "difficulty": "unknown",
+            "difficulty": "easy",
             "pairs": 12,
             "tasks": 3,
             "variant_passed": 12,
             "variant_rate": 1.0
+          },
+          {
+            "baseline_passed": 12,
+            "baseline_rate": 1.0,
+            "difficulty": "medium",
+            "pairs": 12,
+            "tasks": 3,
+            "variant_passed": 12,
+            "variant_rate": 1.0
+          },
+          {
+            "baseline_passed": 6,
+            "baseline_rate": 0.75,
+            "difficulty": "hard",
+            "pairs": 8,
+            "tasks": 2,
+            "variant_passed": 8,
+            "variant_rate": 1.0
           }
         ],
-        "ceiling": true,
+        "ceiling": false,
         "current": true,
         "days": 1,
         "delta_cost_usd": {
-          "high": 0.019601,
-          "low": 0.015945,
-          "mean": 0.017591,
+          "high": 0.049797,
+          "low": 0.020445,
+          "mean": 0.032005,
           "verdict": "variant higher"
         },
         "delta_output_tokens": {
-          "high": -798.583333,
-          "low": -1370.25,
-          "mean": -1061.0,
+          "high": -980.875,
+          "low": -2451.65625,
+          "mean": -1624.3125,
           "verdict": "variant lower"
         },
         "delta_pass_pp": {
-          "high": 24.249401,
-          "low": -24.249401,
-          "mean": 0.0,
+          "high": 18.75,
+          "low": 0.0,
+          "mean": 6.25,
           "verdict": "no detectable difference"
         },
         "delta_turns": {
-          "high": -2.083333,
-          "low": -4.0,
-          "mean": -3.0,
+          "high": -0.59375,
+          "low": -1.96875,
+          "mean": -1.28125,
           "verdict": "variant lower"
         },
         "description": "model: claude-haiku-5-5 \u2192 claude-sonnet-5-5",
@@ -304,35 +327,119 @@
           "tampered": 0,
           "unpaired": 0
         },
-        "first_date": "2026-11-02",
+        "first_date": "2026-11-09",
         "injection": {
           "baseline_rate": 1.0,
-          "baseline_resisted": 4,
-          "pairs": 4,
+          "baseline_resisted": 8,
+          "pairs": 8,
           "variant_rate": 1.0,
-          "variant_resisted": 4
+          "variant_resisted": 8
         },
-        "last_date": "2026-11-02",
-        "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
+        "last_date": "2026-11-09",
+        "method": "task-clustered percentile bootstrap for every metric, pass rate included",
         "noise_floor": false,
-        "pairs": 12,
+        "pairs": 32,
         "question": "Does claude-sonnet-5-5 solve more tasks than claude-haiku-5-5, and at what cost?",
-        "suite_hash": null,
-        "suite_tasks": 3,
-        "tasks": 3,
+        "suite_hash": "37e677db05e7",
+        "suite_tasks": 8,
+        "tasks": 8,
         "track": "model-comparison",
         "variant": {
           "ci_high": 1.0,
-          "ci_low": 0.757506,
-          "cost_per_solved_usd": 0.020345,
-          "mean_cost_usd": 0.020345,
-          "n": 12,
-          "passed": 12,
+          "ci_low": 0.892821,
+          "cost_per_solved_usd": 0.035516,
+          "mean_cost_usd": 0.035516,
+          "n": 32,
+          "passed": 32,
           "rate": 1.0
         },
         "variant_hash": "6b01f849769a"
       },
-      "older": [],
+      "older": [
+        {
+          "baseline": {
+            "ci_high": 1.0,
+            "ci_low": 0.757506,
+            "cost_per_solved_usd": 0.002753,
+            "mean_cost_usd": 0.002753,
+            "n": 12,
+            "passed": 12,
+            "rate": 1.0
+          },
+          "baseline_hash": "3016aba7e85c",
+          "by_difficulty": [
+            {
+              "baseline_passed": 12,
+              "baseline_rate": 1.0,
+              "difficulty": "unknown",
+              "pairs": 12,
+              "tasks": 3,
+              "variant_passed": 12,
+              "variant_rate": 1.0
+            }
+          ],
+          "ceiling": true,
+          "current": false,
+          "days": 1,
+          "delta_cost_usd": {
+            "high": 0.019601,
+            "low": 0.015945,
+            "mean": 0.017591,
+            "verdict": "variant higher"
+          },
+          "delta_output_tokens": {
+            "high": -798.583333,
+            "low": -1370.25,
+            "mean": -1061.0,
+            "verdict": "variant lower"
+          },
+          "delta_pass_pp": {
+            "high": 24.249401,
+            "low": -24.249401,
+            "mean": 0.0,
+            "verdict": "no detectable difference"
+          },
+          "delta_turns": {
+            "high": -2.083333,
+            "low": -4.0,
+            "mean": -3.0,
+            "verdict": "variant lower"
+          },
+          "description": "model: claude-haiku-5-5 \u2192 claude-sonnet-5-5",
+          "excluded": {
+            "error": 0,
+            "tampered": 0,
+            "unpaired": 0
+          },
+          "first_date": "2026-11-02",
+          "injection": {
+            "baseline_rate": 1.0,
+            "baseline_resisted": 4,
+            "pairs": 4,
+            "variant_rate": 1.0,
+            "variant_resisted": 4
+          },
+          "last_date": "2026-11-02",
+          "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
+          "noise_floor": false,
+          "pairs": 12,
+          "question": "Does claude-sonnet-5-5 solve more tasks than claude-haiku-5-5, and at what cost?",
+          "suite_hash": null,
+          "suite_tasks": 3,
+          "tasks": 3,
+          "track": "model-comparison",
+          "variant": {
+            "ci_high": 1.0,
+            "ci_low": 0.757506,
+            "cost_per_solved_usd": 0.020345,
+            "mean_cost_usd": 0.020345,
+            "n": 12,
+            "passed": 12,
+            "rate": 1.0
+          },
+          "variant_hash": "6b01f849769a"
+        }
+      ],
       "track": "model-comparison",
       "unattributed_exclusions": 0
     },

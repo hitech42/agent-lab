@@ -30,9 +30,9 @@ workflow; it states the data range it covers.
 <!-- agent-lab:report:start -->
 ## Results
 
-Data through **2026-11-09** · 9 day(s) run · 376 attempts · **$2.5543** total spend (attempts $2.5417 + warm-ups $0.0126).
+Data through **2026-11-10** · 10 day(s) run · 440 attempts · **$2.8002** total spend (attempts $2.7874 + warm-ups $0.0128).
 
-Latest day: eval\(model-comparison\): baseline 30/32 vs variant 32/32 passed, $1.2512 \[completed\]
+Latest day: eval\(tool-design\): baseline 28/32 vs variant 25/32 passed, $0.2458 \[completed\]
 
 | Track | Pairs (excl.) | Baseline pass | Variant pass | Δ pass (pp) | Δ cost / attempt | Δ turns | Verdict | Flags |
 |---|---|---|---|---|---|---|---|---|
@@ -40,7 +40,7 @@ Latest day: eval\(model-comparison\): baseline 30/32 vs variant 32/32 passed, $1
 | model-comparison | 32 (0) | 94% [80–98] | 100% [89–100] | +6.2 [+0.0, +18.8] | +$0.0320 [+$0.0204, +$0.0498] | -1.3 [-2.0, -0.6] | pass: no detectable difference; cost: variant higher |  |
 | plan-first | 12 (0) | 100% [76–100] | 100% [76–100] | +0.0 [-24.2, +24.2] | +$0.0001 [-$0.0004, +$0.0004] | -0.2 [-1.1, +0.4] | pass: no detectable difference; cost: no detectable difference | ceiling |
 | self-verify | 32 (0) | 91% [76–97] | 88% [72–95] | -3.1 [-9.4, +0.0] | +$0.0013 [+$0.0004, +$0.0025] | +0.8 [+0.2, +1.3] | pass: no detectable difference; cost: variant higher |  |
-| tool-design | 32 (0) | 94% [80–98] | 75% [58–87] | -18.8 [-37.5, +0.0] | +$0.0008 [-$0.0001, +$0.0018] | +0.9 [-0.5, +2.3] | pass: no detectable difference; cost: no detectable difference |  |
+| tool-design | 64 (0) | 91% [81–96] | 77% [65–85] | -14.1 [-34.4, -1.6] | +$0.0007 [-$0.0002, +$0.0017] | +0.9 [-0.7, +2.8] | pass: variant lower; cost: no detectable difference |  |
 | turn-budget | 12 (0) | 100% [76–100] | 83% [55–95] | -16.7 [-44.8, +10.4] | -$0.0004 [-$0.0009, +$0.0000] | -0.9 [-1.8, -0.1] | pass: no detectable difference; cost: variant lower |  |
 
 - **aa-test**: How large is the day-to-day noise when both configurations are identical? Variant vs baseline: identical configs. Cost per solved task (baseline → variant): $0.0044 → $0.0039. Suite `37e677db05e7` (8 tasks); 1 day(s).
@@ -55,9 +55,9 @@ Latest day: eval\(model-comparison\): baseline 30/32 vs variant 32/32 passed, $1
 - **self-verify**: Does requiring the agent to run tests and re-read its changes improve results? Variant vs baseline: [system prompt changed](results/configs/55d2bd0df8d1.json). Cost per solved task (baseline → variant): $0.0042 → $0.0058. Suite `37e677db05e7` (8 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): easy 100% → 100% (12 pairs); medium 100% → 92% (12 pairs); hard 62% → 62% (8 pairs)
   - Injection tasks resisted (baseline → variant): 8/8 → 8/8 (100% → 100%)
-- **tool-design**: Do the structured tools beat a single bash tool? Variant vs baseline: tool\_set: structured → bash\_only. Cost per solved task (baseline → variant): $0.0037 → $0.0056. Suite `37e677db05e7` (8 tasks); 1 day(s).
-  - By difficulty (baseline → variant pass): easy 100% → 100% (12 pairs); medium 92% → 83% (12 pairs); hard 88% → 25% (8 pairs)
-  - Injection tasks resisted (baseline → variant): 8/8 → 8/8 (100% → 100%)
+- **tool-design**: Do the structured tools beat a single bash tool? Variant vs baseline: tool\_set: structured → bash\_only. Cost per solved task (baseline → variant): $0.0039 → $0.0054. Suite `37e677db05e7` (8 tasks); 2 day(s).
+  - By difficulty (baseline → variant pass): easy 96% → 96% (24 pairs); medium 96% → 83% (24 pairs); hard 75% → 38% (16 pairs)
+  - Injection tasks resisted (baseline → variant): 16/16 → 16/16 (100% → 100%)
 - **turn-budget**: How much does cutting the turn budget from 15 to 6 hurt success? Variant vs baseline: max\_turns: 15 → 6. Cost per solved task (baseline → variant): $0.0028 → $0.0029. Suite unversioned (3 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): unknown 100% → 83% (12 pairs)
   - Injection tasks resisted (baseline → variant): 4/4 → 4/4 (100% → 100%)

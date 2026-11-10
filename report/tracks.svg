@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 272" width="760" height="272" role="img" aria-labelledby="title desc">
 <title id="title">Variant minus baseline by track</title>
-<desc id="desc">Point estimates with 95% intervals, variant minus baseline. aa-test: pass 6.7 pp, cost -0.0002 USD; model-comparison: pass 6.2 pp, cost 0.0320 USD; plan-first: pass 0.0 pp, cost 0.0001 USD; self-verify: pass -3.1 pp, cost 0.0013 USD; tool-design: pass -18.8 pp, cost 0.0008 USD; turn-budget: pass -16.7 pp, cost -0.0004 USD</desc>
+<desc id="desc">Point estimates with 95% intervals, variant minus baseline. aa-test: pass 6.7 pp, cost -0.0002 USD; model-comparison: pass 6.2 pp, cost 0.0320 USD; plan-first: pass 0.0 pp, cost 0.0001 USD; self-verify: pass -3.1 pp, cost 0.0013 USD; tool-design: pass -14.1 pp, cost 0.0007 USD; turn-budget: pass -16.7 pp, cost -0.0004 USD</desc>
 <style>
   :root { --fg: #57606a; --grid: #afb8c1; --accent: #0969da; --band: rgba(140,149,159,0.18); }
   @media (prefers-color-scheme: dark) {
@@ -46,10 +46,10 @@
 <line class="whisker" x1="275.3" y1="158.0" x2="275.3" y2="168.0"/>
 <line class="whisker" x1="300.0" y1="158.0" x2="300.0" y2="168.0"/>
 <circle class="point" cx="291.8" cy="163.0" r="4"/>
-<line class="whisker" x1="201.1" y1="193.0" x2="300.0" y2="193.0"/>
-<line class="whisker" x1="201.1" y1="188.0" x2="201.1" y2="198.0"/>
-<line class="whisker" x1="300.0" y1="188.0" x2="300.0" y2="198.0"/>
-<circle class="point" cx="250.5" cy="193.0" r="4"/>
+<line class="whisker" x1="209.3" y1="193.0" x2="295.9" y2="193.0"/>
+<line class="whisker" x1="209.3" y1="188.0" x2="209.3" y2="198.0"/>
+<line class="whisker" x1="295.9" y1="188.0" x2="295.9" y2="198.0"/>
+<circle class="point" cx="262.9" cy="193.0" r="4"/>
 <line class="whisker" x1="181.8" y1="223.0" x2="327.4" y2="223.0"/>
 <line class="whisker" x1="181.8" y1="218.0" x2="181.8" y2="228.0"/>
 <line class="whisker" x1="327.4" y1="218.0" x2="327.4" y2="228.0"/>
@@ -76,10 +76,10 @@
 <line class="whisker" x1="620.8" y1="158.0" x2="620.8" y2="168.0"/>
 <line class="whisker" x1="625.6" y1="158.0" x2="625.6" y2="168.0"/>
 <circle class="point" cx="622.7" cy="163.0" r="4"/>
-<line class="whisker" x1="619.8" y1="193.0" x2="624.0" y2="193.0"/>
-<line class="whisker" x1="619.8" y1="188.0" x2="619.8" y2="198.0"/>
-<line class="whisker" x1="624.0" y1="188.0" x2="624.0" y2="198.0"/>
-<circle class="point" cx="621.7" cy="193.0" r="4"/>
+<line class="whisker" x1="619.6" y1="193.0" x2="623.8" y2="193.0"/>
+<line class="whisker" x1="619.6" y1="188.0" x2="619.6" y2="198.0"/>
+<line class="whisker" x1="623.8" y1="188.0" x2="623.8" y2="198.0"/>
+<circle class="point" cx="621.4" cy="193.0" r="4"/>
 <line class="whisker" x1="618.1" y1="223.0" x2="620.0" y2="223.0"/>
 <line class="whisker" x1="618.1" y1="218.0" x2="618.1" y2="228.0"/>
 <line class="whisker" x1="620.0" y1="218.0" x2="620.0" y2="228.0"/>

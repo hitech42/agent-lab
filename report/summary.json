@@ -1,5 +1,5 @@
 {
-  "attempts": 376,
+  "attempts": 440,
   "cluster_min_tasks": 8,
   "comparisons_by_metric": {
     "cost": 9,
@@ -52,16 +52,21 @@
       "date": "2026-11-09",
       "spend_usd": 1.251187,
       "track": "model-comparison"
+    },
+    {
+      "date": "2026-11-10",
+      "spend_usd": 0.245844,
+      "track": "tool-design"
     }
   ],
-  "days_run": 9,
-  "latest_date": "2026-11-09",
-  "latest_day": "eval(model-comparison): baseline 30/32 vs variant 32/32 passed, $1.2512 [completed]",
+  "days_run": 10,
+  "latest_date": "2026-11-10",
+  "latest_day": "eval(tool-design): baseline 28/32 vs variant 25/32 passed, $0.2458 [completed]",
   "min_pairs": 10,
   "resamples": 2000,
-  "spend_attempts_usd": 2.54167,
-  "spend_usd": 2.554314,
-  "spend_warmups_usd": 0.012644,
+  "spend_attempts_usd": 2.787362,
+  "spend_usd": 2.800158,
+  "spend_warmups_usd": 0.012796,
   "tracks": [
     {
       "current": {
@@ -640,69 +645,69 @@
     {
       "current": {
         "baseline": {
-          "ci_high": 0.982689,
-          "ci_low": 0.798529,
-          "cost_per_solved_usd": 0.003651,
-          "mean_cost_usd": 0.003423,
-          "n": 32,
-          "passed": 30,
-          "rate": 0.9375
+          "ci_high": 0.956322,
+          "ci_low": 0.810171,
+          "cost_per_solved_usd": 0.003861,
+          "mean_cost_usd": 0.003499,
+          "n": 64,
+          "passed": 58,
+          "rate": 0.90625
         },
         "baseline_hash": "3016aba7e85c",
         "by_difficulty": [
           {
-            "baseline_passed": 12,
-            "baseline_rate": 1.0,
+            "baseline_passed": 23,
+            "baseline_rate": 0.958333,
             "difficulty": "easy",
-            "pairs": 12,
+            "pairs": 24,
             "tasks": 3,
-            "variant_passed": 12,
-            "variant_rate": 1.0
+            "variant_passed": 23,
+            "variant_rate": 0.958333
           },
           {
-            "baseline_passed": 11,
-            "baseline_rate": 0.916667,
+            "baseline_passed": 23,
+            "baseline_rate": 0.958333,
             "difficulty": "medium",
-            "pairs": 12,
+            "pairs": 24,
             "tasks": 3,
-            "variant_passed": 10,
+            "variant_passed": 20,
             "variant_rate": 0.833333
           },
           {
-            "baseline_passed": 7,
-            "baseline_rate": 0.875,
+            "baseline_passed": 12,
+            "baseline_rate": 0.75,
             "difficulty": "hard",
-            "pairs": 8,
+            "pairs": 16,
             "tasks": 2,
-            "variant_passed": 2,
-            "variant_rate": 0.25
+            "variant_passed": 6,
+            "variant_rate": 0.375
           }
         ],
         "ceiling": false,
         "current": true,
-        "days": 1,
+        "days": 2,
         "delta_cost_usd": {
-          "high": 0.001831,
-          "low": -7.7e-05,
-          "mean": 0.000784,
+          "high": 0.001729,
+          "low": -0.000173,
+          "mean": 0.000655,
           "verdict": "no detectable difference"
         },
         "delta_output_tokens": {
-          "high": 233.34375,
-          "low": -770.78125,
-          "mean": -211.875,
+          "high": 334.4375,
+          "low": -888.546875,
+          "mean": -206.796875,
           "verdict": "no detectable difference"
         },
         "delta_pass_pp": {
-          "high": 0.0,
-          "low": -37.5,
-          "mean": -18.75,
-          "verdict": "no detectable difference"
+          "high": -1.5625,
+          "low": -34.375,
+          "mean": -14.0625,
+          "verdict": "variant lower"
         },
         "delta_turns": {
-          "high": 2.3125,
-          "low": -0.46875,
-          "mean": 0.875,
+          "high": 2.796875,
+          "low": -0.65625,
+          "mean": 0.890625,
           "verdict": "no detectable difference"
         },
         "description": "tool_set: structured \u2192 bash_only",
@@ -714,28 +719,28 @@
         "first_date": "2026-11-07",
         "injection": {
           "baseline_rate": 1.0,
-          "baseline_resisted": 8,
-          "pairs": 8,
+          "baseline_resisted": 16,
+          "pairs": 16,
           "variant_rate": 1.0,
-          "variant_resisted": 8
+          "variant_resisted": 16
         },
-        "last_date": "2026-11-07",
+        "last_date": "2026-11-10",
         "method": "task-clustered percentile bootstrap for every metric, pass rate included",
         "noise_floor": false,
-        "pairs": 32,
+        "pairs": 64,
         "question": "Do the structured tools beat a single bash tool?",
         "suite_hash": "37e677db05e7",
         "suite_tasks": 8,
         "tasks": 8,
         "track": "tool-design",
         "variant": {
-          "ci_high": 0.867476,
-          "ci_low": 0.578934,
-          "cost_per_solved_usd": 0.005609,
-          "mean_cost_usd": 0.004206,
-          "n": 32,
-          "passed": 24,
-          "rate": 0.75
+          "ci_high": 0.852501,
+          "ci_low": 0.648667,
+          "cost_per_solved_usd": 0.005426,
+          "mean_cost_usd": 0.004154,
+          "n": 64,
+          "passed": 49,
+          "rate": 0.765625
         },
         "variant_hash": "8e13fb1371da"
       },

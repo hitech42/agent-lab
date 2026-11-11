@@ -11,6 +11,7 @@ from runner_support import (
     FakeGrader,
     FixedClock,
     auth_error,
+    bad_request,
     build_world,
     default_responder,
     is_warmup,
@@ -304,6 +305,60 @@ def test_an_auth_error_during_the_attempts_aborts_immediately(tmp_path: Path) ->
     assert [r.status for r in records] == ["completed", "error"]
     assert (records[1].error_type, records[1].error_status) == ("AuthenticationError", 401)
     assert not world.store.has_summary(MONDAY)
+
+
+def test_a_credit_balance_error_during_the_attempts_aborts_immediately(tmp_path: Path) -> None:
+    world = build_world(
+        tmp_path, responder=make_responder(lambda n: bad_request() if n == 2 else None)
+    )
+    outcome = world.runner.run(world.plan)
+    assert outcome.kind == "abort" and outcome.cause is not None
+    assert outcome.cause.reason == "credit_balance"
+    assert (outcome.cause.error_type, outcome.cause.error_status) == ("BadRequestError", 400)
+    assert (
+        outcome.cause.message is not None and "credit balance is too low" in outcome.cause.message
+    )
+    abort = world.store.read_aborts(MONDAY)[0][0]
+    assert (abort.reason, abort.error_type, abort.error_status) == (
+        "credit_balance",
+        "BadRequestError",
+        400,
+    )
+    assert abort.completed == 2 and abort.skipped_aborted == 4
+    records = records_of(world)
+    assert [r.status for r in records] == ["completed", "error"]  # stopped at the first one
+    assert (records[1].error_type, records[1].error_status) == ("BadRequestError", 400)
+    assert not world.store.has_summary(MONDAY)
+
+
+def test_the_credit_balance_wording_is_matched_case_insensitively(tmp_path: Path) -> None:
+    world = build_world(
+        tmp_path,
+        responder=make_responder(
+            lambda n: bad_request("CREDIT BALANCE IS TOO LOW") if n == 1 else None
+        ),
+    )
+    assert world.runner.run(world.plan).cause is not None
+
+
+def test_other_400_errors_still_need_three_in_a_row_to_abort(tmp_path: Path) -> None:
+    world = build_world(
+        tmp_path,
+        responder=make_responder(lambda n: bad_request("prompt is too long") if n <= 2 else None),
+    )
+    outcome = world.runner.run(world.plan)
+    assert outcome.kind == "summary" and outcome.summary.errored == 2
+
+
+def test_the_credit_balance_wording_is_a_constructor_argument(tmp_path: Path) -> None:
+    def responder() -> Any:  # each world needs its own attempt counter
+        return make_responder(lambda n: bad_request("out of funds") if n == 1 else None)
+
+    default = build_world(tmp_path / "a", responder=responder())
+    assert default.runner.run(default.plan).kind == "summary"  # one plain 400: no abort
+    custom = build_world(tmp_path / "b", responder=responder(), credit_balance_text="out of funds")
+    outcome = custom.runner.run(custom.plan)
+    assert outcome.cause is not None and outcome.cause.reason == "credit_balance"
 
 
 def test_an_auth_error_in_the_warmup_aborts_before_any_attempt(tmp_path: Path) -> None:

@@ -116,6 +116,10 @@ class Cli:
             default=LinuxUserIsolation.DEFAULT_USER,
             help="the unprivileged user for --isolation linux-user",
         )
+        run.add_argument(
+            "--outcome-file",
+            help="write the run's outcome (kind, status, detail, counts) to this file",
+        )
         db = commands.add_parser("db", help="derived SQLite database")
         db_commands = db.add_subparsers(dest="db_command", required=True)
         rebuild = db_commands.add_parser("rebuild", help="rebuild results.db from the JSONL")
@@ -158,6 +162,7 @@ class Cli:
             dry_run=args.dry_run,
             isolation=args.isolation,
             isolation_user=args.isolation_user,
+            outcome_file=Path(args.outcome_file) if args.outcome_file else None,
         )
 
 

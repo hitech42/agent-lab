@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "run_id": "2026-11-11-turn-budget",
+  "date": "2026-11-11",
+  "track": "turn-budget",
+  "status": "completed",
+  "started": "2026-11-11T00:15:23+00:00",
+  "finished": "2026-11-11T00:31:40+00:00",
+  "planned": 64,
+  "completed": 64,
+  "errored": 0,
+  "skipped_budget": 0,
+  "skipped_aborted": 0,
+  "skipped_attempts": [],
+  "abort_count": 0,
+  "corrupt_lines": 0,
+  "warmup_cost_usd": 0.00012703,
+  "total_cost_usd": 0.21461989,
+  "estimate_usd": 0.2358681512567288
+}

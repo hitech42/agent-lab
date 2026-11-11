@@ -22,6 +22,7 @@ from agent_lab.harness.pricing import PriceTable, PricingError
 from agent_lab.runner.database import ResultsDatabase
 from agent_lab.runner.estimator import CostEstimator
 from agent_lab.runner.experiment import Clock, ExperimentRunner, RunOutcome, SystemClock
+from agent_lab.runner.outcome import RunReport
 from agent_lab.runner.plan import PlanOptions, RunPlan, RunPlanner
 from agent_lab.runner.provenance import ProvenanceReader
 from agent_lab.runner.publish import CommitMessageBuilder, PublishRejected, ResultsPublisher
@@ -45,6 +46,7 @@ class RunArgs:
     dry_run: bool = False
     isolation: Literal["none", "linux-user"] = "none"
     isolation_user: str = LinuxUserIsolation.DEFAULT_USER
+    outcome_file: Path | None = None  # where to write the RunReport (see runner/outcome.py)
     # Calibration overrides (scripts/calibrate.py only; not command line options): run the
     # baseline alone, optionally on another model and under a different daily cap.
     baseline_only: bool = False
@@ -108,6 +110,7 @@ class RunCommand:
         store = ResultsStore(args.results_dir)
         if store.has_summary(day.isoformat()):
             self._say(f"{day}: already done ({store.summary_path(day.isoformat())})")
+            self._report(args, RunReport.already_done())
             return 0
         if store.has_attempts(day.isoformat()) and not args.resume and not args.dry_run:
             return self._error(
@@ -133,6 +136,7 @@ class RunCommand:
         estimator = CostEstimator(history, schedule.cost_defaults, prices)
         if args.dry_run:
             self._print_plan(plan, estimator, corrupt, args, fingerprint)
+            self._report(args, RunReport.dry_run())
             return 0
         try:
             agents = self._deps.agent_factory(self._deps.environ)
@@ -168,7 +172,9 @@ class RunCommand:
             clock=self._deps.clock,
             isolation=isolation,
         )
-        self._print_outcome(runner.run(plan))
+        outcome = runner.run(plan)
+        self._print_outcome(outcome)
+        self._report(args, RunReport.of(outcome, agents.redactor))
         return 0
 
     @staticmethod
@@ -334,6 +340,11 @@ class RunCommand:
             f"skipped {summary.skipped_budget + summary.skipped_aborted}, "
             f"cost ${summary.total_cost_usd:.4f}"
         )
+
+    @staticmethod
+    def _report(args: RunArgs, report: RunReport) -> None:
+        if args.outcome_file is not None:
+            args.outcome_file.write_text("\n".join(report.lines()) + "\n")
 
     def _say(self, text: str) -> None:
         print(text, file=self._out)

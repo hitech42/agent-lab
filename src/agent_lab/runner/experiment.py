@@ -96,6 +96,7 @@ class ExperimentRunner:
         clock: Clock,
         isolation: CommandIsolation,
         max_consecutive_errors: int = 3,
+        credit_balance_text: str = "credit balance is too low",
     ) -> None:
         self._agents = agents
         self._suite = suite
@@ -109,6 +110,7 @@ class ExperimentRunner:
         self._clock = clock
         self._isolation = isolation
         self._max_consecutive_errors = max_consecutive_errors
+        self._credit_balance_text = credit_balance_text.lower()
 
     def run(self, plan: RunPlan) -> RunOutcome:
         """Run every attempt of the plan that is not already recorded for its date."""
@@ -189,10 +191,8 @@ class ExperimentRunner:
             segment.consecutive_errors = 0
             return False
         segment.consecutive_errors += 1
-        reason = None
-        if record.error_type in AUTH_ERRORS:
-            reason = "auth_error"
-        elif segment.consecutive_errors >= self._max_consecutive_errors:
+        reason = self._fatal_reason(record)
+        if reason is None and segment.consecutive_errors >= self._max_consecutive_errors:
             reason = "consecutive_errors"
         if reason is None:
             return False
@@ -203,6 +203,14 @@ class ExperimentRunner:
             message=record.error,
         )
         return True
+
+    def _fatal_reason(self, record: AttemptRecord) -> str | None:
+        """Errors that no later attempt can get past, so the run stops at the first one."""
+        if record.error_type in AUTH_ERRORS:
+            return "auth_error"
+        if record.error_status == 400 and self._credit_balance_text in (record.error or "").lower():
+            return "credit_balance"
+        return None
 
     def _reservation(self, plan: RunPlan, remaining: list[PlannedAttempt], index: int) -> float:
         """Estimate to set aside before an attempt: its whole interleaved pair if it opens one."""

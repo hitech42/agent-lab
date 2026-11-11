@@ -137,6 +137,17 @@ def auth_error() -> anthropic.AuthenticationError:
     return anthropic.AuthenticationError("invalid x-api-key", response=response, body=None)
 
 
+CREDIT_MESSAGE = (
+    "Your credit balance is too low to access the Anthropic API. "
+    "Please go to Plans & Billing to upgrade or purchase credits."
+)
+
+
+def bad_request(message: str = CREDIT_MESSAGE) -> anthropic.BadRequestError:
+    response = httpx2.Response(400, request=httpx2.Request("POST", "https://example.invalid"))
+    return anthropic.BadRequestError(message, response=response, body=None)
+
+
 Responder = Callable[[dict[str, Any]], Any]
 
 
@@ -258,6 +269,7 @@ def build_world(
     history: list[Any] | None = None,
     clock: Any = None,
     max_consecutive_errors: int = 3,
+    credit_balance_text: str | None = None,
     redactor: Redactor | None = None,
     results_dir: Path | None = None,
     store: ResultsStore | None = None,
@@ -274,6 +286,7 @@ def build_world(
     (site_dir / "pkg.py").write_text("x = 1\n")
     integrity = EnvironmentIntegrity([site_dir])
     store = store or ResultsStore(results_dir or tmp_path / "results")
+    extra = {} if credit_balance_text is None else {"credit_balance_text": credit_balance_text}
     runner = ExperimentRunner(
         agents=agents,
         suite=suite(tasks_dir),
@@ -290,6 +303,7 @@ def build_world(
         provenance=PROVENANCE,
         clock=clock or StepClock(),
         isolation=NoIsolation(),
+        **extra,
     )
     return World(
         runner, store, tmp_path / "transcripts", client, fake_grader, integrity, site_dir, plan

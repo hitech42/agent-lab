@@ -47,6 +47,8 @@ directly; no agent frameworks.
   - `warmup.py` — `CacheWarmer`: one cache warm-up call per distinct config (also the canary)
   - `budget.py` — `DailyBudget`: the day's spending cap
   - `experiment.py` — `ExperimentRunner`: runs a plan, records each attempt immediately
+  - `outcome.py` — `RunReport`: kind, status, a redacted workflow-safe detail and the attempt counts
+    of a run, written by `--outcome-file` for the workflow (see Daily workflow)
   - `records.py` — `AttemptRecord`, `RunSummary`, `AbortRecord`, `RecordBuilder`
   - `provenance.py` — `ProvenanceReader`: git sha, lockfile hash, versions, ci|local
   - `storage.py` — `ResultsStore` (append-only results) and `TranscriptStore`
@@ -109,7 +111,7 @@ directly; no agent frameworks.
 ## Running experiments
 
 `uv run agent-lab run [--date YYYY-MM-DD] [--track NAME] [--trials N] [--tasks id,id]
-[--results-dir DIR] [--transcripts-dir DIR] [--resume] [--dry-run]`. The API key comes from
+[--results-dir DIR] [--transcripts-dir DIR] [--resume] [--dry-run] [--outcome-file FILE]`. The API key comes from
 the `ANTHROPIC_API_KEY` environment variable only. `--dry-run` prints the track, question,
 resolved configs with their `config_hash`, the ordered plan and the cost estimate, makes no
 API calls and writes no files (no key needed).
@@ -155,12 +157,19 @@ values (models in `config/pricing.yaml`, existing prompt files in `experiments/p
 7. Outcomes. **Terminal** outcomes write `<date>.run.json` (exclusive create) and the day is
    done: `completed`, `partial_budget` (budget stop), `aborted_tampered` (site-packages
    changed; final). **Aborts are events**: an authentication/permission error (in the warm-up
-   or an attempt), a warm-up failure, or 3 consecutive attempts with `status == "error"`
+   or an attempt), a 400 whose message says the credit balance is too low (reason `credit_balance`,
+   `error_type` kept as recorded; the wording is the `credit_balance_text` constructor argument of
+   `ExperimentRunner`), a warm-up failure, or 3 consecutive attempts with `status == "error"`
    (failed grades never count) write `<date>.abort-<HHMMSS>.json` (exclusive create; the
    summary fields plus `reason`, `error_type`, `error_status`, completed ids and
    `skipped_attempts`) and do NOT write `.run.json`, so the day stays resumable.
 8. Exit 0 whenever a record was written or the day was already done; nonzero only for
-   configuration errors or crashes before any record could be written.
+   configuration errors or crashes before any record could be written. An abort therefore exits 0
+   too; with `--outcome-file FILE` the run writes `kind=` (`summary`, `abort`, `already_done`,
+   `dry_run`), `status=` (the summary status, or the abort reason), `detail=` (`<http status>
+   <error type>: <message>`, redacted, only `[A-Za-z0-9 .,:_'()/-]`, no `::`, at most 160 chars) and,
+   for summaries and aborts, `completed=` / `planned=`. The daily workflow reads that file. Nothing is
+   written on configuration errors (exit 1).
 
 **Resuming:** Phase 4 always calls `agent-lab run --resume`, which is safe unconditionally: with
 no JSONL for the date it is a normal run, with a finished day it prints "already done", and
@@ -197,7 +206,7 @@ and warm-up totals cover all segments. To re-run a terminal day, remove its `.ru
 ## Daily workflow
 
 `.github/workflows/daily.yml` runs the experiment unattended and publishes the results to `main`.
-It has two jobs so that the job that executes agent code can never push:
+It has separate jobs so that the job that executes agent code can never push:
 
 - **`experiment`** (`contents: read`, `environment: experiment`, 60 min): checkout with
   `persist-credentials: false`; uv installs into `/opt/agentlab` (`UV_PROJECT_ENVIRONMENT`,
@@ -222,6 +231,19 @@ It has two jobs so that the job that executes agent code can never push:
   and push retry as `publish`), so every run shows on the contribution graph. The log is outside
   `results/runs` and `results/configs`, so nothing reads it; it is the one file in `results/` that
   `publish` does not write, and it is only ever appended to.
+- **`alert`** (`needs: [experiment, publish]`, no token, no key, no checkout, 5 min): an abort or a
+  tampered day still exits 0, so its record is collected and published first; this last job then
+  fails the run so that GitHub notifies. The `experiment` job exposes the outcome file as job outputs
+  (`kind`, `status`, `detail`, `completed`, `planned`; the "Expose the outcome" step lets through only
+  lines of the expected shape and treats a missing or malformed file as `kind=unknown`). `alert`
+  runs when `!cancelled()` (so also when `publish` was skipped) and the run is not a dry run, and only
+  fires for: `kind == abort` (`::error::<reason>: <status> <type>: <message>`, e.g. `warmup_failed:
+  400 BadRequestError: Your credit balance is too low`), `status == aborted_tampered`, `kind ==
+  unknown` after a successful experiment job ("run finished without reporting an outcome"), or
+  `publish` failed. Completed, `already_done` and dry runs stay green. A `partial_budget` day also
+  stays green but the experiment job emits `::warning title=Daily run hit the budget cap::completed
+  N of M attempts ...`, so caps that are too tight show in the run summary. Values reach the script
+  through `env:` only.
 - **Triggers:** `schedule` with two slots per UTC day, a primary and a backup at non-round minutes
   (13:17, 19:47), and `workflow_dispatch` with `dry_run`. Never `push` or `pull_request`. GitHub
   starts scheduled runs best-effort: the first ones began 6 to 9 hours after their slot, and

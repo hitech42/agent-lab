@@ -37,6 +37,11 @@ jobs:
     outputs:
       changed: ${{ steps.collect.outputs.changed }}
       artifact: ${{ steps.collect.outputs.artifact }}
+      kind: ${{ steps.outcome.outputs.kind }}
+      status: ${{ steps.outcome.outputs.status }}
+      detail: ${{ steps.outcome.outputs.detail }}
+      completed: ${{ steps.outcome.outputs.completed }}
+      planned: ${{ steps.outcome.outputs.planned }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -58,9 +63,32 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           if [ "$DRY_RUN" = "true" ]; then
-            uv run agent-lab run --resume --isolation linux-user --dry-run
+            uv run agent-lab run --resume --isolation linux-user --dry-run --outcome-file "$RUNNER_TEMP/outcome"
           else
-            uv run agent-lab run --resume --isolation linux-user
+            uv run agent-lab run --resume --isolation linux-user --outcome-file "$RUNNER_TEMP/outcome"
+          fi
+      - name: Expose the outcome
+        id: outcome
+        if: ${{ !cancelled() }}
+        run: |
+          # `agent-lab run` exits 0 for an abort too, so the outcome file is the only signal. Only
+          # lines of the expected shape and a known kind get through (a missing or odd file is
+          # "unknown"); the values can contain no newline, "%" or "::", and the counts are digits.
+          raw="$RUNNER_TEMP/outcome"
+          safe="$RUNNER_TEMP/outcome.safe"
+          : > "$safe"
+          if [ -f "$raw" ] && [ ! -L "$raw" ]; then
+            grep -E "^((kind|status|detail)=[A-Za-z0-9 .,:_'()/-]*|(completed|planned)=[0-9]+)$" "$raw" \
+              | grep -vF '::' > "$safe" || true
+          fi
+          if ! grep -qE '^kind=(abort|summary|already_done|dry_run)$' "$safe"; then
+            printf 'kind=unknown\nstatus=unknown\ndetail=\n' > "$safe"
+          fi
+          cat "$safe" >> "$GITHUB_OUTPUT"
+          if grep -qx 'kind=summary' "$safe" && grep -qx 'status=partial_budget' "$safe"; then
+            completed="$(sed -n 's/^completed=\([0-9][0-9]*\)$/\1/p' "$safe")"
+            planned="$(sed -n 's/^planned=\([0-9][0-9]*\)$/\1/p' "$safe")"
+            echo "::warning title=Daily run hit the budget cap::completed ${completed:-?} of ${planned:-?} attempts before the daily cost cap stopped the run"
           fi
       - name: Collect new and changed result files
         id: collect
@@ -197,4 +225,39 @@ jobs:
             git pull --rebase origin main
           done
           echo "::error::could not push to main after 3 attempts"
+          exit 1
+
+  # The run exits 0 for an abort so that its record is still collected and published; this job
+  # runs after `publish` and turns the bad outcomes into a failed run, which GitHub notifies about.
+  # `!cancelled()` makes it evaluate even when publish was skipped. It stays skipped on green runs.
+  alert:
+    needs: [experiment, publish]
+    if: ${{ !cancelled() && inputs.dry_run != true && (needs.experiment.outputs.kind == 'abort' || needs.experiment.outputs.status == 'aborted_tampered' || (needs.experiment.result == 'success' && needs.experiment.outputs.kind == 'unknown') || needs.publish.result == 'failure') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Fail with the reason
+        env:
+          KIND: ${{ needs.experiment.outputs.kind }}
+          STATUS: ${{ needs.experiment.outputs.status }}
+          DETAIL: ${{ needs.experiment.outputs.detail }}
+          COMPLETED: ${{ needs.experiment.outputs.completed }}
+          PLANNED: ${{ needs.experiment.outputs.planned }}
+          EXPERIMENT: ${{ needs.experiment.result }}
+          PUBLISH: ${{ needs.publish.result }}
+        run: |
+          counts=""
+          if [ -n "$COMPLETED" ] && [ -n "$PLANNED" ]; then counts=" (completed $COMPLETED of $PLANNED attempts)"; fi
+          if [ "$KIND" = "abort" ]; then
+            echo "::error title=Daily run aborted::${STATUS}${DETAIL:+: $DETAIL}${counts}; the day stays resumable"
+          elif [ "$STATUS" = "aborted_tampered" ]; then
+            echo "::error title=Daily run ended aborted_tampered::the environment was tampered with${counts}; the day is final"
+          fi
+          if [ "$KIND" = "unknown" ] && [ "$EXPERIMENT" = "success" ]; then
+            echo "::error title=Daily run reported no outcome::run finished without reporting an outcome"
+          fi
+          if [ "$PUBLISH" = "failure" ]; then
+            echo "::error title=Publishing failed::the results were not published to main; the artifact is kept for 3 days"
+          fi
           exit 1

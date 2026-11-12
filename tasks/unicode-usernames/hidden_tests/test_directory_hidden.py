@@ -108,3 +108,64 @@ def test_a_blank_prefix_matches_everyone(blank):
     for name in ["bob", "Alice"]:
         users.add(name)
     assert users.search(blank) == ["Alice", "bob"]
+
+
+@pytest.mark.parametrize(
+    "name", ["Straße", "ﬁsh", "Ａlice", "J̌", "ǰ", "É", "ÉCOLE", "  ǅ  ", "ΣΑΣ", "ẞ", "ﬃ", "①②"]
+)
+def test_a_key_is_a_normal_form(name):
+    key = canonical(name)
+    assert canonical(key) == key
+
+
+def test_add_many_adds_in_order_and_returns_display_names():
+    users = UserDirectory()
+    users.add("zed")
+    assert users.add_many(["  Straße", "Ａlice", "bob "]) == ["Straße", "Ａlice", "bob"]
+    assert users.names() == ["Ａlice", "bob", "Straße", "zed"]
+    assert users.find("STRASSE") == "Straße"
+    assert users.add_many([]) == []
+
+
+@pytest.mark.parametrize(
+    "names",
+    [
+        ["new", "Alice"],  # matches a user already there
+        ["new", "other", "NEW"],  # matches an earlier name in the list
+        ["Straße", "x", "STRASSE"],  # in another spelling
+        ["new", "ﬁsh", "fish"],
+        ["new", "  "],  # blank
+        ["new", ""],
+    ],
+)
+def test_add_many_adds_all_or_none(names):
+    users = UserDirectory()
+    users.add("Alice")
+    with pytest.raises(ValueError):
+        users.add_many(names)
+    assert users.names() == ["Alice"]
+
+
+def test_add_many_names_the_kind_of_error():
+    users = UserDirectory()
+    users.add("Alice")
+    with pytest.raises(DuplicateUserError):
+        users.add_many(["bob", "ALICE"])
+    with pytest.raises(DuplicateUserError):
+        users.add_many(["bob", "Bob"])
+    blank = pytest.raises(ValueError)
+    with blank as caught:
+        users.add_many(["bob", " "])
+    assert not isinstance(caught.value, DuplicateUserError)
+
+
+def test_renaming_from_a_blank_name_is_a_key_error_and_to_a_blank_name_a_value_error():
+    users = UserDirectory()
+    users.add("alice")
+    for blank in ("", "   "):
+        with pytest.raises(KeyError):
+            users.rename(blank, "carol")
+        with pytest.raises(ValueError) as caught:
+            users.rename("alice", blank)
+        assert not isinstance(caught.value, KeyError)
+    assert users.names() == ["alice"]

@@ -1,17 +1,6 @@
 """The three renderers. Each takes sorted rows and the resolved column names."""
 
-
-def _is_number(value):
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
-
-
-def _numeric_columns(rows, columns):
-    """The columns whose values (ignoring ``None``) are all numbers and at least one."""
-    numeric = {}
-    for col in columns:
-        values = [row.get(col) for row in rows if row.get(col) is not None]
-        numeric[col] = bool(values) and all(_is_number(value) for value in values)
-    return numeric
+from columns import numeric_columns
 
 
 def _display(value, null, digits):
@@ -71,9 +60,9 @@ def format_markdown(rows, columns, header, null, float_digits):
     """A Markdown table; ``header=False`` is a ``ValueError``."""
     if not header:
         raise ValueError("markdown tables need a header")
-    numeric = _numeric_columns(rows, columns)
+    numeric = numeric_columns(rows, columns)
     lines = ["| " + " | ".join(str(col) for col in columns) + " |"]
-    lines.append("| " + " | ".join("---:" if numeric[col] else "---" for col in columns) + " |")
+    lines.append("| " + " | ".join("---:" if col in numeric else "---" for col in columns) + " |")
     for row in rows:
         cells = []
         for col in columns:
@@ -86,7 +75,7 @@ def format_markdown(rows, columns, header, null, float_digits):
 
 def format_text(rows, columns, max_width, header, null, float_digits):
     """Aligned text: cells cut to ``max_width``, numeric columns right-aligned."""
-    numeric = _numeric_columns(rows, columns)
+    numeric = numeric_columns(rows, columns)
     heads = [_truncate(str(col), max_width) for col in columns]
     body = []
     for row in rows:
@@ -101,7 +90,7 @@ def format_text(rows, columns, max_width, header, null, float_digits):
     def line_of(values):
         parts = []
         for index, value in enumerate(values):
-            align = value.rjust if numeric[columns[index]] else value.ljust
+            align = value.rjust if columns[index] in numeric else value.ljust
             parts.append(align(widths[index]))
         return "  ".join(parts).rstrip()
 

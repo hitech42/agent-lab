@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from agent_lab.runner.storage import ResultsStore
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "calibrate.py"
@@ -21,6 +23,7 @@ def load_script():  # type: ignore[no-untyped-def]
 def test_the_defaults_are_four_trials_all_tasks_and_a_two_dollar_stop() -> None:
     args = load_script().parse_args([])
     assert (args.trials, args.tasks, args.model, args.results_dir) == (4, None, None, None)
+    assert args.effort is None
     assert args.max_cost == 2.0 and args.max_attempt_cost is None and args.isolation == "none"
 
 
@@ -56,3 +59,10 @@ def test_help_runs_without_a_key_or_any_network() -> None:
         env={"PATH": "/usr/bin:/bin"},
     )
     assert done.returncode == 0 and "--trials" in done.stdout and "--model" in done.stdout
+
+
+def test_the_effort_option_accepts_only_the_known_levels() -> None:
+    script = load_script()
+    assert script.parse_args(["--effort", "xhigh"]).effort == "xhigh"
+    with pytest.raises(SystemExit):
+        script.parse_args(["--effort", "extreme"])

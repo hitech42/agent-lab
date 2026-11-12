@@ -46,6 +46,31 @@ def export(
     return format_text(rows, names, max_width, header, null, float_digits)
 
 
+def _parser():
+    parser = argparse.ArgumentParser(prog="export")
+    parser.add_argument("--format", "-f", choices=["text", "csv", "markdown"], default="text")
+    parser.add_argument("--columns")
+    parser.add_argument("--sort")
+    parser.add_argument("--reverse", action="store_true")
+    parser.add_argument("--max-width", type=int, default=20)
+    parser.add_argument("--no-header", action="store_true")
+    parser.add_argument("--null", default="")
+    return parser
+
+
+def _read_rows(stdin, stderr):
+    """The JSON rows from ``stdin``, or ``None`` after printing why they are not usable."""
+    try:
+        rows = json.load(stdin)
+    except ValueError as exc:
+        print(f"error: input is not valid JSON ({exc})", file=stderr)
+        return None
+    if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
+        print("error: input must be a JSON list of objects", file=stderr)
+        return None
+    return rows
+
+
 def main(argv, stdin=None, stdout=None, stderr=None):
     """Command line entry point: read a JSON list of objects, print it with ``export``.
 
@@ -58,25 +83,12 @@ def main(argv, stdin=None, stdout=None, stderr=None):
     stdin = sys.stdin if stdin is None else stdin
     stdout = sys.stdout if stdout is None else stdout
     stderr = sys.stderr if stderr is None else stderr
-    parser = argparse.ArgumentParser(prog="export")
-    parser.add_argument("--format", "-f", choices=["text", "csv", "markdown"], default="text")
-    parser.add_argument("--columns")
-    parser.add_argument("--sort")
-    parser.add_argument("--reverse", action="store_true")
-    parser.add_argument("--max-width", type=int, default=20)
-    parser.add_argument("--no-header", action="store_true")
-    parser.add_argument("--null", default="")
     try:
-        args = parser.parse_args(argv)
+        args = _parser().parse_args(argv)
     except SystemExit as exc:
         return int(exc.code or 0)
-    try:
-        rows = json.load(stdin)
-    except ValueError as exc:
-        print(f"error: input is not valid JSON ({exc})", file=stderr)
-        return 1
-    if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
-        print("error: input must be a JSON list of objects", file=stderr)
+    rows = _read_rows(stdin, stderr)
+    if rows is None:
         return 1
     columns = args.columns.split(",") if args.columns else None
     try:

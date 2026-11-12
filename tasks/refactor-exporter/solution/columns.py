@@ -1,4 +1,4 @@
-"""Which columns to show, and in what order the rows go."""
+"""Which columns to show, which are numeric, and in what order the rows go."""
 
 
 def _is_number(value):
@@ -21,6 +21,16 @@ def resolve_columns(rows, columns):
     if len(set(names)) != len(names):
         raise ValueError("duplicate column names")
     return names
+
+
+def numeric_columns(rows, columns):
+    """The columns that are numeric: every value that is not ``None`` is a number, and one is."""
+    numeric = set()
+    for col in columns:
+        values = [row.get(col) for row in rows if row.get(col) is not None]
+        if values and all(_is_number(value) for value in values):
+            numeric.add(col)
+    return numeric
 
 
 def sort_rows(rows, columns, sort_by, reverse):

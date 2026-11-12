@@ -12,6 +12,7 @@ from agent_lab.benchmark.environment import EnvironmentIntegrity
 from agent_lab.benchmark.grader import Grader
 from agent_lab.benchmark.loader import SuiteFingerprint, TaskLoadError, TaskSuite, UnknownTaskError
 from agent_lab.benchmark.task import Task
+from agent_lab.harness.config import Effort
 from agent_lab.harness.isolation import (
     CommandIsolation,
     IsolationError,
@@ -48,9 +49,10 @@ class RunArgs:
     isolation_user: str = LinuxUserIsolation.DEFAULT_USER
     outcome_file: Path | None = None  # where to write the RunReport (see runner/outcome.py)
     # Calibration overrides (scripts/calibrate.py only; not command line options): run the
-    # baseline alone, optionally on another model and under a different daily cap.
+    # baseline alone, optionally on another model or effort and under a different daily cap.
     baseline_only: bool = False
     model: str | None = None
+    effort: Effort | None = None
     max_cost_usd: float | None = None
     max_attempt_cost_usd: float | None = None
 
@@ -187,6 +189,13 @@ class RunCommand:
                 update={
                     "baseline": resolved.baseline.model_copy(update={"model": args.model}),
                     "variant": resolved.variant.model_copy(update={"model": args.model}),
+                }
+            )
+        if args.effort is not None:
+            resolved = resolved.model_copy(
+                update={
+                    "baseline": resolved.baseline.model_copy(update={"effort": args.effort}),
+                    "variant": resolved.variant.model_copy(update={"effort": args.effort}),
                 }
             )
         if args.max_cost_usd is not None:

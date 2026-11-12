@@ -2,7 +2,7 @@
 
 Usage:
     ANTHROPIC_API_KEY=... uv run python scripts/calibrate.py [--tasks id,id] [--trials 4] \\
-        [--model claude-sonnet-5-5] [--results-dir DIR] [--max-cost 2.0]
+        [--model claude-sonnet-5-5] [--effort high] [--results-dir DIR] [--max-cost 2.0]
 
 Results go to a results directory that is NOT results/ (a fresh temporary directory by
 default, printed at the start). Run the script twice with the same ``--results-dir`` (for
@@ -32,6 +32,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--tasks", help="comma-separated task ids (default: all)")
     parser.add_argument("--trials", type=int, default=4, help="attempts per task (default 4)")
     parser.add_argument("--model", help="run this model instead of the baseline's (e.g. Sonnet)")
+    parser.add_argument(
+        "--effort",
+        choices=["low", "medium", "high", "xhigh", "max"],
+        help="run at this effort instead of the baseline's (like --model, it changes the config)",
+    )
     parser.add_argument("--results-dir", help="where to write (default: a new temporary dir)")
     parser.add_argument("--max-cost", type=float, default=2.0, help="hard stop in USD (default 2)")
     parser.add_argument(
@@ -66,6 +71,7 @@ def main(argv: list[str]) -> int:
         isolation=args.isolation,
         baseline_only=True,
         model=args.model,
+        effort=args.effort,
         max_cost_usd=args.max_cost,
         max_attempt_cost_usd=args.max_attempt_cost or (0.50 if args.model else None),
     )

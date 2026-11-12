@@ -11,11 +11,13 @@ def canonical(name: str) -> str:
     """The matching key of a user name: two names are the same user iff their keys are equal.
 
     The key is the name without leading and trailing whitespace, normalized to Unicode
-    NFKC, then case-folded with ``str.casefold`` (not ``str.lower``), then normalized to
-    NFKC again, because case folding can leave text denormalized. So ``"Straße"`` and
+    NFKC and case-folded with ``str.casefold`` (not ``str.lower``). So ``"Straße"`` and
     ``"STRASSE"`` are the same user; so are ``"é"`` written as one code point and as
     ``"e"`` plus a combining accent, ``"ﬁsh"`` and ``"fish"``, and ``"Ａlice"`` (with a
-    full-width A) and ``"alice"``. Raises ``ValueError`` if the key is empty.
+    full-width A) and ``"alice"``. A key is itself a normal form: it is NFKC-normalized and
+    ``canonical(canonical(x)) == canonical(x)`` for every name ``x``. For instance ``"J"`` followed by a combining
+    caron and the single character ``"ǰ"`` are the same user. Raises ``ValueError`` if the
+    key is empty.
     """
     key = unicodedata.normalize("NFKC", unicodedata.normalize("NFKC", name.strip()).casefold())
     if not key:
@@ -44,6 +46,22 @@ class UserDirectory:
         self._users[key] = name.strip()
         return self._users[key]
 
+    def add_many(self, names: list[str]) -> list[str]:
+        """Add every name, in order, and return their display names; or add none.
+
+        Raises ``DuplicateUserError`` if a name matches a user who is already in the
+        directory or an earlier name in ``names`` (in whatever spelling), and
+        ``ValueError`` if a name is empty. When it raises, the directory is unchanged.
+        """
+        added: dict[str, str] = {}
+        for name in names:
+            key = canonical(name)
+            if key in self._users or key in added:
+                raise DuplicateUserError(name)
+            added[key] = name.strip()
+        self._users.update(added)
+        return list(added.values())
+
     def find(self, name: str) -> str | None:
         """The display name of the user the name matches, or ``None``.
 
@@ -70,9 +88,13 @@ class UserDirectory:
         Raises ``KeyError`` if ``old`` matches nobody and ``DuplicateUserError`` if ``new``
         matches a different user. A user may be renamed to another spelling of the same
         name (``"alice"`` to ``"Alice"``): that is allowed and changes the display name.
-        When it raises, nothing changes.
+        A blank ``old`` matches nobody, so it raises ``KeyError`` like any unknown name; a
+        blank ``new`` raises ``ValueError``. When it raises, nothing changes.
         """
-        old_key = canonical(old)
+        try:
+            old_key = canonical(old)
+        except ValueError:
+            raise KeyError(old) from None
         if old_key not in self._users:
             raise KeyError(old)
         new_key = canonical(new)

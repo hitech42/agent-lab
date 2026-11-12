@@ -1,7 +1,9 @@
 from decimal import Decimal
 
+from discounts import Discount
 from invoice import build_invoice, render
-from money import format_cents, to_cents
+from money import allocate, format_cents, round_div, to_cents
+from pricing import price_line
 
 
 def test_format_cents():
@@ -14,22 +16,31 @@ def test_to_cents_for_plain_amounts():
     assert to_cents(Decimal("3")) == 300
 
 
+def test_round_div_and_an_even_allocation():
+    assert round_div(9, 3) == 3
+    assert allocate(90, [1, 1, 1]) == [30, 30, 30]
+
+
+def test_a_line_is_priced_from_the_catalog():
+    assert price_line("CABLE", 2).gross_cents == 499
+    assert price_line("MANUAL", 1).gross_cents == 1999
+
+
 def test_a_simple_invoice():
-    invoice = build_invoice([("Pen", "1.50", 2), ("Pad", "4.00", 1)], tax_rate="0.10")
-    assert [line.total_cents for line in invoice.lines] == [300, 400]
-    assert (invoice.subtotal_cents, invoice.tax_cents, invoice.total_cents) == (700, 70, 770)
+    invoice = build_invoice([("CABLE", 2)])
+    assert (invoice.subtotal_cents, invoice.tax_cents, invoice.total_cents) == (499, 41, 540)
+
+
+def test_a_percentage_discount():
+    invoice = build_invoice([("MANUAL", 1)], [Discount("percent", Decimal("10"))])
+    assert (invoice.discount_cents, invoice.tax_cents, invoice.total_cents) == (200, 72, 1871)
 
 
 def test_render_prints_each_part():
-    text = render(build_invoice([("Pen", "1.50", 2)], tax_rate="0.10"))
+    text = render(build_invoice([("CABLE", 2)]))
     assert text.splitlines() == [
-        "Pen: 2 x 1.50 = $3.00",
-        "Subtotal: $3.00",
-        "Tax: $0.30",
-        "Total: $3.30",
+        "Cable: 2 = $4.99",
+        "Subtotal: $4.99",
+        "Tax: $0.41",
+        "Total: $5.40",
     ]
-
-
-def test_tax_on_a_round_amount_is_rounded_to_the_nearest_cent():
-    invoice = build_invoice([("Item", "10.00", 1)], tax_rate="0.0825")
-    assert invoice.tax_cents == 83

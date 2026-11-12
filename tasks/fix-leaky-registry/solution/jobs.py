@@ -56,17 +56,22 @@ class Job:
 
 
 class Scheduler:
-    """Keeps jobs by name. Every scheduler has its own jobs."""
+    """Keeps jobs by name. Every scheduler has its own jobs and its own history."""
 
     def __init__(self) -> None:
         self.jobs: dict[str, Job] = {}
+        self.history: list[str] = []
 
     def add(self, name: str, interval: str, priority: int = 0) -> Job:
-        """Add a job; ``ValueError`` if this scheduler already has one with that name."""
+        """Add a job; ``ValueError`` if this scheduler already has one with that name.
+
+        ``history`` lists the names of the jobs this scheduler has added, in order.
+        """
         if name in self.jobs:
             raise ValueError(f"duplicate job {name!r}")
         job = Job(name, interval, priority)
         self.jobs[name] = job
+        self.history.append(name)
         return job
 
     def names(self) -> list[str]:

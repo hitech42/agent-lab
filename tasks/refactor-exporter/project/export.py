@@ -2,6 +2,23 @@
 
 ``export`` is the library entry point and ``main`` the command line one (JSON rows on
 standard input). Both are used by other tools, so their behaviour must not change.
+
+Layout. The module is to be split into three, keeping ``export`` and ``main`` here:
+
+- ``columns.py``: ``resolve_columns(rows, columns)`` returns the list of column names;
+  ``sort_rows(rows, columns, sort_by, reverse)`` returns the sorted list of rows (the rows in
+  their original order when ``sort_by`` is ``None``), does not modify the list it is given
+  and raises the same ``ValueError`` as ``export`` for a ``sort_by`` that is not one of the
+  columns; ``resolve_columns`` raises the one for duplicate names; and
+  ``numeric_columns(rows, columns)`` returns the set of those columns that are numeric:
+  every value that is not ``None`` (a missing key is ``None``) is a number, booleans are not
+  numbers, and a column with no values is not numeric.
+- ``formatters.py``: ``format_text(rows, columns, max_width, header, null, float_digits)``,
+  ``format_csv(rows, columns, header)`` and ``format_markdown(rows, columns, header, null,
+  float_digits)``. Each takes rows that are already sorted and the resolved list of column
+  names, and returns the finished string exactly as ``export`` returns it today.
+- Size: ``export.py`` has at most 90 lines of code. Blank lines, comments and docstrings do
+  not count.
 """
 
 import argparse

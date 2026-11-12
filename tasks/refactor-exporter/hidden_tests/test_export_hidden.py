@@ -485,6 +485,28 @@ def test_export_py_is_at_most_90_lines_of_code():
     assert code_lines(Path(export_module.__file__)) <= 90
 
 
+def test_numeric_columns_are_those_whose_values_are_all_numbers():
+    from columns import numeric_columns
+
+    rows = [
+        {"n": 1, "f": 2.5, "m": 1, "b": True, "s": "x", "none": None, "mixed": 1},
+        {"n": None, "f": 3, "b": False, "s": 4, "none": None, "mixed": "1"},
+        {"n": 7, "m": None, "b": True, "mixed": 2},
+    ]
+    names = ["n", "f", "m", "b", "s", "none", "mixed", "absent"]
+    assert numeric_columns(rows, names) == {"n", "f", "m"}
+    assert numeric_columns(rows, ["b"]) == set()  # booleans are not numbers
+    assert numeric_columns(rows, []) == set()
+    assert numeric_columns([], ["n"]) == set()
+
+
+def test_numeric_columns_only_looks_at_the_columns_it_is_given():
+    from columns import numeric_columns
+
+    assert numeric_columns([{"a": 1, "b": 2}], ["a"]) == {"a"}
+    assert isinstance(numeric_columns([{"a": 1}], ["a"]), set)
+
+
 @pytest.mark.parametrize(("case_id", "stdin", "argv", "code", "out", "err"), MAIN_CASES, ids=[c[0] for c in MAIN_CASES])
 def test_main_behaves_exactly_as_before(case_id, stdin, argv, code, out, err):
     stdout, stderr = io.StringIO(), io.StringIO()
@@ -496,3 +518,95 @@ def test_main_behaves_exactly_as_before(case_id, stdin, argv, code, out, err):
         assert stderr.getvalue().startswith(err)
     else:
         assert stderr.getvalue() == err
+
+
+# Behaviour the original code has and its docstrings do not state. The expected values were
+# produced by running the original export.py, like CASES above.
+
+MAX_WIDTH_IS_CHECKED_FOR_EVERY_FORMAT = [
+    ('csv-max-width-1', [{'a': 1, 'b': 'x'}], {'fmt': 'csv', 'max_width': 1}, ['ValueError', 'max_width must be at least 2']),
+    ('markdown-max-width-0', [{'a': 1, 'b': 'x'}], {'fmt': 'markdown', 'max_width': 0}, ['ValueError', 'max_width must be at least 2']),
+    ('csv-max-width-negative-empty-rows', [], {'fmt': 'csv', 'max_width': -5}, ['ValueError', 'max_width must be at least 2']),
+]
+
+
+@pytest.mark.parametrize(("case_id", "rows", "kwargs", "expected"), MAX_WIDTH_IS_CHECKED_FOR_EVERY_FORMAT, ids=[c[0] for c in MAX_WIDTH_IS_CHECKED_FOR_EVERY_FORMAT])
+def test_max_width_is_checked_for_every_format(case_id, rows, kwargs, expected):
+    assert run(rows, kwargs) == expected
+
+THE_FIRST_FAILING_CHECK_DECIDES_WHICH_ERROR_IS_RAISED = [
+    ('format-before-width-and-duplicates', [{'a': 1, 'b': 'x'}], {'fmt': 'xml', 'max_width': 1, 'columns': ['a', 'a']}, ['ValueError', "unknown format 'xml'; expected text, csv or markdown"]),
+    ('width-before-duplicates', [{'a': 1, 'b': 'x'}], {'max_width': 1, 'columns': ['a', 'a']}, ['ValueError', 'max_width must be at least 2']),
+    ('markdown-header-before-duplicates-and-sort', [{'a': 1, 'b': 'x'}], {'fmt': 'markdown', 'header': False, 'columns': ['a', 'a'], 'sort_by': 'zz'}, ['ValueError', 'markdown tables need a header']),
+    ('width-before-markdown-header', [{'a': 1, 'b': 'x'}], {'fmt': 'markdown', 'header': False, 'max_width': 1}, ['ValueError', 'max_width must be at least 2']),
+    ('duplicates-before-unknown-sort-column', [{'a': 1, 'b': 'x'}], {'columns': ['a', 'a'], 'sort_by': 'zz'}, ['ValueError', 'duplicate column names']),
+    ('format-before-width-with-no-rows', [], {'fmt': 'pdf', 'max_width': 0}, ['ValueError', "unknown format 'pdf'; expected text, csv or markdown"]),
+]
+
+
+@pytest.mark.parametrize(("case_id", "rows", "kwargs", "expected"), THE_FIRST_FAILING_CHECK_DECIDES_WHICH_ERROR_IS_RAISED, ids=[c[0] for c in THE_FIRST_FAILING_CHECK_DECIDES_WHICH_ERROR_IS_RAISED])
+def test_the_first_failing_check_decides_which_error_is_raised(case_id, rows, kwargs, expected):
+    assert run(rows, kwargs) == expected
+
+LINE_BREAKS_IN_CELLS_DIFFER_BETWEEN_TEXT_AND_MARKDOWN = [
+    ('text-crlf-and-cr', [{'a': 'x\r\ny', 'b': 'p\rq'}], {}, 'a     b\n----  ---\nx  y  p q\n'),
+    ('markdown-crlf-and-cr', [{'a': 'x\r\ny', 'b': 'p\rq'}], {'fmt': 'markdown'}, '| a | b |\n| --- | --- |\n| x<br>y | p<br>q |\n'),
+    ('text-lf-then-cr', [{'a': 'x\n\ry'}], {}, 'a\n----\nx  y\n'),
+    ('markdown-pipe-and-breaks', [{'a': 'p|q\r\nr\ns\rt'}], {'fmt': 'markdown'}, '| a |\n| --- |\n| p\\|q<br>r<br>s<br>t |\n'),
+]
+
+
+@pytest.mark.parametrize(("case_id", "rows", "kwargs", "expected"), LINE_BREAKS_IN_CELLS_DIFFER_BETWEEN_TEXT_AND_MARKDOWN, ids=[c[0] for c in LINE_BREAKS_IN_CELLS_DIFFER_BETWEEN_TEXT_AND_MARKDOWN])
+def test_line_breaks_in_cells_differ_between_text_and_markdown(case_id, rows, kwargs, expected):
+    assert run(rows, kwargs) == expected
+
+HEADERS_ARE_NOT_TREATED_LIKE_CELLS = [
+    ('markdown-header-is-not-escaped', [{'a|b': 1, 'c\nd': 'v'}], {'fmt': 'markdown'}, '| a|b | c\nd |\n| ---: | --- |\n| 1 | v |\n'),
+    ('csv-header-is-quoted-like-a-cell', [{'a b': 1, 'c,d': 2, ' e': 3, 'f"g': 4}], {'fmt': 'csv'}, 'a b,"c,d"," e","f""g"\n1,2,3,4\n'),
+    ('text-header-keeps-line-breaks', [{'a|b': 1, 'c\nd': 'v'}], {'max_width': 3}, 'a|b  c\nd\n---  ---\n  1  v\n'),
+    ('text-header-is-truncated', [{'a-long-name': 1}], {'max_width': 5}, 'a-lo…\n-----\n    1\n'),
+]
+
+
+@pytest.mark.parametrize(("case_id", "rows", "kwargs", "expected"), HEADERS_ARE_NOT_TREATED_LIKE_CELLS, ids=[c[0] for c in HEADERS_ARE_NOT_TREATED_LIKE_CELLS])
+def test_headers_are_not_treated_like_cells(case_id, rows, kwargs, expected):
+    assert run(rows, kwargs) == expected
+
+VALUES_THAT_ARE_NOT_PLAIN_SCALARS = [
+    ('text-tuple-nested-list-dict-nan-inf-negative-zero', [{'t': (1, 2), 'n': [1, [2, 3]], 'd': {'k': 1}, 'f': float("nan"), 'i': float("inf"), 'z': -0.0}], {}, ('t     n        d           f    i   z\n'
+ '----  -------  --------  ---  ---  --\n'
+ "1; 2  1; 2; 3  {'k': 1}  nan  inf  -0\n")),
+    ('csv-tuple-nested-list-dict-nan-inf-negative-zero', [{'t': (1, 2), 'n': [1, [2, 3]], 'd': {'k': 1}, 'f': float("nan"), 'i': float("inf"), 'z': -0.0}], {'fmt': 'csv'}, "t,n,d,f,i,z\n1|2,1|2|3,{'k': 1},nan,inf,-0.0\n"),
+    ('markdown-tuple-nested-list-dict-nan-inf-negative-zero', [{'t': (1, 2), 'n': [1, [2, 3]], 'd': {'k': 1}, 'f': float("nan"), 'i': float("inf"), 'z': -0.0}], {'fmt': 'markdown'}, ('| t | n | d | f | i | z |\n'
+ '| --- | --- | --- | ---: | ---: | ---: |\n'
+ "| 1; 2 | 1; 2; 3 | {'k': 1} | nan | inf | -0 |\n")),
+    ('text-non-string-column-names', [{1: 'a', 2: 'b'}], {'columns': [1, 2]}, '1  2\n-  -\na  b\n'),
+    ('csv-non-string-column-names', [{1: 'a', 2: 'b'}], {'columns': [1, 2], 'fmt': 'csv'}, '1,2\na,b\n'),
+    ('markdown-non-string-column-names', [{1: 'a'}], {'columns': [1], 'fmt': 'markdown'}, '| 1 |\n| --- |\n| a |\n'),
+]
+
+
+@pytest.mark.parametrize(("case_id", "rows", "kwargs", "expected"), VALUES_THAT_ARE_NOT_PLAIN_SCALARS, ids=[c[0] for c in VALUES_THAT_ARE_NOT_PLAIN_SCALARS])
+def test_values_that_are_not_plain_scalars(case_id, rows, kwargs, expected):
+    assert run(rows, kwargs) == expected
+
+MAIN_OPTION_CASES_INPUT = '[{"a": 1, "b": 2}, {"a": 3, "c": 4}]'
+MAIN_OPTION_CASES = [
+    ('main-empty-columns-option-means-all-columns', ['--columns', ''], 0, 'a  b  c\n-  -  -\n1  2\n3     4\n', ''),
+    ('main-empty-column-name-is-kept', ['--columns', 'a,,b'], 0, 'a    b\n-    -\n1    2\n3\n', ''),
+    ('main-empty-sort-option-is-an-unknown-column', ['--sort', ''], 1, '', "error: cannot sort by unknown column ''\n"),
+    ('main-zero-width', ['--max-width', '0'], 1, '', 'error: max_width must be at least 2\n'),
+    ('main-negative-width', ['--max-width', '-3'], 1, '', 'error: max_width must be at least 2\n'),
+    ('main-width-is-checked-for-csv', ['-f', 'csv', '--max-width', '1'], 1, '', 'error: max_width must be at least 2\n'),
+    ('main-duplicate-columns', ['--columns', 'a,a'], 1, '', 'error: duplicate column names\n'),
+    ('main-sort-by-a-column-that-is-not-shown', ['--columns', 'a', '--sort', 'b'], 1, '', "error: cannot sort by unknown column 'b'\n"),
+]
+
+
+@pytest.mark.parametrize(("case_id", "argv", "code", "out", "err"), MAIN_OPTION_CASES, ids=[c[0] for c in MAIN_OPTION_CASES])
+def test_main_options_behave_exactly_as_before(case_id, argv, code, out, err):
+    stdout, stderr = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stderr(io.StringIO()):
+        status = main(argv, io.StringIO(MAIN_OPTION_CASES_INPUT), stdout, stderr)
+    assert (status, stdout.getvalue(), stderr.getvalue()) == (code, out, err)
+

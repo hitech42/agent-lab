@@ -51,3 +51,9 @@ def test_names_and_search():
         users.add(name)
     assert users.names() == ["alfred", "alice", "bob"]
     assert users.search("al") == ["alfred", "alice"]
+
+
+def test_add_many_adds_every_name_and_returns_the_display_names():
+    users = UserDirectory()
+    assert users.add_many([" Alice", "bob "]) == ["Alice", "bob"]
+    assert users.names() == ["Alice", "bob"]

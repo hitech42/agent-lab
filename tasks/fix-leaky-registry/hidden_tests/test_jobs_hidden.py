@@ -80,3 +80,16 @@ def test_duplicate_names_are_refused_within_one_scheduler():
     scheduler.add("dup", "1m")
     with pytest.raises(ValueError):
         scheduler.add("dup", "1m")
+
+
+def test_a_schedulers_history_lists_what_it_added_in_order_and_is_its_own():
+    first, second = Scheduler(), Scheduler()
+    assert first.history == [] and second.history == []
+    first.add("b", "1m")
+    first.add("a", "1m")
+    second.add("c", "1m")
+    assert first.history == ["b", "a"] and second.history == ["c"]
+    assert first.history is not second.history
+    with pytest.raises(ValueError):
+        first.add("a", "1m")
+    assert first.history == ["b", "a"]  # a refused job is not recorded

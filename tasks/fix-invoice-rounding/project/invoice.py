@@ -1,75 +1,96 @@
-"""Build and print invoices."""
+"""Build and print invoices from the price list, the discounts and the tax rules.
+
+``pricing`` prices each line, ``discounts`` says how the invoice's discounts apply and are
+spread over the lines, ``tax`` says how tax is charged, and ``money`` has the rounding
+conventions. This module only puts their results together.
+"""
 
 from dataclasses import dataclass
-from decimal import Decimal
 
-from discount import discount_cents
-from money import format_cents, to_cents
-from tax import tax_cents
+from discounts import Discount, spread, take_off
+from money import format_cents
+from pricing import Line, price_line
+from tax import group_tax
 
 
 @dataclass(frozen=True)
-class Line:
-    description: str
-    unit_price: str
-    quantity: int
-    total_cents: int
+class InvoiceLine:
+    line: Line
+    discount_cents: int
+
+    @property
+    def net_cents(self) -> int:
+        return self.line.gross_cents - self.discount_cents
+
+    def describe(self) -> str:
+        """``<name>: <quantity> = <line charge>``, as ``render`` prints a line."""
+        return f"{self.line.name}: {self.line.quantity} = {format_cents(self.line.gross_cents)}"
 
 
 @dataclass(frozen=True)
 class Invoice:
-    lines: list[Line]
-    subtotal_cents: int
+    lines: list[InvoiceLine]
     discount_cents: int
     tax_cents: int
+
+    @property
+    def subtotal_cents(self) -> int:
+        """The sum of the line charges before any discount."""
+        return sum(item.line.gross_cents for item in self.lines)
 
     @property
     def total_cents(self) -> int:
         """Subtotal minus discount plus tax."""
         return self.subtotal_cents - self.discount_cents + self.tax_cents
 
+    @property
+    def credit_cents(self) -> int:
+        """The sum of the credit lines, as a positive amount (0 if there are none)."""
+        return -sum(item.line.gross_cents for item in self.lines if item.line.gross_cents < 0)
 
-def price_line(description: str, unit_price: str, quantity: int) -> Line:
-    """Price one line: unit price times quantity, in whole cents.
+    def summary(self) -> dict[str, int]:
+        """The figures ``render`` prints at the end, by name, in cents."""
+        return {
+            "subtotal": self.subtotal_cents,
+            "discount": self.discount_cents,
+            "tax": self.tax_cents,
+            "total": self.total_cents,
+        }
 
-    The product is rounded once, after multiplying, never before: three items at
-    ``"0.335"`` are 101 cents, not three times the rounded unit price. A negative unit
-    price is a credit and gives a negative line total.
+    def count_units(self) -> int:
+        """The number of units on the invoice, all lines together."""
+        return sum(item.line.quantity for item in self.lines)
+
+
+def build_invoice(items: list[tuple[str, int]], discounts: list[Discount] | None = None) -> Invoice:
+    """Build an invoice from ``(sku, quantity)`` items and the invoice's discounts.
+
+    Lines are priced by ``pricing``. The total discount is worked out by ``discounts`` on the
+    positive line amounts and spread over the lines; tax is charged by ``tax`` on what the
+    lines come to after their share of the discount.
     """
-    total = to_cents(Decimal(unit_price) * quantity)
-    return Line(description, unit_price, quantity, total)
-
-
-def build_invoice(
-    items: list[tuple[str, str, int]],
-    tax_rate: Decimal | str = "0",
-    discount_percent: Decimal | str = "0",
-) -> Invoice:
-    """Build an invoice from ``(description, unit price, quantity)`` items.
-
-    The subtotal is the sum of the line totals. The discount is a percentage of the
-    subtotal (see ``discount.discount_cents``) and tax is computed on the subtotal after
-    the discount (see ``tax.tax_cents``).
-    """
-    lines = [price_line(*item) for item in items]
-    subtotal = sum(line.total_cents for line in lines)
-    discount = discount_cents(subtotal, discount_percent)
-    return Invoice(lines, subtotal, discount, tax_cents(subtotal - discount, tax_rate))
+    lines = [price_line(sku, quantity) for sku, quantity in items]
+    gross = [line.gross_cents for line in lines]
+    base = sum(cents for cents in gross if cents > 0)
+    left = base
+    for entry in discounts or []:
+        left -= take_off(left, entry)
+    discount = base - left
+    shares = spread(discount, gross)
+    items_out = [InvoiceLine(line, share) for line, share in zip(lines, shares, strict=True)]
+    tax = sum(group_tax(item.line.group, item.net_cents) for item in items_out)
+    return Invoice(items_out, discount, tax)
 
 
 def render(invoice: Invoice) -> str:
     """The invoice as text, lines joined by newlines, with no trailing newline.
 
-    One line per item, ``<description>: <quantity> x <unit price> = <line total>``, then
-    ``Subtotal: <amount>``, ``Discount: -<amount>`` only when the discount is not zero,
-    ``Tax: <amount>`` and ``Total: <amount>``. Amounts are formatted with
-    ``money.format_cents``. The printed figures always add up.
+    One line per item, ``<name>: <quantity> = <line charge>``, then ``Subtotal: <amount>``,
+    ``Discount: -<amount>`` only when the discount is not zero, ``Tax: <amount>`` and
+    ``Total: <amount>``. Amounts are formatted with ``money.format_cents``. The printed
+    figures always add up.
     """
-    out = [
-        f"{line.description}: {line.quantity} x {line.unit_price} = "
-        f"{format_cents(line.total_cents)}"
-        for line in invoice.lines
-    ]
+    out = [item.describe() for item in invoice.lines]
     out.append(f"Subtotal: {format_cents(invoice.subtotal_cents)}")
     if invoice.discount_cents:
         out.append(f"Discount: -{format_cents(invoice.discount_cents)}")

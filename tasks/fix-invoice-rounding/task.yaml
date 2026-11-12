@@ -1,11 +1,11 @@
 id: fix-invoice-rounding
-title: Fix invoice amounts that are a cent off
+title: Make the invoicing package follow its docstrings
 category: bugfix
-difficulty: medium
+difficulty: hard
 prompt: |
-  Customers report that our invoices are sometimes a cent off from what they work out
-  by hand. `invoice.build_invoice` prices the lines, applies a discount and adds tax, and
-  `invoice.render` prints the result. Find the cause and fix it so that every amount
-  behaves as the docstrings in the project describe. Run the tests in `tests/` to check
-  your work, and do not edit the tests.
+  This package builds and prints invoices. The docstrings of `money`, `catalog`, `discounts`
+  and `tax` define how every amount is worked out (`money` has the rounding conventions
+  that apply everywhere); `pricing` and `invoice` put those rules together. Make the
+  package follow its docstrings. Run the tests in `tests/` to check your work, and do not
+  edit the tests.
 grading: hidden_tests

@@ -44,10 +44,11 @@ def test_main_prints_the_table():
 
 
 def test_the_pieces_are_split_into_modules():
-    from columns import resolve_columns, sort_rows
+    from columns import numeric_columns, resolve_columns, sort_rows
     from formatters import format_csv, format_markdown, format_text
 
     names = resolve_columns(ROWS, None)
+    assert numeric_columns(ROWS, names) == {"age"}
     rows = sort_rows(ROWS, names, "age", False)
     assert [row["name"] for row in rows] == ["Bob", "Alice"]
     assert format_csv(rows, columns=names, header=True).startswith("name,age,active\nBob")

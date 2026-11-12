@@ -1,4 +1,9 @@
+import json
+from pathlib import Path
+
 from settings import load_settings, merge_settings, parse_env
+
+DEFAULTS = json.loads((Path(__file__).parent / "data" / "defaults.json").read_text())
 
 
 def test_nested_dicts_merge_and_other_values_replace():
@@ -9,6 +14,12 @@ def test_nested_dicts_merge_and_other_values_replace():
         "tags": [3],
         "debug": True,
     }
+
+
+def test_a_local_override_can_remove_a_defaulted_setting():
+    merged = merge_settings(DEFAULTS, {"service": {"retries": None}})
+    service = {key: value for key, value in DEFAULTS["service"].items() if key != "retries"}
+    assert merged == {**DEFAULTS, "service": service}
 
 
 def test_none_removes_a_key():

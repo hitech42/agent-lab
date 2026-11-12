@@ -1,13 +1,9 @@
 id: unicode-usernames
-title: Match user names the way people read them
+title: Make the user directory follow its docstrings
 category: bugfix
 difficulty: medium
 prompt: |
-  `directory.py` keeps a directory of user names. Its docstrings describe exactly how
-  names are matched and how each operation behaves, but the code does not follow them:
-  users complain that the same name typed on another keyboard or with other capitals
-  creates a second account, and some lookups fail in surprising ways. Fix
-  `directory.py` so that `canonical` and every `UserDirectory` method behave as their
-  docstrings describe. Run the tests in `tests/` to check your work, and do not edit
-  the tests.
+  `directory.py` keeps a directory of user names. Make `canonical` and every
+  `UserDirectory` method behave as their docstrings describe. Run the tests in `tests/`
+  to check your work, and do not edit the tests.
 grading: hidden_tests

@@ -1,12 +1,12 @@
 {
-  "attempts": 504,
+  "attempts": 568,
   "cluster_min_tasks": 8,
   "comparisons_by_metric": {
-    "cost": 10,
-    "pass": 10,
-    "turns": 10
+    "cost": 11,
+    "pass": 11,
+    "turns": 11
   },
-  "comparisons_shown": 30,
+  "comparisons_shown": 33,
   "daily": [
     {
       "date": "2026-11-01",
@@ -62,16 +62,21 @@
       "date": "2026-11-11",
       "spend_usd": 0.21462,
       "track": "turn-budget"
+    },
+    {
+      "date": "2026-11-12",
+      "spend_usd": 0.250509,
+      "track": "plan-first"
     }
   ],
-  "days_run": 11,
-  "latest_date": "2026-11-11",
-  "latest_day": "eval(turn-budget): baseline 28/32 vs variant 28/32 passed, $0.2146 [completed]",
+  "days_run": 12,
+  "latest_date": "2026-11-12",
+  "latest_day": "eval(plan-first): baseline 29/32 vs variant 29/32 passed, $0.2505 [completed]",
   "min_pairs": 10,
   "resamples": 2000,
-  "spend_attempts_usd": 3.001855,
-  "spend_usd": 3.014778,
-  "spend_warmups_usd": 0.012923,
+  "spend_attempts_usd": 3.252227,
+  "spend_usd": 3.265287,
+  "spend_warmups_usd": 0.01306,
   "tracks": [
     {
       "current": {
@@ -456,51 +461,69 @@
     {
       "current": {
         "baseline": {
-          "ci_high": 1.0,
-          "ci_low": 0.757506,
-          "cost_per_solved_usd": 0.003044,
-          "mean_cost_usd": 0.003044,
-          "n": 12,
-          "passed": 12,
-          "rate": 1.0
+          "ci_high": 0.967598,
+          "ci_low": 0.757818,
+          "cost_per_solved_usd": 0.004099,
+          "mean_cost_usd": 0.003715,
+          "n": 32,
+          "passed": 29,
+          "rate": 0.90625
         },
         "baseline_hash": "3016aba7e85c",
         "by_difficulty": [
           {
-            "baseline_passed": 12,
-            "baseline_rate": 1.0,
-            "difficulty": "unknown",
+            "baseline_passed": 11,
+            "baseline_rate": 0.916667,
+            "difficulty": "easy",
             "pairs": 12,
             "tasks": 3,
             "variant_passed": 12,
             "variant_rate": 1.0
+          },
+          {
+            "baseline_passed": 12,
+            "baseline_rate": 1.0,
+            "difficulty": "medium",
+            "pairs": 12,
+            "tasks": 3,
+            "variant_passed": 12,
+            "variant_rate": 1.0
+          },
+          {
+            "baseline_passed": 6,
+            "baseline_rate": 0.75,
+            "difficulty": "hard",
+            "pairs": 8,
+            "tasks": 2,
+            "variant_passed": 5,
+            "variant_rate": 0.625
           }
         ],
-        "ceiling": true,
+        "ceiling": false,
         "current": true,
         "days": 1,
         "delta_cost_usd": {
-          "high": 0.00043,
-          "low": -0.000396,
-          "mean": 6.7e-05,
-          "verdict": "no detectable difference"
+          "high": 0.000717,
+          "low": 0.0001,
+          "mean": 0.000394,
+          "verdict": "variant higher"
         },
         "delta_output_tokens": {
-          "high": 475.166667,
-          "low": -242.916667,
-          "mean": 136.083333,
-          "verdict": "no detectable difference"
+          "high": 1240.9375,
+          "low": 332.28125,
+          "mean": 708.75,
+          "verdict": "variant higher"
         },
         "delta_pass_pp": {
-          "high": 24.249401,
-          "low": -24.249401,
+          "high": 9.375,
+          "low": -9.375,
           "mean": 0.0,
           "verdict": "no detectable difference"
         },
         "delta_turns": {
-          "high": 0.416667,
-          "low": -1.083333,
-          "mean": -0.25,
+          "high": 0.65625,
+          "low": -0.75,
+          "mean": -0.03125,
           "verdict": "no detectable difference"
         },
         "description": "system prompt changed",
@@ -509,35 +532,119 @@
           "tampered": 0,
           "unpaired": 0
         },
-        "first_date": "2026-11-05",
+        "first_date": "2026-11-12",
         "injection": {
           "baseline_rate": 1.0,
-          "baseline_resisted": 4,
-          "pairs": 4,
+          "baseline_resisted": 8,
+          "pairs": 8,
           "variant_rate": 1.0,
-          "variant_resisted": 4
+          "variant_resisted": 8
         },
-        "last_date": "2026-11-05",
-        "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
+        "last_date": "2026-11-12",
+        "method": "task-clustered percentile bootstrap for every metric, pass rate included",
         "noise_floor": false,
-        "pairs": 12,
+        "pairs": 32,
         "question": "Does asking the agent to write a plan before acting improve results?",
-        "suite_hash": null,
-        "suite_tasks": 3,
-        "tasks": 3,
+        "suite_hash": "37e677db05e7",
+        "suite_tasks": 8,
+        "tasks": 8,
         "track": "plan-first",
         "variant": {
-          "ci_high": 1.0,
-          "ci_low": 0.757506,
-          "cost_per_solved_usd": 0.003111,
-          "mean_cost_usd": 0.003111,
-          "n": 12,
-          "passed": 12,
-          "rate": 1.0
+          "ci_high": 0.967598,
+          "ci_low": 0.757818,
+          "cost_per_solved_usd": 0.004534,
+          "mean_cost_usd": 0.004109,
+          "n": 32,
+          "passed": 29,
+          "rate": 0.90625
         },
         "variant_hash": "f155db74474c"
       },
-      "older": [],
+      "older": [
+        {
+          "baseline": {
+            "ci_high": 1.0,
+            "ci_low": 0.757506,
+            "cost_per_solved_usd": 0.003044,
+            "mean_cost_usd": 0.003044,
+            "n": 12,
+            "passed": 12,
+            "rate": 1.0
+          },
+          "baseline_hash": "3016aba7e85c",
+          "by_difficulty": [
+            {
+              "baseline_passed": 12,
+              "baseline_rate": 1.0,
+              "difficulty": "unknown",
+              "pairs": 12,
+              "tasks": 3,
+              "variant_passed": 12,
+              "variant_rate": 1.0
+            }
+          ],
+          "ceiling": true,
+          "current": false,
+          "days": 1,
+          "delta_cost_usd": {
+            "high": 0.00043,
+            "low": -0.000396,
+            "mean": 6.7e-05,
+            "verdict": "no detectable difference"
+          },
+          "delta_output_tokens": {
+            "high": 475.166667,
+            "low": -242.916667,
+            "mean": 136.083333,
+            "verdict": "no detectable difference"
+          },
+          "delta_pass_pp": {
+            "high": 24.249401,
+            "low": -24.249401,
+            "mean": 0.0,
+            "verdict": "no detectable difference"
+          },
+          "delta_turns": {
+            "high": 0.416667,
+            "low": -1.083333,
+            "mean": -0.25,
+            "verdict": "no detectable difference"
+          },
+          "description": "system prompt changed",
+          "excluded": {
+            "error": 0,
+            "tampered": 0,
+            "unpaired": 0
+          },
+          "first_date": "2026-11-05",
+          "injection": {
+            "baseline_rate": 1.0,
+            "baseline_resisted": 4,
+            "pairs": 4,
+            "variant_rate": 1.0,
+            "variant_resisted": 4
+          },
+          "last_date": "2026-11-05",
+          "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
+          "noise_floor": false,
+          "pairs": 12,
+          "question": "Does asking the agent to write a plan before acting improve results?",
+          "suite_hash": null,
+          "suite_tasks": 3,
+          "tasks": 3,
+          "track": "plan-first",
+          "variant": {
+            "ci_high": 1.0,
+            "ci_low": 0.757506,
+            "cost_per_solved_usd": 0.003111,
+            "mean_cost_usd": 0.003111,
+            "n": 12,
+            "passed": 12,
+            "rate": 1.0
+          },
+          "variant_hash": "f155db74474c"
+        }
+      ],
       "track": "plan-first",
       "unattributed_exclusions": 0
     },

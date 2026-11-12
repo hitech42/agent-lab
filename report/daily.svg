@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 250" width="760" height="250" role="img" aria-labelledby="title desc">
 <title id="title">Daily spend</title>
-<desc id="desc">Total spend per day in USD (attempts and warm-ups), labelled by track. 2026-11-01 aa-test $0.0633; 2026-11-02 model-comparison $0.2795; 2026-11-03 tool-design $0.0596; 2026-11-04 turn-budget $0.0628; 2026-11-05 plan-first $0.0740; 2026-11-06 self-verify $0.2850; 2026-11-07 tool-design $0.2443; 2026-11-08 aa-test $0.2345; 2026-11-09 model-comparison $1.2512; 2026-11-10 tool-design $0.2458; 2026-11-11 turn-budget $0.2146</desc>
+<desc id="desc">Total spend per day in USD (attempts and warm-ups), labelled by track. 2026-11-01 aa-test $0.0633; 2026-11-02 model-comparison $0.2795; 2026-11-03 tool-design $0.0596; 2026-11-04 turn-budget $0.0628; 2026-11-05 plan-first $0.0740; 2026-11-06 self-verify $0.2850; 2026-11-07 tool-design $0.2443; 2026-11-08 aa-test $0.2345; 2026-11-09 model-comparison $1.2512; 2026-11-10 tool-design $0.2458; 2026-11-11 turn-budget $0.2146; 2026-11-12 plan-first $0.2505</desc>
 <style>
   :root { --fg: #57606a; --grid: #afb8c1; --accent: #0969da; --band: rgba(140,149,159,0.18); }
   @media (prefers-color-scheme: dark) {
@@ -20,32 +20,35 @@
 <line class="axis" x1="64.0" y1="190.0" x2="744.0" y2="190.0"/>
 <text class="small" x="58.0" y="194.0" text-anchor="end">$0</text>
 <text class="small" x="58.0" y="84.0" text-anchor="end">$1.3137</text>
-<text class="small" x="94.9" y="206.0" text-anchor="middle">11-01</text>
-<rect class="bar" x="81.9" y="184.7" width="26.0" height="5.3"/>
-<text class="small" transform="translate(97.9 180.7) rotate(-90)">aa-test</text>
-<rect class="bar" x="143.7" y="166.6" width="26.0" height="23.4"/>
-<text class="small" transform="translate(159.7 162.6) rotate(-90)">model-comparis</text>
-<text class="small" x="218.5" y="206.0" text-anchor="middle">11-03</text>
-<rect class="bar" x="205.5" y="185.0" width="26.0" height="5.0"/>
-<text class="small" transform="translate(221.5 181.0) rotate(-90)">tool-design</text>
-<rect class="bar" x="267.4" y="184.7" width="26.0" height="5.3"/>
-<text class="small" transform="translate(283.4 180.7) rotate(-90)">turn-budget</text>
-<text class="small" x="342.2" y="206.0" text-anchor="middle">11-05</text>
-<rect class="bar" x="329.2" y="183.8" width="26.0" height="6.2"/>
-<text class="small" transform="translate(345.2 179.8) rotate(-90)">plan-first</text>
-<rect class="bar" x="391.0" y="166.1" width="26.0" height="23.9"/>
-<text class="small" transform="translate(407.0 162.1) rotate(-90)">self-verify</text>
-<text class="small" x="465.8" y="206.0" text-anchor="middle">11-07</text>
-<rect class="bar" x="452.8" y="169.5" width="26.0" height="20.5"/>
-<text class="small" transform="translate(468.8 165.5) rotate(-90)">tool-design</text>
-<rect class="bar" x="514.6" y="170.4" width="26.0" height="19.6"/>
-<text class="small" transform="translate(530.6 166.4) rotate(-90)">aa-test</text>
-<text class="small" x="589.5" y="206.0" text-anchor="middle">11-09</text>
-<rect class="bar" x="576.5" y="85.2" width="26.0" height="104.8"/>
-<text class="small" transform="translate(592.5 81.2) rotate(-90)">model-comparis</text>
-<rect class="bar" x="638.3" y="169.4" width="26.0" height="20.6"/>
-<text class="small" transform="translate(654.3 165.4) rotate(-90)">tool-design</text>
-<text class="small" x="713.1" y="206.0" text-anchor="middle">11-11</text>
-<rect class="bar" x="700.1" y="172.0" width="26.0" height="18.0"/>
-<text class="small" transform="translate(716.1 168.0) rotate(-90)">turn-budget</text>
+<text class="small" x="92.3" y="206.0" text-anchor="middle">11-01</text>
+<rect class="bar" x="79.3" y="184.7" width="26.0" height="5.3"/>
+<text class="small" transform="translate(95.3 180.7) rotate(-90)">aa-test</text>
+<rect class="bar" x="136.0" y="166.6" width="26.0" height="23.4"/>
+<text class="small" transform="translate(152.0 162.6) rotate(-90)">model-comparis</text>
+<text class="small" x="205.7" y="206.0" text-anchor="middle">11-03</text>
+<rect class="bar" x="192.7" y="185.0" width="26.0" height="5.0"/>
+<text class="small" transform="translate(208.7 181.0) rotate(-90)">tool-design</text>
+<rect class="bar" x="249.3" y="184.7" width="26.0" height="5.3"/>
+<text class="small" transform="translate(265.3 180.7) rotate(-90)">turn-budget</text>
+<text class="small" x="319.0" y="206.0" text-anchor="middle">11-05</text>
+<rect class="bar" x="306.0" y="183.8" width="26.0" height="6.2"/>
+<text class="small" transform="translate(322.0 179.8) rotate(-90)">plan-first</text>
+<rect class="bar" x="362.7" y="166.1" width="26.0" height="23.9"/>
+<text class="small" transform="translate(378.7 162.1) rotate(-90)">self-verify</text>
+<text class="small" x="432.3" y="206.0" text-anchor="middle">11-07</text>
+<rect class="bar" x="419.3" y="169.5" width="26.0" height="20.5"/>
+<text class="small" transform="translate(435.3 165.5) rotate(-90)">tool-design</text>
+<rect class="bar" x="476.0" y="170.4" width="26.0" height="19.6"/>
+<text class="small" transform="translate(492.0 166.4) rotate(-90)">aa-test</text>
+<text class="small" x="545.7" y="206.0" text-anchor="middle">11-09</text>
+<rect class="bar" x="532.7" y="85.2" width="26.0" height="104.8"/>
+<text class="small" transform="translate(548.7 81.2) rotate(-90)">model-comparis</text>
+<rect class="bar" x="589.3" y="169.4" width="26.0" height="20.6"/>
+<text class="small" transform="translate(605.3 165.4) rotate(-90)">tool-design</text>
+<text class="small" x="659.0" y="206.0" text-anchor="middle">11-11</text>
+<rect class="bar" x="646.0" y="172.0" width="26.0" height="18.0"/>
+<text class="small" transform="translate(662.0 168.0) rotate(-90)">turn-budget</text>
+<text class="small" x="715.7" y="206.0" text-anchor="middle">11-12</text>
+<rect class="bar" x="702.7" y="169.0" width="26.0" height="21.0"/>
+<text class="small" transform="translate(718.7 165.0) rotate(-90)">plan-first</text>
 </svg>

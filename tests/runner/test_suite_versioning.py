@@ -200,6 +200,18 @@ def test_the_model_override_changes_the_config_and_its_hash(tmp_path: Path) -> N
     assert len(set(by_model.values())) == 2
 
 
+def test_the_effort_override_changes_the_config_hash_and_every_request(tmp_path: Path) -> None:
+    world = build_cli(tmp_path)
+    world.command.execute(calibration_args(world, trials=1))
+    world.client.requests.clear()
+    world.command.execute(calibration_args(world, date="2026-11-03", effort="high", trials=1))
+    records, _ = ResultsStore(world.results_dir).read_all_attempts()
+    by_effort = {r.effort: r.config_hash for r in records}
+    assert set(by_effort) == {"medium", "high"} and len(set(by_effort.values())) == 2
+    assert world.client.requests
+    assert {r["output_config"]["effort"] for r in world.client.requests} == {"high"}
+
+
 def test_an_unknown_model_is_refused_before_any_api_call(tmp_path: Path) -> None:
     world = build_cli(tmp_path)
     assert world.command.execute(calibration_args(world, model="gpt-9")) == 1

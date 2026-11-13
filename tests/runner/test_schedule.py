@@ -13,7 +13,7 @@ EXPECTED = {
     "2026-11-04": "turn-budget",
     "2026-11-05": "plan-first",
     "2026-11-06": "self-verify",
-    "2026-11-07": "tool-design",
+    "2026-11-07": "effort-sweep",
     "2026-11-08": "aa-test",
 }
 
@@ -43,7 +43,7 @@ def test_baseline_and_defaults() -> None:
     tuesday = sched.track_for(date(2026, 11, 3))
     assert (tuesday.trials_per_task, tuesday.daily_max_cost_usd) == (4, 1.00)
     assert tuesday.attempt_max_cost_usd == 0.15
-    assert sched.cost_defaults == {"claude-haiku-5-5": 0.005, "claude-sonnet-5-5": 0.06}
+    assert sched.cost_defaults == {"claude-haiku-5-5": 0.004, "claude-sonnet-5-5": 0.04}
 
 
 def test_monday_overrides_the_default_caps() -> None:
@@ -141,8 +141,19 @@ def test_duplicate_weekday_in_the_yaml(tmp_path: Path) -> None:
 
 
 def test_same_name_with_a_different_definition(tmp_path: Path) -> None:
-    text = problems(tmp_path, lambda raw: raw["tracks"][6]["variant"].update({"max_turns": 9}))
+    def reuse(raw) -> None:  # type: ignore[no-untyped-def]
+        raw["tracks"][6] = {
+            **raw["tracks"][2],
+            "variant": {"tool_set": "bash_only", "max_turns": 9},
+        }
+
+    text = problems(tmp_path, reuse)
     assert "name 'tool-design' is reused with a different definition" in text
+
+
+def test_a_name_may_repeat_only_with_an_identical_definition(tmp_path: Path) -> None:
+    path = write_schedule(tmp_path, lambda raw: raw["tracks"].update({6: raw["tracks"][2]}))
+    assert load(path).track_for(date(2026, 11, 7)).track.name == "tool-design"
 
 
 def test_cost_default_required_for_every_model_used(tmp_path: Path) -> None:
@@ -235,9 +246,9 @@ def test_real_schedule_path_exists() -> None:
     assert SCHEDULE_PATH.is_file()
 
 
-def test_the_baseline_runs_at_medium_effort_with_room_for_long_replies() -> None:
+def test_the_baseline_runs_at_low_effort_with_room_for_long_replies() -> None:
     base = schedule().baseline
-    assert (base.effort, base.max_tokens_per_call) == ("medium", 16000)
+    assert (base.effort, base.max_tokens_per_call) == ("low", 16000)
     assert all(
         schedule().track_for(date(2026, 11, d)).baseline == base for d in range(2, 9)
     )  # every track compares against that same baseline
@@ -257,3 +268,18 @@ def test_a_track_can_override_effort_with_a_valid_level(tmp_path: Path) -> None:
         tmp_path / "bad", lambda raw: raw["tracks"][3]["variant"].update({"effort": "extreme"})
     )
     assert "track 3 (turn-budget)" in text and "effort" in text
+
+
+def test_every_track_name_is_unique_in_the_real_schedule() -> None:
+    names = [schedule().track_for(date(2026, 11, d)).track.name for d in range(2, 9)]
+    assert len(set(names)) == 7 and names.count("tool-design") == 1
+
+
+def test_saturday_sweeps_effort_and_monday_compares_models_at_the_same_effort() -> None:
+    saturday = schedule().track_for(date(2026, 11, 7))
+    assert saturday.track.name == "effort-sweep"
+    assert (saturday.baseline.effort, saturday.variant.effort) == ("low", "medium")
+    assert saturday.variant.model == saturday.baseline.model == "claude-haiku-5-5"
+    assert saturday.variant.tool_set == saturday.baseline.tool_set
+    monday = schedule().track_for(date(2026, 11, 2))
+    assert monday.variant.effort == monday.baseline.effort == "low"

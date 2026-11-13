@@ -53,13 +53,13 @@ TIERS = {"add-top-flag": "easy", "fix-csv-total": "medium", "fix-date-range": "h
 def test_a_baseline_run_gives_per_task_rates_turns_and_cost(tmp_path: Path) -> None:
     report = CalibrationReport.from_records(baseline_records(tmp_path, trials=2))
     (config,) = report.configs
-    assert config.model == "claude-haiku-5-5" and config.effort == "medium"
+    assert config.model == "claude-haiku-5-5" and config.effort == "low"
     assert [t.task_id for t in config.tasks] == ["add-top-flag", "fix-csv-total", "fix-date-range"]
     assert all(t.trials == 2 and t.passed == 2 and t.errors == 0 for t in config.tasks)
     assert all(t.mean_turns > 0 and t.mean_cost_usd > 0 for t in config.tasks)
     assert config.totals() == (6, 6)
     text = report.render()
-    assert "claude-haiku-5-5 (medium)" in text and "fix-date-range" in text and "6/6" in text
+    assert "claude-haiku-5-5 (low)" in text and "fix-date-range" in text and "6/6" in text
     assert "Projected cost of one side of a day" in text and "4 trials $" in text
 
 
@@ -150,8 +150,8 @@ def test_two_configs_in_one_directory_are_shown_side_by_side(tmp_path: Path) -> 
     report = CalibrationReport.from_records(second)
     assert [c.model for c in report.configs] == ["claude-haiku-5-5", "claude-sonnet-5-5"]
     text = report.render()
-    assert "claude-haiku-5-5 (medium)" in text and "claude-sonnet-5-5 (medium)" in text
-    assert "claude-haiku-5-5 (medium) + claude-sonnet-5-5 (medium): 4 trials $" in text
+    assert "claude-haiku-5-5 (low)" in text and "claude-sonnet-5-5 (low)" in text
+    assert "claude-haiku-5-5 (low) + claude-sonnet-5-5 (low): 4 trials $" in text
     haiku, sonnet = report.configs
     assert sonnet.cost_of_one_side(2) == pytest.approx(2 * sonnet.cost_of_one_side(1))
     assert sonnet.cost_of_one_side(1) > haiku.cost_of_one_side(1)  # same tokens, dearer model

@@ -431,7 +431,7 @@ def test_message_counts_passes_per_role(tmp_path: Path) -> None:
 
 
 def test_message_for_a_partial_budget_day(tmp_path: Path) -> None:
-    plan = with_caps(make_plan(trials=1), daily=0.07)
+    plan = with_caps(make_plan(trials=1), daily=0.049)
     incoming = incoming_from(produce(tmp_path / "w", plan=plan), tmp_path / "i")
     text = message(incoming)
     assert text.endswith("[partial_budget]") and "baseline 1/1 vs variant 1/1" in text

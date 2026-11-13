@@ -171,6 +171,28 @@ values (models in `config/pricing.yaml`, existing prompt files in `experiments/p
    for summaries and aborts, `completed=` / `planned=`. The daily workflow reads that file. Nothing is
    written on configuration errors (exit 1).
 
+| Day | Track | Variant (vs baseline) | Daily cap | Expected cost* |
+|---|---|---|---|---|
+| Mon | `model-comparison` | `model: claude-sonnet-5-5` | $3.00 (attempt $0.50) | about $1.5 |
+| Tue | `tool-design` | `tool_set: bash_only` | $1.00 | about $0.3 |
+| Wed | `turn-budget` | `max_turns: 6` | $1.00 | about $0.3 |
+| Thu | `plan-first` | `system_prompt: plan_first.md` | $1.00 | about $0.3 |
+| Fri | `self-verify` | `system_prompt: self_verify.md` | $1.00 | about $0.3 |
+| Sat | `effort-sweep` | `effort: medium` | $1.00 | about $0.3 |
+| Sun | `aa-test` | none (identical configs) | $1.00 | about $0.3 |
+
+*8 tasks x 4 trials per side. Default attempt cap $0.15. Track names are unique per behavior: one
+weekday each. The baseline is haiku at **effort low**, so every track compares against that, and
+Monday compares haiku-low with sonnet-low. `cost_defaults` (haiku 0.004, sonnet 0.04 per attempt)
+follow the calibration means; the estimator uses history per config hash once there is some.
+
+**Baseline effort (calibration outcome).** At effort low, haiku passed 78% of the 8-task suite
+(25/32; easy 92%, medium 75%, hard 67%), against about 90% at medium; sonnet at low passed 100%.
+78% is slightly above the 60-75% target band, but within noise (Wilson 95% interval about
+61-89%), and the daily runs will refine it. The tasks were not made easier to get there: the
+effort setting did the lowering. Changing the baseline effort changes its `config_hash`, so every
+track started a new report series. Per attempt about $0.004 (haiku low) and $0.04 (sonnet low).
+
 **Resuming:** Phase 4 always calls `agent-lab run --resume`, which is safe unconditionally: with
 no JSONL for the date it is a normal run, with a finished day it prints "already done", and
 after an abort it skips attempt ids already recorded and appends the rest to the same
@@ -358,7 +380,7 @@ task, its prompt or its hidden tests therefore starts a new report series. Editi
 lines of code for easy and medium and 600 for hard (`TaskValidator(max_code_lines=...)`).
 
 **Calibration** (manual, real API, never CI; `scripts/calibrate.py`). Goal: baseline (haiku,
-effort medium) passes about 60-75% overall, every non-easy task inside 30-75%, the easy tasks
+effort low) passes about 60-75% overall, every non-easy task inside 30-75%, the easy tasks
 kept as they are. The script runs the baseline alone on the chosen tasks (`RunArgs.baseline_only`,
 not a command line option of `agent-lab run`) into a results directory that is not `results/`
 (temporary by default), prints the plan and estimate first, stops at `--max-cost` (default $2;

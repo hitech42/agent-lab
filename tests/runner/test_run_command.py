@@ -24,7 +24,7 @@ DAYS = {
     "2026-11-04": "turn-budget",
     "2026-11-05": "plan-first",
     "2026-11-06": "self-verify",
-    "2026-11-07": "tool-design",
+    "2026-11-07": "effort-sweep",
     "2026-11-08": "aa-test",
 }
 
@@ -304,7 +304,7 @@ def test_dry_run_shows_effort_and_token_limit_for_both_configs(tmp_path: Path) -
     _, output = build_cli(tmp_path, api_key=None).run("--date", MONDAY, "--dry-run")
     lines = [line for line in output.splitlines() if line.startswith(("baseline:", "variant:"))]
     assert len(lines) == 2
-    assert all("effort=medium" in line and "max_tokens=16000" in line for line in lines)
+    assert all("effort=low" in line and "max_tokens=16000" in line for line in lines)
 
 
 # --- argument validation --------------------------------------------------------------

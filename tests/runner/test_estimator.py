@@ -54,8 +54,8 @@ def test_without_history_the_per_model_defaults_apply() -> None:
     est = estimator([])
     haiku = est.attempt_cost(plan.resolved.baseline, "fix-date-range")
     sonnet = est.attempt_cost(plan.resolved.variant, "fix-date-range")
-    assert (haiku, sonnet) == (0.005, 0.06)
-    assert est.plan_cost(plan) == 3 * (0.005 + 0.06)
+    assert (haiku, sonnet) == (0.004, 0.04)
+    assert est.plan_cost(plan) == 3 * (0.004 + 0.04)
 
 
 def test_history_for_the_same_config_and_task_wins() -> None:
@@ -68,7 +68,7 @@ def test_history_for_the_same_config_and_task_wins() -> None:
     est = estimator(history)
     assert est.attempt_cost(plan.resolved.baseline, "fix-date-range") == 0.015
     assert est.attempt_cost(plan.resolved.baseline, "fix-csv-total") == 0.5
-    assert est.attempt_cost(plan.resolved.baseline, "add-top-flag") == 0.005  # no history
+    assert est.attempt_cost(plan.resolved.baseline, "add-top-flag") == 0.004  # no history
 
 
 def test_model_history_is_used_when_the_config_hash_is_new() -> None:
@@ -77,13 +77,13 @@ def test_model_history_is_used_when_the_config_hash_is_new() -> None:
     other = plan.resolved.baseline.model_copy(update={"max_turns": 7})  # new hash, same model
     est = estimator(history)
     assert est.attempt_cost(other, "fix-date-range") == 0.04
-    assert est.attempt_cost(plan.resolved.variant, "fix-date-range") == 0.06  # sonnet: default
+    assert est.attempt_cost(plan.resolved.variant, "fix-date-range") == 0.04  # sonnet: default
 
 
 def test_zero_cost_history_is_ignored() -> None:
     plan = make_plan(MONDAY, trials=1)
     history = [record(plan, "baseline", "fix-date-range", 0.0)]
-    assert estimator(history).attempt_cost(plan.resolved.baseline, "fix-date-range") == 0.005
+    assert estimator(history).attempt_cost(plan.resolved.baseline, "fix-date-range") == 0.004
 
 
 def test_aa_test_estimates_use_the_shared_hash() -> None:

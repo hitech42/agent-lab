@@ -263,3 +263,28 @@ def test_record_statuses_are_the_agents_plus_environment_tampered() -> None:
 def test_the_new_statuses_are_storable(status: str) -> None:
     data = json.loads(build().model_dump_json())
     assert AttemptRecord.model_validate({**data, "status": status}).status == status
+
+
+def test_context_calls_are_counted_apart_but_their_tokens_are_in_the_totals() -> None:
+    from agent_lab.harness.tracing import ContextCallTrace
+
+    base = trace()
+    call = ContextCallTrace(
+        kind="summary",
+        after_turn=2,
+        input_tokens=50,
+        output_tokens=7,
+        cache_creation_input_tokens=0,
+        cache_read_input_tokens=3,
+        stop_reason="end_turn",
+        latency_s=0.5,
+        total_latency_s=0.5,
+    )
+    with_call = base.model_copy(update={"context_calls": [call]})
+    plain = build().model_dump()
+    record = build(result=result().model_copy(update={"trace": with_call}))
+    assert (record.turns, record.tool_calls) == (plain["turns"], plain["tool_calls"])
+    assert record.input_tokens == plain["input_tokens"] + 50
+    assert record.output_tokens == plain["output_tokens"] + 7
+    assert (record.context_calls, record.context_call_tokens) == (1, 60)
+    assert (plain["context_calls"], plain["context_call_tokens"]) == (0, 0)

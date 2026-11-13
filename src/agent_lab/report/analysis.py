@@ -34,6 +34,9 @@ _CONFIG_FIELDS = (
     "max_tokens_per_call",
     "tool_output_max_chars",
     "context_strategy",
+    "context_keep_last",
+    "context_after_turns",
+    "context_summary_max_tokens",
 )
 _DIFFICULTIES = ("easy", "medium", "hard", "unknown")
 

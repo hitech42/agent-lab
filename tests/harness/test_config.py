@@ -18,19 +18,74 @@ def test_config_validation_and_frozen(config: AgentConfig) -> None:
     assert config.context_strategy == "full"
 
 
-def test_unimplemented_strategies_are_constructible_as_config() -> None:
-    cfg = AgentConfig(
-        name="n",
-        model="m",
-        system_prompt="s",
-        effort="medium",
-        tool_set="bash_only",
-        max_turns=1,
-        max_tokens_per_call=1,
-        tool_output_max_chars=1,
-        context_strategy="summarize",
+def build(**changes: object) -> AgentConfig:
+    base: dict[str, object] = {
+        "name": "n",
+        "model": "m",
+        "system_prompt": "s",
+        "effort": "medium",
+        "tool_set": "bash_only",
+        "max_turns": 1,
+        "max_tokens_per_call": 1,
+        "tool_output_max_chars": 1,
+    }
+    return AgentConfig(**{**base, **changes})  # type: ignore[arg-type]
+
+
+def test_context_parameters_default_to_none() -> None:
+    cfg = build()
+    assert (cfg.context_keep_last, cfg.context_after_turns, cfg.context_summary_max_tokens) == (
+        None,
+        None,
+        None,
     )
-    assert cfg.context_strategy == "summarize"
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"context_strategy": "truncate_tool_outputs", "context_keep_last": 2},
+        {
+            "context_strategy": "summarize",
+            "context_keep_last": 2,
+            "context_after_turns": 4,
+            "context_summary_max_tokens": 300,
+        },
+    ],
+)
+def test_valid_strategy_parameters(fields: dict[str, object]) -> None:
+    assert build(**fields).context_strategy == fields["context_strategy"]
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"context_keep_last": 2},  # full takes none
+        {"context_strategy": "truncate_tool_outputs"},  # keep_last missing
+        {"context_strategy": "truncate_tool_outputs", "context_keep_last": 0},
+        {
+            "context_strategy": "truncate_tool_outputs",
+            "context_keep_last": 2,
+            "context_after_turns": 4,
+        },
+        {"context_strategy": "summarize", "context_keep_last": 2},
+        {
+            "context_strategy": "summarize",
+            "context_keep_last": 4,
+            "context_after_turns": 4,
+            "context_summary_max_tokens": 300,
+        },
+        {
+            "context_strategy": "summarize",
+            "context_keep_last": 2,
+            "context_after_turns": 4,
+            "context_summary_max_tokens": 0,
+        },
+    ],
+)
+def test_invalid_strategy_parameters(fields: dict[str, object]) -> None:
+    with pytest.raises(ValidationError):
+        build(**fields)
 
 
 def test_effort_is_required_and_limited_to_the_five_levels(config: AgentConfig) -> None:

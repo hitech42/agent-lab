@@ -6,13 +6,16 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Literal, TextIO
+from typing import Literal, TextIO, get_args
+
+from pydantic import ValidationError
 
 from agent_lab.benchmark.environment import EnvironmentIntegrity
 from agent_lab.benchmark.grader import Grader
 from agent_lab.benchmark.loader import SuiteFingerprint, TaskLoadError, TaskSuite, UnknownTaskError
 from agent_lab.benchmark.task import Task
-from agent_lab.harness.config import Effort
+from agent_lab.harness.config import AgentConfig, ContextStrategyName, Effort
+from agent_lab.harness.context import ContextStrategy
 from agent_lab.harness.isolation import (
     CommandIsolation,
     IsolationError,
@@ -31,6 +34,39 @@ from agent_lab.runner.schedule import ExperimentSchedule, ScheduleError
 from agent_lab.runner.storage import ResultsStore, TranscriptStore
 from agent_lab.runner.warmup import CacheWarmer
 from agent_lab.runner.wiring import AgentFactory, MissingApiKeyError
+
+
+@dataclass(frozen=True)
+class ContextOverride:
+    """A context strategy and its parameters for calibration, e.g.
+    ``summarize:after_turns=4,keep_last=2,summary_max_tokens=400``."""
+
+    strategy: str
+    params: dict[str, int]
+
+    _PARAMS = ("keep_last", "after_turns", "summary_max_tokens")
+
+    @classmethod
+    def parse(cls, spec: str) -> ContextOverride:
+        """Raises ValueError for a malformed spec; the parameters are validated on apply."""
+        name, _, rest = spec.partition(":")
+        if name not in get_args(ContextStrategyName):
+            raise ValueError(f"unknown context strategy {name!r}")
+        params: dict[str, int] = {}
+        for item in filter(None, rest.split(",")):
+            key, eq, value = item.partition("=")
+            if not eq or key not in cls._PARAMS or not value.lstrip("-").isdigit():
+                raise ValueError(f"bad context parameter {item!r} (use {'|'.join(cls._PARAMS)}=N)")
+            params[key] = int(value)
+        return cls(name, params)
+
+    def apply(self, config: AgentConfig) -> AgentConfig:
+        """The config with this strategy; raises ValidationError for wrong parameters."""
+        fields: dict[str, int | None] = {f"context_{k}": None for k in self._PARAMS}
+        fields |= {f"context_{k}": v for k, v in self.params.items()}
+        return AgentConfig.model_validate(
+            {**config.model_dump(), "context_strategy": self.strategy, **fields}
+        )
 
 
 @dataclass(frozen=True)
@@ -53,6 +89,7 @@ class RunArgs:
     baseline_only: bool = False
     model: str | None = None
     effort: Effort | None = None
+    context: ContextOverride | None = None
     max_cost_usd: float | None = None
     max_attempt_cost_usd: float | None = None
 
@@ -128,7 +165,13 @@ class RunCommand:
             options = PlanOptions(track=args.track, trials=args.trials, tasks=args.tasks)
             plan = self._calibrated(RunPlanner(schedule, suite).plan(day, options), args, prices)
             fingerprint = suite.fingerprint({a.task_id for a in plan.attempts})
-        except (ScheduleError, TaskLoadError, UnknownTaskError, PricingError) as exc:
+        except (
+            ScheduleError,
+            TaskLoadError,
+            UnknownTaskError,
+            PricingError,
+            ValidationError,
+        ) as exc:
             return self._error(str(exc))
         if args.resume and not args.dry_run:
             mismatch = self._resume_mismatch(store, plan, fingerprint.suite_hash)
@@ -196,6 +239,13 @@ class RunCommand:
                 update={
                     "baseline": resolved.baseline.model_copy(update={"effort": args.effort}),
                     "variant": resolved.variant.model_copy(update={"effort": args.effort}),
+                }
+            )
+        if args.context is not None:
+            resolved = resolved.model_copy(
+                update={
+                    "baseline": args.context.apply(resolved.baseline),
+                    "variant": args.context.apply(resolved.variant),
                 }
             )
         if args.max_cost_usd is not None:
@@ -308,7 +358,7 @@ class RunCommand:
                 f"{role}: {config.name} hash={ExperimentSchedule.config_hash(config)} "
                 f"model={config.model} effort={config.effort} tool_set={config.tool_set} "
                 f"max_turns={config.max_turns} max_tokens={config.max_tokens_per_call} "
-                f"context={config.context_strategy}"
+                f"context={ContextStrategy.describe(config)}"
             )
         say(
             f"trials per task: {resolved.trials_per_task}; daily cap: "

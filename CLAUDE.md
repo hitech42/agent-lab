@@ -19,14 +19,15 @@ directly; no agent frameworks.
   - `model_client.py` — `ModelClient` and `RetryPolicy` (the harness owns retries: 4 attempts,
     2s/4s/8s backoff, a numeric `retry-after` header replaces the wait, capped at 60s)
   - `conversation.py` — `Conversation`, the message history
-  - `context.py` — `ContextStrategy` ABC and implementations
+  - `context.py` — `ContextStrategy` ABC (the contract), `ContextResult`, `FullHistory`, `TruncateToolOutputs`,
+    `Summarize` (see Context strategies)
   - `tools/` — `Tool` ABC, file/exec tools, and `ToolRegistry`
   - `sandbox.py` — sandboxed execution with minimal explicit environment
   - `isolation.py` — `CommandIsolation` ABC, `NoIsolation`, `LinuxUserIsolation` (commands as a
     dedicated user, no network, processes killed after every command)
   - `redact.py` — `Redactor`, secret redaction
   - `budget.py` — per-attempt token/cost budget
-  - `tracing.py` — run traces
+  - `tracing.py` — run traces (`TurnTrace` per turn, `ContextCallTrace` for extra context calls)
   - `pricing.py` — `PriceTable` and cost computation
 - `src/agent_lab/benchmark/`
   - `task.py` — `Task` model (task.yaml, data only; `difficulty` easy | medium | hard)
@@ -175,8 +176,8 @@ values (models in `config/pricing.yaml`, existing prompt files in `experiments/p
 |---|---|---|---|---|
 | Mon | `model-comparison` | `model: claude-sonnet-5-5` | $3.00 (attempt $0.50) | about $1.5 |
 | Tue | `tool-design` | `tool_set: bash_only` | $1.00 | about $0.3 |
-| Wed | `turn-budget` | `max_turns: 6` | $1.00 | about $0.3 |
-| Thu | `plan-first` | `system_prompt: plan_first.md` | $1.00 | about $0.3 |
+| Wed | `context-truncate` | `context_strategy: truncate_tool_outputs`, `context_keep_last: 2` | $1.00 | about $0.3 |
+| Thu | `turn-budget` | `max_turns: 6` | $1.00 | about $0.3 |
 | Fri | `self-verify` | `system_prompt: self_verify.md` | $1.00 | about $0.3 |
 | Sat | `effort-sweep` | `effort: medium` | $1.00 | about $0.3 |
 | Sun | `aa-test` | none (identical configs) | $1.00 | about $0.3 |
@@ -308,6 +309,56 @@ It has separate jobs so that the job that executes agent code can never push:
 - **Running it manually:** Actions, "Daily experiment", "Run workflow" (use `dry_run` first).
   Locally: `agent-lab run --dry-run`, or a real run with `--results-dir /tmp/x`, then
   `agent-lab results publish /tmp/x` into a scratch results directory to try the publisher.
+
+## Context strategies
+
+`context_strategy` in `AgentConfig` picks what the model sees on each call; the strategy is built by
+`ContextStrategy.from_config(config, client)` from a registry (only implemented strategies are in it; a test
+checks it equals `ContextStrategyName`). Parameters are optional `AgentConfig` fields (default `None`), checked per
+strategy by a validator: `full` takes none; `truncate_tool_outputs` takes `context_keep_last`; `summarize` takes
+`context_after_turns`, `context_keep_last` and `context_summary_max_tokens` (`after_turns > keep_last >= 1`).
+A wrong set fails validation (a schedule problem or a `--context` error, before any API call).
+
+**Contract.** `apply(conversation)` returns a `ContextResult(messages, calls)`. `messages` is a valid Messages API
+sequence: it starts with a user message that contains the task prompt, roles alternate, every assistant `tool_use` is
+answered by a `tool_result` with the same id in the immediately following user message, and the `Conversation` is never
+mutated. `calls` are extra model calls the strategy made (see Summarize). A parametrized contract test
+(`tests/harness/test_context.py`) runs every registered strategy over multi-turn, parallel-call and thinking-block
+conversations. Strategies are shared by all attempts of an agent, so they hold no per-attempt state: `Agent.run`
+calls `fresh()` once per attempt (stateless strategies return themselves, `Summarize` a new instance).
+
+- `FullHistory`: everything, unchanged.
+- `TruncateToolOutputs(keep_last)`: a `tool_result` older than the last `keep_last` assistant turns becomes
+  `[tool output elided: N characters from <tool>]` (id and `is_error` kept; results already shorter than the
+  placeholder stay). Prompt, assistant blocks and recent results are untouched. A pure function of the conversation,
+  so an elided result stays elided identically on later calls. With `n` assistant turns, turns `1..n-keep_last` are
+  elided: for the 4-9 turn attempts here (history mean 5.6 turns, medium effort), `keep_last: 2` elides something on
+  every attempt, from the fourth model call, on about 46% of all calls.
+- `Summarize(after_turns, keep_last, summary_max_tokens)`: with `n` complete assistant turns and `covered` already
+  summarized, once `n - covered > after_turns` the turns `covered+1..n-keep_last` (plus the previous summary) are
+  replaced by a model-written summary (files read, edits, test results, open problems) and `covered = n - keep_last`.
+  Between summaries the previous one is reused, so the sent prefix only grows; it is re-written only when the threshold
+  is crossed again. The summary sits in a second text block of the first user message (roles keep alternating). The
+  summary call uses the same model at effort low, `max_tokens=summary_max_tokens`, **no `tools` parameter** (the old turns
+  are flattened to plain text, thinking blocks skipped; `ModelRequest.tools=None` omits it) and goes through the
+  `ModelClient` (retries). `Agent` charges each returned `ContextCall` to the attempt's `Budget` and records a
+  `ContextCallTrace` in `AttemptTrace.context_calls`, apart from `turns` (turn counts stay comparable). Trace token,
+  latency and retry totals include those calls, so record tokens and `cost_usd` agree; records add `context_calls` and
+  `context_call_tokens` (default 0). Not scheduled yet; try it with `scripts/calibrate.py`.
+
+**Calibrating a strategy:** `uv run python scripts/calibrate.py --context SPEC`, with SPEC `full`,
+`truncate_tool_outputs:keep_last=2` or `summarize:after_turns=4,keep_last=2,summary_max_tokens=400`.
+
+**Caching note (as found).** `cache_control` is set only on the system prompt and the last tool definition; messages are
+never cache-marked. Editing earlier messages therefore cannot invalidate a cached prefix today, and a strategy's saving
+is plain uncached input (history: `cache_write_tokens` 0, cache reads about 19% of input, from tools + system). If message
+caching is added (a separate step), compressing old messages will break the cached prefix and can raise cost; that
+interplay is not measured yet.
+
+**config_hash.** `None`-valued fields are left out of the canonical JSON, so adding optional fields did not change any
+existing hash; `tests/runner/test_schedule.py` pins the baseline (`0d83bf23c762`) and every track's hash, including
+`context-truncate` and the unscheduled `plan-first` (the prompt file `plan_first.md` is kept for later). Registry files
+(`results/configs`) omit `None` fields too, so old-style configs are stored exactly as before.
 
 ## Report
 
@@ -508,7 +559,6 @@ attempts opened the file with the notice). So each attempt also records whether 
   filesystem namespace (world-readable files such as `/etc` and `/usr` stay readable), and
   grading still executes the agent's code in-process, now as the sandbox user.
 
-- Context strategies other than `FullHistory` are stubs (they raise `NotImplementedError` at construction). When implementing them, document the message-sequence contract on `ContextStrategy` and add a parametrized contract test across all strategies.
 - Grading runs the agent's project code inside the pytest process (R1). Project code can
   tamper with the runner: monkeypatch pytest, rewrite the JUnit file (its path is in argv)
   and exit. Premature exits and malformed or contradictory reports are caught; a

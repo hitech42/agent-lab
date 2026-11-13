@@ -10,8 +10,8 @@ from agent_lab.runner.schedule import ExperimentSchedule, ScheduleError
 EXPECTED = {
     "2026-11-02": "model-comparison",
     "2026-11-03": "tool-design",
-    "2026-11-04": "turn-budget",
-    "2026-11-05": "plan-first",
+    "2026-11-04": "context-truncate",
+    "2026-11-05": "turn-budget",
     "2026-11-06": "self-verify",
     "2026-11-07": "effort-sweep",
     "2026-11-08": "aa-test",
@@ -58,11 +58,10 @@ def test_variants_override_only_what_they_say() -> None:
     base = sched.baseline
     tool = sched.track_for(date(2026, 11, 3)).variant
     assert tool.tool_set == "bash_only" and tool.max_turns == base.max_turns
-    turns = sched.track_for(date(2026, 11, 4)).variant
+    turns = sched.track_for(date(2026, 11, 5)).variant
     assert turns.max_turns == 6 and turns.tool_set == base.tool_set
-    plan_first = sched.track_for(date(2026, 11, 5)).variant
-    assert plan_first.system_prompt.startswith(base.system_prompt)
-    assert "write a short plan" in plan_first.system_prompt
+    truncate = sched.track_for(date(2026, 11, 4)).variant
+    assert truncate.system_prompt == base.system_prompt and truncate.max_turns == base.max_turns
     verify = sched.track_for(date(2026, 11, 6)).variant
     assert "re-read every change" in verify.system_prompt
 
@@ -89,8 +88,8 @@ def test_aa_test_variant_is_identical_to_the_baseline() -> None:
 
 
 def test_override_that_is_not_an_agentconfig_field(tmp_path: Path) -> None:
-    text = problems(tmp_path, lambda raw: raw["tracks"][3]["variant"].update({"temperature": 0.2}))
-    assert "track 3 (turn-budget)" in text and "temperature" in text
+    text = problems(tmp_path, lambda raw: raw["tracks"][4]["variant"].update({"temperature": 0.2}))
+    assert "track 4 (turn-budget)" in text and "temperature" in text
 
 
 def test_unregistered_model(tmp_path: Path) -> None:
@@ -103,11 +102,42 @@ def test_invalid_literal_value(tmp_path: Path) -> None:
     assert "tool_set" in text
 
 
-def test_unimplemented_context_strategy(tmp_path: Path) -> None:
-    text = problems(
-        tmp_path, lambda raw: raw["tracks"][2]["variant"].update({"context_strategy": "summarize"})
+@pytest.mark.parametrize(
+    "variant",
+    [
+        {"context_strategy": "summarize"},  # parameters missing
+        {"context_strategy": "truncate_tool_outputs"},
+        {"context_strategy": "truncate_tool_outputs", "context_keep_last": 0},
+        {"context_keep_last": 2},  # parameter without a strategy that takes it
+        {
+            "context_strategy": "summarize",
+            "context_keep_last": 4,
+            "context_after_turns": 4,
+            "context_summary_max_tokens": 300,
+        },
+    ],
+)
+def test_context_parameters_must_match_the_strategy(
+    tmp_path: Path, variant: dict[str, object]
+) -> None:
+    text = problems(tmp_path, lambda raw: raw["tracks"][2]["variant"].update(variant))
+    assert "track 2 (tool-design)" in text and "context" in text
+
+
+def test_summarize_with_all_its_parameters_is_valid(tmp_path: Path) -> None:
+    path = write_schedule(
+        tmp_path,
+        lambda raw: raw["tracks"][2]["variant"].update(
+            {
+                "context_strategy": "summarize",
+                "context_keep_last": 2,
+                "context_after_turns": 4,
+                "context_summary_max_tokens": 400,
+            }
+        ),
     )
-    assert "summarize" in text and "not implemented" in text
+    variant = load(path).track_for(date(2026, 11, 3)).variant
+    assert (variant.context_after_turns, variant.context_keep_last) == (4, 2)
 
 
 def test_missing_prompt_file(tmp_path: Path) -> None:
@@ -118,7 +148,7 @@ def test_missing_prompt_file(tmp_path: Path) -> None:
 
 
 def test_name_cannot_be_overridden(tmp_path: Path) -> None:
-    text = problems(tmp_path, lambda raw: raw["tracks"][3]["variant"].update({"name": "x"}))
+    text = problems(tmp_path, lambda raw: raw["tracks"][4]["variant"].update({"name": "x"}))
     assert "'name' cannot be overridden" in text
 
 
@@ -225,7 +255,8 @@ def test_hash_is_pinned_so_accidental_changes_to_the_scheme_are_noticed() -> Non
         {"max_tokens_per_call": 3999},
         {"tool_output_max_chars": 3999},
         {"system_prompt": "a different prompt"},
-        {"context_strategy": "summarize"},
+        {"context_strategy": "truncate_tool_outputs", "context_keep_last": 2},
+        {"context_strategy": "truncate_tool_outputs", "context_keep_last": 3},
     ],
 )
 def test_hash_changes_with_every_config_field(change: dict[str, object]) -> None:
@@ -261,13 +292,13 @@ def test_effort_is_required_in_the_baseline(tmp_path: Path) -> None:
 
 def test_a_track_can_override_effort_with_a_valid_level(tmp_path: Path) -> None:
     path = write_schedule(
-        tmp_path, lambda raw: raw["tracks"][3]["variant"].update({"effort": "max"})
+        tmp_path, lambda raw: raw["tracks"][4]["variant"].update({"effort": "max"})
     )
-    assert load(path).track_for(date(2026, 11, 4)).variant.effort == "max"
+    assert load(path).track_for(date(2026, 11, 5)).variant.effort == "max"
     text = problems(
-        tmp_path / "bad", lambda raw: raw["tracks"][3]["variant"].update({"effort": "extreme"})
+        tmp_path / "bad", lambda raw: raw["tracks"][4]["variant"].update({"effort": "extreme"})
     )
-    assert "track 3 (turn-budget)" in text and "effort" in text
+    assert "track 4 (turn-budget)" in text and "effort" in text
 
 
 def test_every_track_name_is_unique_in_the_real_schedule() -> None:
@@ -283,3 +314,35 @@ def test_saturday_sweeps_effort_and_monday_compares_models_at_the_same_effort() 
     assert saturday.variant.tool_set == saturday.baseline.tool_set
     monday = schedule().track_for(date(2026, 11, 2))
     assert monday.variant.effort == monday.baseline.effort == "low"
+
+
+def test_every_hash_that_ran_before_context_strategies_is_unchanged() -> None:
+    """Results already in results/ carry these hashes; None-valued fields must not alter them."""
+    sched = schedule()
+    hash_of = ExperimentSchedule.config_hash
+    assert hash_of(sched.baseline) == "0d83bf23c762"
+    pinned = {
+        "model-comparison": "a39f80189bd1",
+        "tool-design": "dc66825c56db",
+        "turn-budget": "af7fb1581948",
+        "self-verify": "b9f0162f65dc",
+        "effort-sweep": "3016aba7e85c",
+        "aa-test": "0d83bf23c762",
+    }
+    for name, expected in pinned.items():
+        assert hash_of(sched.track_named(name).variant) == expected, name
+    plan_first = (SCHEDULE_PATH.parent / "prompts" / "plan_first.md").read_text().strip()
+    unscheduled = sched.baseline.model_copy(update={"system_prompt": plan_first})
+    assert hash_of(unscheduled) == "7f8e50e2ce25"  # the track left the schedule, the file stays
+
+
+def test_the_context_truncate_hash_is_pinned() -> None:
+    variant = schedule().track_named("context-truncate").variant
+    assert ExperimentSchedule.config_hash(variant) == "3a27c9a4c761"
+
+
+def test_thursday_is_turn_budget_and_wednesday_truncates() -> None:
+    sched = schedule()
+    wed = sched.track_for(date(2026, 11, 4)).variant
+    assert (wed.context_strategy, wed.context_keep_last) == ("truncate_tool_outputs", 2)
+    assert sched.track_for(date(2026, 11, 5)).track.name == "turn-budget"

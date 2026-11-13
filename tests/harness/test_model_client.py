@@ -163,3 +163,12 @@ def test_every_request_carries_its_effort() -> None:
     client.create(request())
     client.create(ModelRequest(**{**request().__dict__, "effort": "low"}))
     assert [r["output_config"] for r in fake.requests] == [{"effort": "high"}, {"effort": "low"}]
+
+
+def test_tools_none_omits_the_parameter_but_an_empty_list_is_sent() -> None:
+    fake = FakeClient([text_response(), text_response()])
+    client = ModelClient(fake, RetryPolicy())
+    client.create(ModelRequest(**{**request().__dict__, "tools": None}))
+    client.create(request())
+    assert "tools" not in fake.requests[0]
+    assert fake.requests[1]["tools"] == []

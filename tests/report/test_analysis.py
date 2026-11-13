@@ -53,13 +53,13 @@ def test_the_overall_numbers(results: Path) -> None:
     assert data.spend_usd == pytest.approx(data.spend_attempts_usd + data.spend_warmups_usd)
     assert data.spend_warmups_usd > 0 and data.unreadable == 0
     assert [d.date for d in data.daily] == [MON, TUE, WED, SUN, NEXT_TUE]
-    assert {d.date: d.track for d in data.daily}[WED] == "turn-budget"
+    assert {d.date: d.track for d in data.daily}[WED] == "context-truncate"
 
 
 def test_every_track_has_a_current_series(results: Path) -> None:
     data = analyze(results)
     assert [t.track for t in data.tracks] == ["aa-test", "model-comparison", "tool-design"]
-    assert all(t.current.current for t in data.tracks)  # turn-budget (abort only) has no pairs
+    assert all(t.current.current for t in data.tracks)  # context-truncate (abort only) has no pairs
 
 
 def test_an_errored_attempt_excludes_its_pair(results: Path) -> None:
@@ -305,3 +305,25 @@ def test_spend_is_not_double_counted_when_variants_change(tmp_path: Path) -> Non
     assert len(data.daily) == 2 and data.attempts == 48
     assert len(data.tracks) == 1 and len(data.tracks[0].older) == 1
     assert make_plan  # the helper is shared with other tests
+
+
+def test_a_context_strategy_and_its_parameters_are_named_in_the_description() -> None:
+    from runner_support import schedule
+
+    from agent_lab.harness.config import AgentConfig
+    from agent_lab.report.analysis import ResultsAnalyzer
+    from agent_lab.runner.records import ConfigRecord
+    from agent_lab.runner.schedule import ExperimentSchedule
+
+    def record(config: AgentConfig) -> ConfigRecord:
+        fields = config.model_dump(exclude={"name"})
+        return ConfigRecord(
+            config_hash=ExperimentSchedule.config_hash(config), first_name=config.name, **fields
+        )
+
+    sched = schedule()
+    text = ResultsAnalyzer._describe(
+        record(sched.baseline), record(sched.track_named("context-truncate").variant)
+    )
+    assert "context_strategy: full → truncate_tool_outputs" in text
+    assert "context_keep_last: None → 2" in text

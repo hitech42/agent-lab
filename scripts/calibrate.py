@@ -2,7 +2,8 @@
 
 Usage:
     ANTHROPIC_API_KEY=... uv run python scripts/calibrate.py [--tasks id,id] [--trials 4] \\
-        [--model claude-sonnet-5-5] [--effort high] [--results-dir DIR] [--max-cost 2.0]
+        [--model claude-sonnet-5-5] [--effort high] [--context SPEC] [--results-dir DIR] \\
+        [--max-cost 2.0]
 
 Results go to a results directory that is NOT results/ (a fresh temporary directory by
 default, printed at the start). Run the script twice with the same ``--results-dir`` (for
@@ -21,10 +22,17 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from agent_lab.runner.calibration import CalibrationReport
-from agent_lab.runner.run_command import RunArgs, RunCommand, RunDependencies
+from agent_lab.runner.run_command import ContextOverride, RunArgs, RunCommand, RunDependencies
 from agent_lab.runner.storage import ResultsStore
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def context_spec(text: str) -> ContextOverride:
+    try:
+        return ContextOverride.parse(text)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -36,6 +44,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--effort",
         choices=["low", "medium", "high", "xhigh", "max"],
         help="run at this effort instead of the baseline's (like --model, it changes the config)",
+    )
+    parser.add_argument(
+        "--context",
+        type=context_spec,
+        metavar="SPEC",
+        help="context strategy for the run, e.g. truncate_tool_outputs:keep_last=2 or "
+        "summarize:after_turns=4,keep_last=2,summary_max_tokens=400",
     )
     parser.add_argument("--results-dir", help="where to write (default: a new temporary dir)")
     parser.add_argument("--max-cost", type=float, default=2.0, help="hard stop in USD (default 2)")
@@ -72,6 +87,7 @@ def main(argv: list[str]) -> int:
         baseline_only=True,
         model=args.model,
         effort=args.effort,
+        context=args.context,
         max_cost_usd=args.max_cost,
         max_attempt_cost_usd=args.max_attempt_cost or (0.50 if args.model else None),
     )

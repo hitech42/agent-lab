@@ -14,7 +14,7 @@ from agent_lab.harness.model_client import ModelClient, ModelRequest, ToolCall
 from agent_lab.harness.redact import Redactor
 from agent_lab.harness.sandbox import Sandbox
 from agent_lab.harness.tools import ToolRegistry
-from agent_lab.harness.tracing import AttemptTrace, ToolCallTrace, TurnTrace
+from agent_lab.harness.tracing import AttemptTrace, ContextCallTrace, ToolCallTrace, TurnTrace
 
 AttemptStatus = Literal[
     "completed", "truncated", "refused", "incomplete", "max_turns", "budget_exceeded", "error"
@@ -44,6 +44,7 @@ class _Attempt:
 
     conversation: Conversation
     turns: list[TurnTrace] = field(default_factory=list)
+    context_calls: list[ContextCallTrace] = field(default_factory=list)
     status: AttemptStatus = "max_turns"
     stop_reason: str | None = None
     error: str | None = None
@@ -68,25 +69,24 @@ class Agent:
 
     @classmethod
     def from_config(cls, config: AgentConfig, client: ModelClient, redactor: Redactor) -> Agent:
-        """Build the tool registry and context strategy a config asks for.
-
-        Raises NotImplementedError for a context strategy that is not implemented yet.
-        """
+        """Build the tool registry and context strategy a config asks for."""
         return cls(
             config,
             client,
             ToolRegistry.for_set(config.tool_set, redactor, config.tool_output_max_chars),
-            ContextStrategy.from_name(config.context_strategy),
+            ContextStrategy.from_config(config, client),
             redactor,
         )
 
     def run(self, task_prompt: str, sandbox: Sandbox, budget: Budget) -> AttemptResult:
         """Run one attempt. Never raises; failures are recorded in the result."""
         attempt = _Attempt(conversation=Conversation(task_prompt))
+        context = self._context.fresh()  # per-attempt state (e.g. a summary) lives there
 
         for turn in range(1, self._config.max_turns + 1):
             try:
-                response = self._client.create(self._build_request(attempt.conversation))
+                request = self._build_request(attempt, context, turn, budget)
+                response = self._client.create(request)
             except Exception as exc:  # run never raises; record and stop
                 attempt.status, attempt.error = "error", f"{type(exc).__name__}: {exc}"
                 attempt.error_type = type(exc).__name__
@@ -144,10 +144,25 @@ class Agent:
         """A minimal request whose cached prefix (system + tools) matches a real attempt's."""
         return self._request([{"role": "user", "content": "ok"}], max_tokens=1)
 
-    def _build_request(self, conversation: Conversation) -> ModelRequest:
-        return self._request(
-            self._context.apply(conversation), max_tokens=self._config.max_tokens_per_call
-        )
+    def _build_request(
+        self, attempt: _Attempt, context: ContextStrategy, turn: int, budget: Budget
+    ) -> ModelRequest:
+        """The request for model call ``turn``; extra calls the context made are charged here."""
+        result = context.apply(attempt.conversation)
+        for call in result.calls:
+            budget.record(call.usage)
+            attempt.context_calls.append(
+                ContextCallTrace(
+                    kind=call.kind,
+                    after_turn=turn,
+                    **call.usage.model_dump(),
+                    stop_reason=call.stop_reason,
+                    latency_s=call.latency_s,
+                    total_latency_s=call.total_latency_s,
+                    retries=call.retries,
+                )
+            )
+        return self._request(result.messages, max_tokens=self._config.max_tokens_per_call)
 
     def _request(self, messages: list[dict[str, Any]], max_tokens: int) -> ModelRequest:
         cache = {"type": "ephemeral"}
@@ -195,7 +210,7 @@ class Agent:
             status=attempt.status,
             stop_reason=attempt.stop_reason,
             final_text=self._redactor.redact(attempt.conversation.last_assistant_text()),
-            trace=AttemptTrace(turns=attempt.turns),
+            trace=AttemptTrace(turns=attempt.turns, context_calls=attempt.context_calls),
             cost_usd=budget.cost_usd,
             error=None if error is None else self._redactor.redact(error),
             error_type=attempt.error_type,

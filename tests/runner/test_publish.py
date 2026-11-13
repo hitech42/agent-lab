@@ -573,3 +573,32 @@ def test_records_written_by_the_store_still_pass_through_unchanged(day: tuple[Pa
     publish(incoming, repo)
     for line in (repo / "runs" / jsonl(incoming).name).read_text().splitlines():
         assert AttemptRecord.model_validate_json(line).date == MONDAY
+
+
+def test_a_config_with_context_parameters_is_accepted(tmp_path: Path) -> None:
+    from runner_support import schedule
+
+    from agent_lab.runner.schedule import ExperimentSchedule
+    from agent_lab.runner.storage import ResultsStore
+
+    incoming = tmp_path / "incoming"
+    config = schedule().track_named("context-truncate").variant
+    ResultsStore(incoming).register_config(ExperimentSchedule.config_hash(config), config)
+    report = publish(incoming, tmp_path / "repo")
+    assert len(report.copied) == 1 and report.copied[0].startswith("configs/")
+
+
+def test_a_forged_context_parameter_is_rejected(tmp_path: Path) -> None:
+    from runner_support import schedule
+
+    from agent_lab.runner.schedule import ExperimentSchedule
+    from agent_lab.runner.storage import ResultsStore
+
+    incoming = tmp_path / "incoming"
+    config = schedule().track_named("context-truncate").variant
+    ResultsStore(incoming).register_config(ExperimentSchedule.config_hash(config), config)
+    path = next((incoming / "configs").glob("*.json"))
+    data = json.loads(path.read_text())
+    data["context_keep_last"] = 3
+    path.write_text(json.dumps(data))
+    assert any("must all agree" in v for v in violations(incoming, tmp_path / "repo"))

@@ -102,7 +102,8 @@ class ResultsStore:
         )
         try:
             self._create_exclusive(
-                self.configs_dir / f"{config_hash}.json", record.model_dump_json(indent=2)
+                self.configs_dir / f"{config_hash}.json",
+                record.model_dump_json(indent=2, exclude_none=True),
             )
         except FileExistsError:
             return False

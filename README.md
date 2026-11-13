@@ -45,22 +45,22 @@ Latest day: eval\(self-verify\): baseline 30/32 vs variant 26/32 passed, $0.4409
 
 - **aa-test**: How large is the day-to-day noise when both configurations are identical? Variant vs baseline: identical configs. Cost per solved task (baseline → variant): $0.0044 → $0.0039. Suite `37e677db05e7` (8 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): easy 100% → 100% (12 pairs); medium 91% → 100% (11 pairs); hard 57% → 71% (7 pairs)
-  - Injection tasks resisted (baseline → variant): 7/7 → 7/7 (100% → 100%)
+  - Injection tasks (baseline → variant): exposed 0/7 → 0/7; resisted among exposed 0/0 → 0/0 (n/a → n/a); exposure unknown 7/7 → 7/7 (resisted 7 → 7 of those)
 - **model-comparison**: Does claude-sonnet-5-5 solve more tasks than claude-haiku-5-5, and at what cost? Variant vs baseline: model: claude-haiku-5-5 → claude-sonnet-5-5. Cost per solved task (baseline → variant): $0.0037 → $0.0355. Suite `37e677db05e7` (8 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): easy 100% → 100% (12 pairs); medium 100% → 100% (12 pairs); hard 75% → 100% (8 pairs)
-  - Injection tasks resisted (baseline → variant): 8/8 → 8/8 (100% → 100%)
+  - Injection tasks (baseline → variant): exposed 0/8 → 0/8; resisted among exposed 0/0 → 0/0 (n/a → n/a); exposure unknown 8/8 → 8/8 (resisted 8 → 8 of those)
 - **plan-first**: Does asking the agent to write a plan before acting improve results? Variant vs baseline: [system prompt changed](results/configs/f155db74474c.json). Cost per solved task (baseline → variant): $0.0041 → $0.0045. Suite `37e677db05e7` (8 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): easy 92% → 100% (12 pairs); medium 100% → 100% (12 pairs); hard 75% → 62% (8 pairs)
-  - Injection tasks resisted (baseline → variant): 8/8 → 8/8 (100% → 100%)
+  - Injection tasks (baseline → variant): exposed 0/8 → 0/8; resisted among exposed 0/0 → 0/0 (n/a → n/a); exposure unknown 8/8 → 8/8 (resisted 8 → 8 of those)
 - **self-verify**: Does requiring the agent to run tests and re-read its changes improve results? Variant vs baseline: [system prompt changed](results/configs/55d2bd0df8d1.json). Cost per solved task (baseline → variant): $0.0063 → $0.0097. Suite `307955deac6c` (8 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): easy 100% → 100% (12 pairs); medium 100% → 75% (8 pairs); hard 83% → 67% (12 pairs)
-  - Injection tasks resisted (baseline → variant): 8/8 → 8/8 (100% → 100%)
+  - Injection tasks (baseline → variant): exposed 0/8 → 0/8; resisted among exposed 0/0 → 0/0 (n/a → n/a); exposure unknown 8/8 → 8/8 (resisted 8 → 8 of those)
 - **tool-design**: Do the structured tools beat a single bash tool? Variant vs baseline: tool\_set: structured → bash\_only. Cost per solved task (baseline → variant): $0.0039 → $0.0054. Suite `37e677db05e7` (8 tasks); 2 day(s).
   - By difficulty (baseline → variant pass): easy 96% → 96% (24 pairs); medium 96% → 83% (24 pairs); hard 75% → 38% (16 pairs)
-  - Injection tasks resisted (baseline → variant): 16/16 → 16/16 (100% → 100%)
+  - Injection tasks (baseline → variant): exposed 0/16 → 0/16; resisted among exposed 0/0 → 0/0 (n/a → n/a); exposure unknown 16/16 → 16/16 (resisted 16 → 16 of those)
 - **turn-budget**: How much does cutting the turn budget from 15 to 6 hurt success? Variant vs baseline: max\_turns: 15 → 6. Cost per solved task (baseline → variant): $0.0040 → $0.0037. Suite `37e677db05e7` (8 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): easy 100% → 92% (12 pairs); medium 92% → 100% (12 pairs); hard 62% → 62% (8 pairs)
-  - Injection tasks resisted (baseline → variant): 8/8 → 8/8 (100% → 100%)
+  - Injection tasks (baseline → variant): exposed 0/8 → 0/8; resisted among exposed 0/0 → 0/0 (n/a → n/a); exposure unknown 8/8 → 8/8 (resisted 8 → 8 of those)
 
 ![Variant minus baseline by track](report/tracks.svg)
 
@@ -87,6 +87,7 @@ Latest day: eval\(self-verify\): baseline 30/32 vs variant 26/32 passed, $0.4409
 - Independence: trials of the same task are correlated, so treating pairs as independent understates uncertainty with few tasks. A task-clustered bootstrap is used automatically for a series with at least 8 tasks.
 - Multiple comparisons: 36 comparisons are shown (cost: 12, pass: 12, turns: 12), re-evaluated daily. At 95%, roughly 1 in 20 will show a difference by chance. The aa-test row compares identical configurations: it is the noise-floor reference and should show none.
 - Subsets: the per-difficulty and injection lines are point rates over small subsets of the pairs, with no intervals; do not read a difference between tiers as significant.
+- Injection: an attempt is exposed only when a planted marker appeared in a tool result the model received, so resistance is read among the exposed attempts alone (an attempt that never saw the planted text resisted nothing). Records written before exposure was tracked are shown as unknown, with their old resisted count kept apart.
 - Exclusions: a pair is left out when either attempt ended in `error` (an API or harness failure), was environment-tampered, or its other side never ran; the number is in parentheses. Truncated, refused, incomplete, max-turn and over-budget outcomes are agent outcomes: they stay in and count as failures unless the attempt passed.
 - Method: pass rate: Newcombe hybrid score interval \(paired, method 10\); cost, turns, output tokens: pair percentile bootstrap; task-clustered percentile bootstrap for every metric, pass rate included.
 - Charts are SVGs that follow your OS/browser colour scheme, which can differ from GitHub's own theme setting.

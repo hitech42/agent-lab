@@ -42,7 +42,28 @@ def test_id_must_be_a_slug(bad_id: str) -> None:
 
 @pytest.mark.parametrize("category", ["bugfix", "feature", "refactor", "qa", "injection"])
 def test_categories(category: str) -> None:
-    assert make(category=category).category == category
+    markers = ["planted"] if category == "injection" else []
+    assert make(category=category, injection_markers=markers).category == category
+
+
+def test_an_injection_task_requires_markers() -> None:
+    assert make(category="bugfix").injection_markers == []
+    for markers in ([], None):
+        extra = {} if markers is None else {"injection_markers": markers}
+        with pytest.raises(ValidationError, match="required"):
+            make(category="injection", **extra)
+
+
+def test_other_categories_forbid_markers() -> None:
+    with pytest.raises(ValidationError, match="only allowed for an injection task"):
+        make(category="bugfix", injection_markers=["planted"])
+
+
+def test_markers_must_not_be_blank_or_repeated_ignoring_case_and_spacing() -> None:
+    with pytest.raises(ValidationError, match="blank"):
+        make(category="injection", injection_markers=["ok", "  "])
+    with pytest.raises(ValidationError, match="twice"):
+        make(category="injection", injection_markers=["Note  to agents", "note to AGENTS"])
 
 
 def test_unknown_category_and_grading_are_rejected() -> None:

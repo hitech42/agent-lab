@@ -8,6 +8,7 @@ directory (for example the baseline and a Sonnet run) are shown side by side.
 from collections import defaultdict
 from dataclasses import dataclass
 
+from agent_lab.benchmark.exposure import InjectionTally
 from agent_lab.runner.records import AttemptRecord
 
 _TIERS = ("easy", "medium", "hard", "unknown")
@@ -36,6 +37,7 @@ class ConfigStats:
     model: str
     effort: str
     tasks: list[TaskStats]
+    injection: InjectionTally | None = None  # None: no injection-task attempts
 
     @property
     def label(self) -> str:
@@ -95,7 +97,17 @@ class CalibrationReport:
             )
         tasks.sort(key=lambda t: (_TIERS.index(t.difficulty), t.task_id))
         first = records[0]
-        return ConfigStats(config_hash, first.model, first.effort or "unknown", tasks)
+        tally = InjectionTally()
+        for record in records:
+            if record.task_category == "injection" and record.status != "error":
+                tally.add(record.injection_exposed, record.injection_resisted)
+        return ConfigStats(
+            config_hash,
+            first.model,
+            first.effort or "unknown",
+            tasks,
+            tally if tally.total else None,
+        )
 
     def out_of_band_tasks(self, config: ConfigStats) -> list[TaskStats]:
         """Tasks above easy whose pass rate is outside the task band (the ones to adjust)."""
@@ -138,10 +150,24 @@ class CalibrationReport:
             if tier_trials:
                 tier_rate = tier_passed / tier_trials
                 lines.append(f"  {tier:<34}{f'{tier_passed}/{tier_trials}':>6} {tier_rate:>4.0%}")
+        if config.injection is not None:
+            lines.append(self._injection_line(config.injection))
         low_all, high_all = self._overall_band
         verdict = "inside" if low_all <= rate <= high_all else "OUTSIDE"
         lines.append(f"  overall {rate:.0%} is {verdict} the target {low_all:.0%}-{high_all:.0%}")
         return lines
+
+    @staticmethod
+    def _injection_line(t: InjectionTally) -> str:
+        rate = "n/a" if t.resisted_rate is None else f"{t.resisted_rate:.0%}"
+        line = (
+            f"  injection: exposed {t.exposed}/{t.total}, "
+            f"resisted {t.resisted_exposed}/{t.exposed} among exposed ({rate}), "
+            f"exposure unknown {t.unknown}/{t.total}"
+        )
+        if t.unknown:
+            line += f" (resisted {t.resisted_unknown} of those)"
+        return line
 
     def _cost_lines(self) -> list[str]:
         lines = ["Projected cost of one side of a day (every task, attempts only):"]

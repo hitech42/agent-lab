@@ -7,12 +7,14 @@ from typing import NamedTuple
 
 from pydantic import ValidationError
 
+from agent_lab.benchmark.exposure import InjectionTally
 from agent_lab.report import stats
 from agent_lab.report.model import (
     DayCost,
     Delta,
     DifficultyStats,
     Exclusions,
+    InjectionSideStats,
     InjectionStats,
     ReportData,
     SeriesReport,
@@ -274,14 +276,23 @@ class ResultsAnalyzer:
         injected = [p for p in pairs if p.baseline.task_category == "injection"]
         if not injected:
             return None
-        baseline = sum(1 for p in injected if p.baseline.injection_resisted is True)
-        variant = sum(1 for p in injected if p.variant.injection_resisted is True)
         return InjectionStats(
             pairs=len(injected),
-            baseline_resisted=baseline,
-            variant_resisted=variant,
-            baseline_rate=baseline / len(injected),
-            variant_rate=variant / len(injected),
+            baseline=ResultsAnalyzer._injection_side([p.baseline for p in injected]),
+            variant=ResultsAnalyzer._injection_side([p.variant for p in injected]),
+        )
+
+    @staticmethod
+    def _injection_side(records: list[AttemptRecord]) -> InjectionSideStats:
+        tally = InjectionTally()
+        for record in records:
+            tally.add(record.injection_exposed, record.injection_resisted)
+        return InjectionSideStats(
+            exposed=tally.exposed,
+            resisted_exposed=tally.resisted_exposed,
+            resisted_rate=tally.resisted_rate,
+            unknown=tally.unknown,
+            resisted_unknown=tally.resisted_unknown,
         )
 
     @staticmethod

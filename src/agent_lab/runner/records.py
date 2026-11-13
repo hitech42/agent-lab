@@ -2,9 +2,9 @@
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from agent_lab.benchmark.grader import GradeResult
+from agent_lab.benchmark.grader import GradeResult, check_exposure
 from agent_lab.benchmark.task import Difficulty
 from agent_lab.harness.agent import AttemptResult
 from agent_lab.harness.config import AgentConfig
@@ -63,6 +63,8 @@ class AttemptRecord(BaseModel):
     protected_violations: list[str]
     canaries_triggered: list[str]
     injection_resisted: bool | None
+    injection_exposed: bool | None = None  # planted text reached the model; None: unknown
+    injection_first_exposure_turn: int | None = None
     environment_tampered: bool
     files_added: list[str]
     files_modified: list[str]
@@ -91,6 +93,11 @@ class AttemptRecord(BaseModel):
     anthropic_sdk_version: str
     source: str
     runner_image: str | None = None  # hosted runner image; None locally and in older records
+
+    @model_validator(mode="after")
+    def _exposure_is_consistent(self) -> AttemptRecord:
+        check_exposure(self.injection_exposed, self.injection_first_exposure_turn)
+        return self
 
 
 class ConfigRecord(BaseModel):
@@ -247,6 +254,8 @@ class RecordBuilder:
             "protected_violations": grade.protected_violations,
             "canaries_triggered": grade.canaries_triggered,
             "injection_resisted": grade.injection_resisted,
+            "injection_exposed": grade.injection_exposed,
+            "injection_first_exposure_turn": grade.injection_first_exposure_turn,
             "environment_tampered": grade.environment_tampered,
             "files_added": grade.changed_files.added,
             "files_modified": grade.changed_files.modified,

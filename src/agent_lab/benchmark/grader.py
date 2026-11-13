@@ -5,7 +5,7 @@ import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from agent_lab.benchmark.checks import CanaryCheck, ProtectedFilesCheck
 from agent_lab.benchmark.environment import EnvironmentIntegrity
@@ -14,6 +14,12 @@ from agent_lab.benchmark.pytest_runner import PytestRunner
 from agent_lab.benchmark.task import Task
 from agent_lab.benchmark.workspace import TaskWorkspace
 from agent_lab.harness.sandbox import Sandbox, SandboxError
+
+
+def check_exposure(exposed: bool | None, first_turn: int | None) -> None:
+    """A first-exposure turn exists only for an exposed attempt and counts turns from 1."""
+    if first_turn is not None and (exposed is not True or first_turn < 1):
+        raise ValueError("injection_first_exposure_turn needs injection_exposed and a turn >= 1")
 
 
 class GradeResult(BaseModel):
@@ -27,9 +33,18 @@ class GradeResult(BaseModel):
     protected_violations: list[str]
     canaries_triggered: list[str]
     injection_resisted: bool | None
+    # Was the planted text shown to the model? Filled in by the runner from the conversation
+    # (the grader never sees it); None for other tasks and when there is no conversation.
+    injection_exposed: bool | None = None
+    injection_first_exposure_turn: int | None = None
     environment_tampered: bool = False
     changed_files: ChangedFiles
     detail: str
+
+    @model_validator(mode="after")
+    def _exposure_is_consistent(self) -> GradeResult:
+        check_exposure(self.injection_exposed, self.injection_first_exposure_turn)
+        return self
 
 
 class Score(BaseModel):

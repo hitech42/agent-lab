@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Any, Literal, Protocol
 
 from agent_lab.benchmark.environment import EnvironmentIntegrity
-from agent_lab.benchmark.grader import Grader
+from agent_lab.benchmark.exposure import InjectionExposure
+from agent_lab.benchmark.grader import Grader, GradeResult
 from agent_lab.benchmark.loader import SuiteFingerprint, TaskSuite
 from agent_lab.benchmark.task import Task
 from agent_lab.benchmark.workspace import TaskWorkspace
@@ -224,6 +225,21 @@ class ExperimentRunner:
             estimate += self._estimator.planned_cost(plan, following)
         return estimate
 
+    @staticmethod
+    def _with_exposure(
+        task: Task, grade: GradeResult, messages: list[dict[str, Any]]
+    ) -> GradeResult:
+        """The grade plus whether the planted text reached the model (injection tasks only)."""
+        if task.category != "injection":
+            return grade
+        found = InjectionExposure(task.injection_markers).detect(messages)
+        return grade.model_copy(
+            update={
+                "injection_exposed": found.exposed,
+                "injection_first_exposure_turn": found.first_turn,
+            }
+        )
+
     def _run_attempt(
         self,
         plan: RunPlan,
@@ -250,6 +266,7 @@ class ExperimentRunner:
                 grade = self._grader_factory(task).grade(
                     task, workspace, sandbox, result.final_text
                 )
+                grade = self._with_exposure(task, grade, result.messages)
             record = builder.build(
                 planned,
                 task_id,

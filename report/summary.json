@@ -159,11 +159,21 @@
         },
         "first_date": "2026-11-08",
         "injection": {
-          "baseline_rate": 1.0,
-          "baseline_resisted": 7,
+          "baseline": {
+            "exposed": 0,
+            "resisted_exposed": 0,
+            "resisted_rate": null,
+            "resisted_unknown": 7,
+            "unknown": 7
+          },
           "pairs": 7,
-          "variant_rate": 1.0,
-          "variant_resisted": 7
+          "variant": {
+            "exposed": 0,
+            "resisted_exposed": 0,
+            "resisted_rate": null,
+            "resisted_unknown": 7,
+            "unknown": 7
+          }
         },
         "last_date": "2026-11-08",
         "method": "task-clustered percentile bootstrap for every metric, pass rate included",
@@ -243,11 +253,21 @@
           },
           "first_date": "2026-11-01",
           "injection": {
-            "baseline_rate": 1.0,
-            "baseline_resisted": 4,
+            "baseline": {
+              "exposed": 0,
+              "resisted_exposed": 0,
+              "resisted_rate": null,
+              "resisted_unknown": 4,
+              "unknown": 4
+            },
             "pairs": 4,
-            "variant_rate": 1.0,
-            "variant_resisted": 4
+            "variant": {
+              "exposed": 0,
+              "resisted_exposed": 0,
+              "resisted_rate": null,
+              "resisted_unknown": 4,
+              "unknown": 4
+            }
           },
           "last_date": "2026-11-01",
           "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
@@ -349,11 +369,21 @@
         },
         "first_date": "2026-11-09",
         "injection": {
-          "baseline_rate": 1.0,
-          "baseline_resisted": 8,
+          "baseline": {
+            "exposed": 0,
+            "resisted_exposed": 0,
+            "resisted_rate": null,
+            "resisted_unknown": 8,
+            "unknown": 8
+          },
           "pairs": 8,
-          "variant_rate": 1.0,
-          "variant_resisted": 8
+          "variant": {
+            "exposed": 0,
+            "resisted_exposed": 0,
+            "resisted_rate": null,
+            "resisted_unknown": 8,
+            "unknown": 8
+          }
         },
         "last_date": "2026-11-09",
         "method": "task-clustered percentile bootstrap for every metric, pass rate included",
@@ -433,11 +463,21 @@
           },
           "first_date": "2026-11-02",
           "injection": {
-            "baseline_rate": 1.0,
-            "baseline_resisted": 4,
+            "baseline": {
+              "exposed": 0,
+              "resisted_exposed": 0,
+              "resisted_rate": null,
+              "resisted_unknown": 4,
+              "unknown": 4
+            },
             "pairs": 4,
-            "variant_rate": 1.0,
-            "variant_resisted": 4
+            "variant": {
+              "exposed": 0,
+              "resisted_exposed": 0,
+              "resisted_rate": null,
+              "resisted_unknown": 4,
+              "unknown": 4
+            }
           },
           "last_date": "2026-11-02",
           "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
@@ -539,11 +579,21 @@
         },
         "first_date": "2026-11-12",
         "injection": {
-          "baseline_rate": 1.0,
-          "baseline_resisted": 8,
+          "baseline": {
+            "exposed": 0,
+            "resisted_exposed": 0,
+            "resisted_rate": null,
+            "resisted_unknown": 8,
+            "unknown": 8
+          },
           "pairs": 8,
-          "variant_rate": 1.0,
-          "variant_resisted": 8
+          "variant": {
+            "exposed": 0,
+            "resisted_exposed": 0,
+            "resisted_rate": null,
+            "resisted_unknown": 8,
+            "unknown": 8
+          }
         },
         "last_date": "2026-11-12",
         "method": "task-clustered percentile bootstrap for every metric, pass rate included",
@@ -623,11 +673,21 @@
           },
           "first_date": "2026-11-05",
           "injection": {
-            "baseline_rate": 1.0,
-            "baseline_resisted": 4,
+            "baseline": {
+              "exposed": 0,
+              "resisted_exposed": 0,
+              "resisted_rate": null,
+              "resisted_unknown": 4,
+              "unknown": 4
+            },
             "pairs": 4,
-            "variant_rate": 1.0,
-            "variant_resisted": 4
+            "variant": {
+              "exposed": 0,
+              "resisted_exposed": 0,
+              "resisted_rate": null,
+              "resisted_unknown": 4,
+              "unknown": 4
+            }
           },
           "last_date": "2026-11-05",
           "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
@@ -729,11 +789,21 @@
         },
         "first_date": "2026-11-13",
         "injection": {
-          "baseline_rate": 1.0,
-          "baseline_resisted": 8,
+          "baseline": {
+            "exposed": 0,
+            "resisted_exposed": 0,
+            "resisted_rate": null,
+            "resisted_unknown": 8,
+            "unknown": 8
+          },
           "pairs": 8,
-          "variant_rate": 1.0,
-          "variant_resisted": 8
+          "variant": {
+            "exposed": 0,
+            "resisted_exposed": 0,
+            "resisted_rate": null,
+            "resisted_unknown": 8,
+            "unknown": 8
+          }
         },
         "last_date": "2026-11-13",
         "method": "task-clustered percentile bootstrap for every metric, pass rate included",
@@ -831,11 +901,21 @@
           },
           "first_date": "2026-11-06",
           "injection": {
-            "baseline_rate": 1.0,
-            "baseline_resisted": 8,
+            "baseline": {
+              "exposed": 0,
+              "resisted_exposed": 0,
+              "resisted_rate": null,
+              "resisted_unknown": 8,
+              "unknown": 8
+            },
             "pairs": 8,
-            "variant_rate": 1.0,
-            "variant_resisted": 8
+            "variant": {
+              "exposed": 0,
+              "resisted_exposed": 0,
+              "resisted_rate": null,
+              "resisted_unknown": 8,
+              "unknown": 8
+            }
           },
           "last_date": "2026-11-06",
           "method": "task-clustered percentile bootstrap for every metric, pass rate included",
@@ -937,11 +1017,21 @@
         },
         "first_date": "2026-11-07",
         "injection": {
-          "baseline_rate": 1.0,
-          "baseline_resisted": 16,
+          "baseline": {
+            "exposed": 0,
+            "resisted_exposed": 0,
+            "resisted_rate": null,
+            "resisted_unknown": 16,
+            "unknown": 16
+          },
           "pairs": 16,
-          "variant_rate": 1.0,
-          "variant_resisted": 16
+          "variant": {
+            "exposed": 0,
+            "resisted_exposed": 0,
+            "resisted_rate": null,
+            "resisted_unknown": 16,
+            "unknown": 16
+          }
         },
         "last_date": "2026-11-10",
         "method": "task-clustered percentile bootstrap for every metric, pass rate included",
@@ -1021,11 +1111,21 @@
           },
           "first_date": "2026-11-03",
           "injection": {
-            "baseline_rate": 1.0,
-            "baseline_resisted": 4,
+            "baseline": {
+              "exposed": 0,
+              "resisted_exposed": 0,
+              "resisted_rate": null,
+              "resisted_unknown": 4,
+              "unknown": 4
+            },
             "pairs": 4,
-            "variant_rate": 1.0,
-            "variant_resisted": 4
+            "variant": {
+              "exposed": 0,
+              "resisted_exposed": 0,
+              "resisted_rate": null,
+              "resisted_unknown": 4,
+              "unknown": 4
+            }
           },
           "last_date": "2026-11-03",
           "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",
@@ -1127,11 +1227,21 @@
         },
         "first_date": "2026-11-11",
         "injection": {
-          "baseline_rate": 1.0,
-          "baseline_resisted": 8,
+          "baseline": {
+            "exposed": 0,
+            "resisted_exposed": 0,
+            "resisted_rate": null,
+            "resisted_unknown": 8,
+            "unknown": 8
+          },
           "pairs": 8,
-          "variant_rate": 1.0,
-          "variant_resisted": 8
+          "variant": {
+            "exposed": 0,
+            "resisted_exposed": 0,
+            "resisted_rate": null,
+            "resisted_unknown": 8,
+            "unknown": 8
+          }
         },
         "last_date": "2026-11-11",
         "method": "task-clustered percentile bootstrap for every metric, pass rate included",
@@ -1211,11 +1321,21 @@
           },
           "first_date": "2026-11-04",
           "injection": {
-            "baseline_rate": 1.0,
-            "baseline_resisted": 4,
+            "baseline": {
+              "exposed": 0,
+              "resisted_exposed": 0,
+              "resisted_rate": null,
+              "resisted_unknown": 4,
+              "unknown": 4
+            },
             "pairs": 4,
-            "variant_rate": 1.0,
-            "variant_resisted": 4
+            "variant": {
+              "exposed": 0,
+              "resisted_exposed": 0,
+              "resisted_rate": null,
+              "resisted_unknown": 4,
+              "unknown": 4
+            }
           },
           "last_date": "2026-11-04",
           "method": "pass rate: Newcombe hybrid score interval (paired, method 10); cost, turns, output tokens: pair percentile bootstrap",

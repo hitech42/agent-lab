@@ -169,24 +169,31 @@ def test_excluded_pairs_do_not_count_in_a_tier(tmp_path: Path, tasks: Path) -> N
 # --- injection --------------------------------------------------------------------------------
 
 
-def test_injection_resistance_per_side_over_injection_pairs(tmp_path: Path, tasks: Path) -> None:
+def test_injection_exposure_and_resistance_per_side(tmp_path: Path, tasks: Path) -> None:
     results = tmp_path / "results"
     run_with(tmp_path, results, TUE, tasks)  # fix-csv-total is the injection task, 2 trials
 
-    def tempted(record):  # type: ignore[no-untyped-def]
-        if (
-            record.task_category == "injection"
-            and record.config_role == "baseline"
-            and record.trial == 1
-        ):
-            return record.model_copy(update={"injection_resisted": False})
-        return record
+    def edited(record):  # type: ignore[no-untyped-def]
+        if record.task_category != "injection":
+            return record
+        if record.config_role == "baseline":  # trial 1 exposed and tempted, trial 2 not exposed
+            exposed = record.trial == 1
+            return record.model_copy(
+                update={
+                    "injection_exposed": exposed,
+                    "injection_first_exposure_turn": 2 if exposed else None,
+                    "injection_resisted": not exposed,
+                }
+            )
+        return record.model_copy(update={"injection_exposed": True, "injection_resisted": True})
 
-    edit_records(results, tempted)
+    edit_records(results, edited)
     injection = track(analyze(results), "tool-design").current.injection
     assert injection is not None and injection.pairs == 2
-    assert (injection.baseline_resisted, injection.variant_resisted) == (1, 2)
-    assert (injection.baseline_rate, injection.variant_rate) == (0.5, 1.0)
+    base, variant = injection.baseline, injection.variant
+    assert (base.exposed, base.resisted_exposed, base.resisted_rate) == (1, 0, 0.0)
+    assert (variant.exposed, variant.resisted_exposed, variant.resisted_rate) == (2, 2, 1.0)
+    assert (base.unknown, variant.unknown) == (0, 0)
 
 
 def test_no_injection_stats_without_injection_pairs(tmp_path: Path, tasks: Path) -> None:
@@ -195,12 +202,29 @@ def test_no_injection_stats_without_injection_pairs(tmp_path: Path, tasks: Path)
     assert track(analyze(results), "aa-test").current.injection is None
 
 
-def test_an_unknown_resistance_is_not_counted_as_resisted(tmp_path: Path, tasks: Path) -> None:
+def test_records_without_exposure_are_unknown_and_not_mixed_into_the_rates(
+    tmp_path: Path, tasks: Path
+) -> None:
     results = tmp_path / "results"
     run_with(tmp_path, results, MON, tasks, tasks=["fix-csv-total"])
-    edit_records(results, lambda r: r.model_copy(update={"injection_resisted": None}))
-    injection = track(analyze(results), "model-comparison").current.injection
-    assert injection is not None and (injection.baseline_resisted, injection.variant_resisted) == (
-        0,
-        0,
+    edit_records(
+        results,
+        lambda r: r.model_copy(update={"injection_exposed": None, "injection_resisted": True}),
     )
+    injection = track(analyze(results), "model-comparison").current.injection
+    assert injection is not None and injection.pairs == 2
+    for side in (injection.baseline, injection.variant):
+        assert (side.exposed, side.resisted_exposed, side.resisted_rate) == (0, 0, None)
+        assert (side.unknown, side.resisted_unknown) == (2, 2)
+
+
+def test_a_missing_resisted_flag_is_never_counted_as_resisted(tmp_path: Path, tasks: Path) -> None:
+    results = tmp_path / "results"
+    run_with(tmp_path, results, MON, tasks, tasks=["fix-csv-total"])
+    edit_records(
+        results,
+        lambda r: r.model_copy(update={"injection_exposed": True, "injection_resisted": None}),
+    )
+    injection = track(analyze(results), "model-comparison").current.injection
+    assert injection is not None and injection.baseline.resisted_exposed == 0
+    assert injection.baseline.exposed == 2

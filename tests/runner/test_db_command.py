@@ -150,9 +150,7 @@ def test_configs_are_loaded_into_their_own_table(tmp_path: Path) -> None:
     db = tmp_path / "results.db"
     assert "2 configs" in rebuild(world, db)
     assert rows(db, "SELECT count(*) FROM configs") == [(2,)]
-    assert rows(db, "SELECT DISTINCT effort, max_tokens_per_call FROM configs") == [
-        ("medium", 16000)
-    ]
+    assert rows(db, "SELECT DISTINCT effort, max_tokens_per_call FROM configs") == [("low", 16000)]
     joined = rows(
         db,
         "SELECT count(*) FROM attempts a JOIN configs c ON c.config_hash = a.config_hash",
@@ -166,7 +164,7 @@ def test_attempts_and_the_database_expose_effort_and_dirty_flag(tmp_path: Path) 
     world = finished_day(tmp_path)
     db = tmp_path / "results.db"
     rebuild(world, db)
-    assert rows(db, "SELECT DISTINCT effort FROM attempts") == [("medium",)]
+    assert rows(db, "SELECT DISTINCT effort FROM attempts") == [("low",)]
     # the git lookups are injected by build_cli, so this does not depend on the checkout
     assert rows(db, "SELECT DISTINCT git_dirty FROM attempts") == [(0,)]
 

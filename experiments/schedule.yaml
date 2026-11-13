@@ -6,7 +6,7 @@ baseline:
   name: baseline
   model: claude-haiku-5-5
   tool_set: structured
-  effort: medium
+  effort: low
   max_turns: 15
   max_tokens_per_call: 16000
   tool_output_max_chars: 4000
@@ -20,8 +20,8 @@ defaults:
 
 # Per-attempt cost estimates used until real history exists (USD).
 cost_defaults:
-  claude-haiku-5-5: 0.005
-  claude-sonnet-5-5: 0.06
+  claude-haiku-5-5: 0.004
+  claude-sonnet-5-5: 0.04
 
 # Tracks are keyed by ISO weekday (1 = Monday ... 7 = Sunday). Exactly one per weekday.
 tracks:
@@ -48,9 +48,9 @@ tracks:
     question: Does requiring the agent to run tests and re-read its changes improve results?
     variant: {system_prompt: self_verify.md}
   6:
-    name: tool-design
-    question: Do the structured tools beat a single bash tool?
-    variant: {tool_set: bash_only}
+    name: effort-sweep
+    question: How much does more thinking (effort medium vs low) improve pass rate, and at what cost?
+    variant: {effort: medium}
   7:
     name: aa-test
     question: How large is the day-to-day noise when both configurations are identical?

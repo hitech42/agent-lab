@@ -189,7 +189,7 @@ def test_the_per_attempt_cost_cap_is_applied(tmp_path: Path) -> None:
 
 
 def test_daily_budget_stops_the_run_without_leaving_half_a_pair(tmp_path: Path) -> None:
-    plan = with_caps(make_plan(trials=1), daily=0.07)  # room for one 0.065 pair, not two
+    plan = with_caps(make_plan(trials=1), daily=0.049)  # room for one 0.044 pair, not two
     world = build_world(tmp_path, plan=plan)
     outcome = world.runner.run(plan)
 
@@ -204,7 +204,7 @@ def test_daily_budget_stops_the_run_without_leaving_half_a_pair(tmp_path: Path) 
     ran = {r.attempt_id for r in records}
     assert ran | {s.attempt_id for s in skipped} == {a.attempt_id for a in plan.attempts}
     assert all(s.task_id and s.config_role in {"baseline", "variant"} for s in skipped)
-    assert summary.total_cost_usd <= 0.07
+    assert summary.total_cost_usd <= 0.049
 
 
 def test_the_warmup_cost_counts_against_the_daily_budget(tmp_path: Path) -> None:
@@ -224,7 +224,7 @@ def test_history_replaces_the_default_estimates(tmp_path: Path) -> None:
     first.runner.run(plan)  # a full day: real (tiny) costs for every task and config
     history = first.store.read_all_attempts()[0]
 
-    tight = with_caps(plan, daily=0.07)  # the default estimates would stop this after one pair
+    tight = with_caps(plan, daily=0.049)  # the default estimates would stop this after one pair
     second = build_world(tmp_path / "b", plan=tight, history=history)
     assert second.runner.run(tight).summary.status == "completed"
     unseen = build_world(tmp_path / "c", plan=tight)
@@ -534,13 +534,13 @@ def test_every_request_including_the_warmups_carries_the_effort(tmp_path: Path) 
     world = build_world(tmp_path)
     world.runner.run(world.plan)
     assert world.client.warmups and world.client.attempts
-    assert all(r["output_config"] == {"effort": "medium"} for r in world.client.requests)
+    assert all(r["output_config"] == {"effort": "low"} for r in world.client.requests)
 
 
 def test_records_carry_effort_and_the_dirty_flag(tmp_path: Path) -> None:
     world = build_world(tmp_path)
     world.runner.run(world.plan)
-    assert {r.effort for r in records_of(world)} == {"medium"}
+    assert {r.effort for r in records_of(world)} == {"low"}
     assert {r.git_dirty for r in records_of(world)} == {False}
 
 

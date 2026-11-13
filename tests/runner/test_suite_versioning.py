@@ -207,7 +207,7 @@ def test_the_effort_override_changes_the_config_hash_and_every_request(tmp_path:
     world.command.execute(calibration_args(world, date="2026-11-03", effort="high", trials=1))
     records, _ = ResultsStore(world.results_dir).read_all_attempts()
     by_effort = {r.effort: r.config_hash for r in records}
-    assert set(by_effort) == {"medium", "high"} and len(set(by_effort.values())) == 2
+    assert set(by_effort) == {"low", "high"} and len(set(by_effort.values())) == 2
     assert world.client.requests
     assert {r["output_config"]["effort"] for r in world.client.requests} == {"high"}
 

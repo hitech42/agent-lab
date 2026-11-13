@@ -271,7 +271,7 @@ def test_the_registered_file_holds_exactly_what_the_hash_covers(tmp_path: Path) 
     store.register_config(digest, config)
     data = json.loads((store.configs_dir / f"{digest}.json").read_text())
     assert "name" not in data and data["first_name"] == "baseline"
-    assert data["system_prompt"] == config.system_prompt and data["effort"] == "medium"
+    assert data["system_prompt"] == config.system_prompt and data["effort"] == "low"
     inputs = {
         k: v for k, v in data.items() if k not in {"schema_version", "config_hash", "first_name"}
     }

@@ -57,7 +57,7 @@ def test_a_tampered_day_reports_aborted_tampered(tmp_path: Path) -> None:
 
 def test_a_budget_stop_reports_partial_budget_with_the_counts(tmp_path: Path) -> None:
     def tight(raw: dict) -> None:  # type: ignore[type-arg]
-        raw["tracks"][1]["daily_max_cost_usd"] = 0.07  # Monday: room for one pair, not two
+        raw["tracks"][1]["daily_max_cost_usd"] = 0.049  # Monday: room for one pair, not two
 
     schedule = write_schedule(tmp_path, tight)
     report = run_with(tmp_path, "--schedule", str(schedule))

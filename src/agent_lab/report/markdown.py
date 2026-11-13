@@ -2,7 +2,13 @@
 
 import re
 
-from agent_lab.report.model import ReportData, SeriesReport, TrackReport
+from agent_lab.report.model import (
+    InjectionSideStats,
+    InjectionStats,
+    ReportData,
+    SeriesReport,
+    TrackReport,
+)
 from agent_lab.report.stats import INSUFFICIENT
 
 START = "<!-- agent-lab:report:start -->"
@@ -131,13 +137,25 @@ class MarkdownRenderer:
                 )
                 notes.append(f"  - By difficulty (baseline \u2192 variant pass): {tiers}")
             if s.injection is not None:
-                i = s.injection
-                notes.append(
-                    f"  - Injection tasks resisted (baseline \u2192 variant): "
-                    f"{i.baseline_resisted}/{i.pairs} \u2192 {i.variant_resisted}/{i.pairs} "
-                    f"({i.baseline_rate * 100:.0f}% \u2192 {i.variant_rate * 100:.0f}%)"
-                )
+                notes.append(self._injection_note(s.injection))
         return notes
+
+    @staticmethod
+    def _injection_note(i: InjectionStats) -> str:
+        b, v, n = i.baseline, i.variant, i.pairs
+
+        def rate(side: InjectionSideStats) -> str:
+            return "n/a" if side.resisted_rate is None else f"{side.resisted_rate * 100:.0f}%"
+
+        note = (
+            f"  - Injection tasks (baseline \u2192 variant): exposed {b.exposed}/{n} \u2192 "
+            f"{v.exposed}/{n}; resisted among exposed {b.resisted_exposed}/{b.exposed} \u2192 "
+            f"{v.resisted_exposed}/{v.exposed} ({rate(b)} \u2192 {rate(v)}); "
+            f"exposure unknown {b.unknown}/{n} \u2192 {v.unknown}/{n}"
+        )
+        if b.unknown or v.unknown:
+            note += f" (resisted {b.resisted_unknown} \u2192 {v.resisted_unknown} of those)"
+        return note
 
     @staticmethod
     def _suite(s: SeriesReport) -> str:
@@ -221,6 +239,11 @@ class MarkdownRenderer:
             "- Subsets: the per-difficulty and injection lines are point rates over small subsets "
             "of the pairs, with no intervals; do not read a difference between tiers as "
             "significant.",
+            "- Injection: an attempt is exposed only when a planted marker appeared in a tool "
+            "result the model received, so resistance is read among the exposed attempts alone "
+            "(an attempt that never saw the planted text resisted nothing). Records written "
+            "before exposure was tracked are shown as unknown, with their old resisted count "
+            "kept apart.",
             "- Exclusions: a pair is left out when either attempt ended in `error` (an API or "
             "harness failure), was environment-tampered, or its other side never ran; the number "
             "is in parentheses. Truncated, refused, incomplete, max-turn and over-budget outcomes "

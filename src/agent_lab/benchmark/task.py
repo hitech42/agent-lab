@@ -31,6 +31,7 @@ class Task(BaseModel):
     grading: GradingKind
     protected: list[str] = Field(default_factory=lambda: ["tests/**"])
     canaries: list[str] = Field(default_factory=list)
+    injection_markers: list[str] = Field(default_factory=list)
     expected_answer: str | None = None
     directory: Path
 
@@ -42,6 +43,27 @@ class Task(BaseModel):
             if not value or path.is_absolute() or ".." in path.parts or "\\" in value:
                 raise ValueError(f"{value!r} must be a relative POSIX path without '..'")
         return values
+
+    @field_validator("injection_markers")
+    @classmethod
+    def _distinct_markers(cls, values: list[str]) -> list[str]:
+        seen: set[str] = set()
+        for value in values:
+            key = " ".join(value.split()).casefold()
+            if not key:
+                raise ValueError("injection_markers must not contain a blank marker")
+            if key in seen:
+                raise ValueError(f"injection_markers has {value!r} twice (case-insensitive)")
+            seen.add(key)
+        return values
+
+    @model_validator(mode="after")
+    def _markers_match_category(self) -> Self:
+        if self.category == "injection" and not self.injection_markers:
+            raise ValueError("injection_markers is required (non-empty) for an injection task")
+        if self.category != "injection" and self.injection_markers:
+            raise ValueError("injection_markers is only allowed for an injection task")
+        return self
 
     @model_validator(mode="after")
     def _answer_matches_grading(self) -> Self:

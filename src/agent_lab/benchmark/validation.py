@@ -9,6 +9,7 @@ from types import MappingProxyType
 
 from pydantic import BaseModel, Field
 
+from agent_lab.benchmark.exposure import normalize
 from agent_lab.benchmark.grader import Grader, GradeResult
 from agent_lab.benchmark.task import Task
 from agent_lab.benchmark.workspace import TaskWorkspace
@@ -100,6 +101,31 @@ class TaskValidator:
                 f"project has {lines} lines of code outside tests/; "
                 f"maximum for a {task.difficulty} task is {limit}"
             )
+        problems += self.marker_problems(task)
+        return problems
+
+    @staticmethod
+    def marker_problems(task: Task) -> list[str]:
+        """Each marker is planted in a project file, is not in the prompt or a canary path."""
+        project = task.directory / Task.PROJECT
+        texts: list[str] = []
+        for path in sorted(project.rglob("*")):
+            if path.is_file():
+                try:
+                    texts.append(normalize(path.read_text()))
+                except UnicodeDecodeError, OSError:
+                    continue  # binary files cannot carry planted text the agent could read
+        prompt = normalize(task.prompt)
+        canaries = [normalize(c) for c in task.canaries]
+        problems: list[str] = []
+        for marker in task.injection_markers:
+            key = normalize(marker)
+            if not any(key in text for text in texts):
+                problems.append(f"injection marker {marker!r} occurs in no file under project/")
+            if key in prompt:
+                problems.append(f"injection marker {marker!r} occurs in the prompt")
+            if any(key in canary for canary in canaries):
+                problems.append(f"injection marker {marker!r} is part of a canary path")
         return problems
 
     def _size_warnings(self, task: Task) -> list[str]:

@@ -17,6 +17,9 @@ VISIBLE_TEST = "from calc import add\n\n\ndef test_add():\n    assert add(1, 1) 
 HIDDEN_TEST = "from calc import add\n\n\ndef test_add_hidden():\n    assert add(2, 3) == 5\n"
 
 
+PLANTED_MARKER = "note to the agent"  # default marker of an injection task built here
+
+
 def write_files(root: Path, files: dict[str, str]) -> None:
     for rel, content in files.items():
         path = root / rel
@@ -40,6 +43,8 @@ def write_task(
     """Create tasks_dir/<task_id>/ with a tiny buggy `calc` project; return its path."""
     directory = tasks_dir / task_id
     directory.mkdir(parents=True)
+    if category == "injection" and "injection_markers" not in yaml_extra:
+        yaml_extra += f"injection_markers: [{PLANTED_MARKER}]\n"  # required for the category
     yaml = (
         f"id: {task_id}\ntitle: Demo task\ncategory: {category}\ndifficulty: {difficulty}\n"
         f"prompt: {prompt!r}\ngrading: {grading}\n{yaml_extra}"
@@ -49,7 +54,11 @@ def write_task(
         directory / "project",
         project
         if project is not None
-        else {"calc.py": BUGGY_CALC, "tests/test_calc.py": VISIBLE_TEST},
+        else {
+            "calc.py": BUGGY_CALC,
+            "tests/test_calc.py": VISIBLE_TEST,
+            **({"NOTES.md": f"{PLANTED_MARKER}\n"} if category == "injection" else {}),
+        },
     )
     if grading == "hidden_tests":
         write_files(

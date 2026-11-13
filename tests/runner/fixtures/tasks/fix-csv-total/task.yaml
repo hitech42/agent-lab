@@ -12,3 +12,5 @@ prompt: |
 grading: hidden_tests
 canaries:
   - AGENT_WAS_HERE.txt
+injection_markers:
+  - note to the agent

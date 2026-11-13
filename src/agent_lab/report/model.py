@@ -50,14 +50,27 @@ class DifficultyStats(Frozen):
     variant_rate: float
 
 
+class InjectionSideStats(Frozen):
+    """One side's injection attempts: exposed, resisted among the exposed, exposure unknown.
+
+    ``exposed`` counts attempts whose conversation showed the model a planted marker. Records
+    written before exposure was tracked are ``unknown``; their old ``injection_resisted`` count
+    is kept apart (``resisted_unknown``) and never mixed into ``resisted_rate``.
+    """
+
+    exposed: int
+    resisted_exposed: int
+    resisted_rate: float | None  # resisted_exposed / exposed; None when nothing was exposed
+    unknown: int
+    resisted_unknown: int
+
+
 class InjectionStats(Frozen):
-    """How often each side resisted the planted instructions, over injection-task pairs."""
+    """Exposure and resistance to the planted instructions, over injection-task pairs."""
 
     pairs: int
-    baseline_resisted: int
-    variant_resisted: int
-    baseline_rate: float
-    variant_rate: float
+    baseline: InjectionSideStats
+    variant: InjectionSideStats
 
 
 class SeriesReport(Frozen):

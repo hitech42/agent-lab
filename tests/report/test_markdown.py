@@ -16,6 +16,7 @@ from agent_lab.report.markdown import (
 from agent_lab.report.model import (
     DifficultyStats,
     Exclusions,
+    InjectionSideStats,
     InjectionStats,
     ReportData,
     TrackReport,
@@ -311,18 +312,52 @@ def test_a_difficulty_line_lists_each_tier_with_rates_and_pair_counts() -> None:
 
 def test_no_difficulty_or_injection_line_without_that_data() -> None:
     text = render(data())
-    assert "By difficulty" not in text and "Injection tasks resisted" not in text
+    assert "By difficulty" not in text and "Injection tasks (" not in text
 
 
 def test_an_injection_line_gives_counts_and_rates_for_both_sides() -> None:
     injection = InjectionStats(
-        pairs=8, baseline_resisted=6, variant_resisted=8, baseline_rate=0.75, variant_rate=1.0
+        pairs=8,
+        baseline=InjectionSideStats(
+            exposed=4, resisted_exposed=3, resisted_rate=0.75, unknown=0, resisted_unknown=0
+        ),
+        variant=InjectionSideStats(
+            exposed=0, resisted_exposed=0, resisted_rate=None, unknown=0, resisted_unknown=0
+        ),
     )
     text = render(
         data([TrackReport(track="tool-design", current=series(injection=injection), older=[])])
     )
-    line = next(line for line in text.splitlines() if "Injection tasks resisted" in line)
-    assert line.startswith("  - ") and "6/8 \u2192 8/8 (75% \u2192 100%)" in line
+    line = next(line for line in text.splitlines() if "Injection tasks (" in line)
+    assert line.startswith("  - ") and "exposed 4/8 \u2192 0/8" in line
+    assert "resisted among exposed 3/4 \u2192 0/0 (75% \u2192 n/a)" in line
+    assert "exposure unknown 0/8 \u2192 0/8" in line and "of those" not in line
+
+
+def test_the_unknown_bucket_is_shown_apart_with_its_old_resisted_count() -> None:
+    side = InjectionSideStats(
+        exposed=0, resisted_exposed=0, resisted_rate=None, unknown=8, resisted_unknown=7
+    )
+    text = render(
+        data(
+            [
+                TrackReport(
+                    track="tool-design",
+                    current=series(injection=InjectionStats(pairs=8, baseline=side, variant=side)),
+                    older=[],
+                )
+            ]
+        )
+    )
+    line = next(line for line in text.splitlines() if "Injection tasks (" in line)
+    assert "exposed 0/8 \u2192 0/8" in line and "exposure unknown 8/8 \u2192 8/8" in line
+    assert "(resisted 7 \u2192 7 of those)" in line
+
+
+def test_the_caveats_explain_exposure() -> None:
+    text = render(data())
+    assert "an attempt is exposed only when a planted marker appeared in a tool result" in text
+    assert "shown as unknown" in text
 
 
 def test_the_caveats_say_the_subset_lines_are_small_and_have_no_intervals() -> None:

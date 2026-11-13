@@ -44,9 +44,9 @@ class MessagesAPI(Protocol):
         model: str,
         max_tokens: int,
         system: Any,
-        tools: Any,
         messages: Any,
         output_config: OutputConfigParam,
+        tools: Any = ...,
     ) -> ResponseLike: ...
 
 
@@ -62,7 +62,7 @@ class ModelRequest:
     model: str
     max_tokens: int
     system: list[dict[str, Any]]
-    tools: list[dict[str, Any]]
+    tools: list[dict[str, Any]] | None  # None omits the parameter from the API call
     messages: list[dict[str, Any]]
     effort: Effort
 
@@ -163,13 +163,14 @@ class ModelClient:
         def attempt() -> ResponseLike:
             nonlocal last_call_s
             started = time.perf_counter()
+            optional: dict[str, Any] = {} if request.tools is None else {"tools": request.tools}
             response = self._raw.messages.create(
                 model=request.model,
                 max_tokens=request.max_tokens,
                 system=request.system,
-                tools=request.tools,
                 messages=request.messages,
                 output_config={"effort": request.effort},
+                **optional,
             )
             last_call_s = time.perf_counter() - started
             return response

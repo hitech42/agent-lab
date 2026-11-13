@@ -36,13 +36,15 @@ tracks:
     question: Do the structured tools beat a single bash tool?
     variant: {tool_set: bash_only}
   3:
+    name: context-truncate
+    question: >-
+      How much do old tool outputs matter? Pass rate and cost when tool outputs older
+      than the last N turns are elided.
+    variant: {context_strategy: truncate_tool_outputs, context_keep_last: 2}
+  4:
     name: turn-budget
     question: How much does cutting the turn budget from 15 to 6 hurt success?
     variant: {max_turns: 6}
-  4:
-    name: plan-first
-    question: Does asking the agent to write a plan before acting improve results?
-    variant: {system_prompt: plan_first.md}
   5:
     name: self-verify
     question: Does requiring the agent to run tests and re-read its changes improve results?

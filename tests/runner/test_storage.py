@@ -291,3 +291,29 @@ def test_registered_configs_are_read_back_and_bad_files_counted(tmp_path: Path) 
     (store.configs_dir / "bad.json").write_text("nope")
     configs, bad = store.read_configs()
     assert [c.config_hash for c in configs] == ["abc123abc123"] and bad == 1
+
+
+def test_a_config_without_context_parameters_is_stored_as_before(tmp_path: Path) -> None:
+    store = ResultsStore(tmp_path)
+    config = schedule().baseline
+    digest = ExperimentSchedule.config_hash(config)
+    store.register_config(digest, config)
+    data = json.loads((store.configs_dir / f"{digest}.json").read_text())
+    assert data["context_strategy"] == "full"
+    assert not [k for k in data if k.startswith("context_") and k != "context_strategy"]
+
+
+def test_context_parameters_are_stored_and_covered_by_the_hash(tmp_path: Path) -> None:
+    store = ResultsStore(tmp_path)
+    config = schedule().track_named("context-truncate").variant
+    digest = ExperimentSchedule.config_hash(config)
+    store.register_config(digest, config)
+    data = json.loads((store.configs_dir / f"{digest}.json").read_text())
+    assert (data["context_strategy"], data["context_keep_last"]) == ("truncate_tool_outputs", 2)
+    inputs = {
+        k: v for k, v in data.items() if k not in {"schema_version", "config_hash", "first_name"}
+    }
+    canonical = json.dumps(inputs, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    assert hashlib.sha256(canonical.encode()).hexdigest()[:12] == digest
+    (record,), bad = store.read_configs()
+    assert bad == 0 and record.context_keep_last == 2 and record.context_after_turns is None

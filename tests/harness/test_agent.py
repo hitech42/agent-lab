@@ -185,14 +185,6 @@ def test_non_transient_error_not_retried(config: AgentConfig, sandbox: Sandbox) 
     assert len(client.requests) == 1
 
 
-def test_unimplemented_context_strategy_raises(config: AgentConfig) -> None:
-    cfg = config.model_copy(update={"context_strategy": "summarize"})
-    client = FakeClient([text_response()])
-    with pytest.raises(NotImplementedError):  # fails at construction, before any run
-        Agent.from_config(cfg, ModelClient(client, RetryPolicy()), Redactor([]))
-    assert client.requests == []
-
-
 def test_tool_output_is_truncated_and_redacted(config: AgentConfig, sandbox: Sandbox) -> None:
     cfg = config.model_copy(update={"tool_output_max_chars": 50})
     sandbox.write_text("k.txt", "super-secret-value-123 sk-ant-abc_DEF-9 " + "x" * 500)
@@ -359,3 +351,110 @@ def test_the_warmup_request_has_the_attempts_prefix_and_parameters(
     for key in ("model", "system", "tools", "output_config"):
         assert warmup[key] == attempt[key], key  # identical cached prefix and parameters
     assert warmup["output_config"] == {"effort": "xhigh"}
+
+
+# --- context strategies ------------------------------------------------------------------------
+
+
+def summarizing(config: AgentConfig) -> AgentConfig:
+    return config.model_copy(
+        update={
+            "context_strategy": "summarize",
+            "context_after_turns": 3,
+            "context_keep_last": 2,
+            "context_summary_max_tokens": 150,
+        }
+    )
+
+
+def four_tool_turns() -> list[Any]:
+    reads = [tool_use_response((f"t{n}", "read_file", {"path": "a.py"})) for n in range(2, 5)]
+    return [tool_use_response(("t1", "create_file", {"path": "a.py", "content": "x\n"})), *reads]
+
+
+def test_the_summary_call_is_charged_and_traced_apart_from_the_turns(
+    config: AgentConfig, sandbox: Sandbox
+) -> None:
+    script = [
+        *four_tool_turns(),
+        text_response("PROGRESS", usage(100, 20)),  # the summary call, before model call 5
+        text_response("all done"),
+    ]
+    budget = Budget(max_cost_usd=10.0, price=PRICE)
+    result, client = run(summarizing(config), sandbox, script, budget=budget)
+
+    assert result.status == "completed" and result.final_text == "all done"
+    assert len(result.trace.turns) == 5  # turns stay comparable
+    (call,) = result.trace.context_calls
+    assert (call.kind, call.after_turn, call.input_tokens, call.output_tokens) == (
+        "summary",
+        5,
+        100,
+        20,
+    )
+    assert result.trace.total_input_tokens == 5 * 10 + 100  # totals include the summary
+    assert result.trace.total_output_tokens == 5 * 5 + 20
+    assert budget.usage.input_tokens == 150 and budget.usage.output_tokens == 45
+    assert result.cost_usd == pytest.approx((150 * 1.0 + 45 * 2.0) / 1_000_000)
+    assert result.trace.tool_call_count == 4
+    # the summary request has no tools; the turn requests do
+    assert "tools" not in client.requests[4] and "tools" in client.requests[5]
+    assert client.requests[4]["output_config"] == {"effort": "low"}
+    # the model call after the summary sees the summary, not the old turns
+    assert len(client.requests[5]["messages"]) == 5
+
+
+def test_a_summary_can_push_the_attempt_over_its_budget(
+    config: AgentConfig, sandbox: Sandbox
+) -> None:
+    script = [
+        *four_tool_turns(),
+        text_response("PROGRESS", usage(100, 20)),
+        tool_use_response(("t5", "read_file", {"path": "a.py"})),
+    ]
+    # 5 turns alone are 75 tokens; with the 120-token summary the cap of 150 is passed
+    result, _ = run(summarizing(config), sandbox, script, budget=Budget(max_total_tokens=150))
+    assert result.status == "budget_exceeded"
+
+
+def test_an_error_in_the_summary_call_is_an_attempt_error(
+    config: AgentConfig, sandbox: Sandbox
+) -> None:
+    result, _ = run(summarizing(config), sandbox, [*four_tool_turns(), status_error(400)])
+    assert result.status == "error" and result.error_type == "APIStatusError"
+    assert len(result.trace.turns) == 4 and result.trace.context_calls == []
+
+
+def test_each_run_of_one_agent_starts_with_no_summary(
+    config: AgentConfig, sandbox: Sandbox
+) -> None:
+    one = [*four_tool_turns(), text_response("S", usage(1, 1)), text_response("done")]
+    client = FakeClient(one + one)
+    agent = Agent.from_config(summarizing(config), ModelClient(client, RetryPolicy()), Redactor([]))
+    first = agent.run("task", sandbox, Budget())
+    second = agent.run("task", sandbox, Budget())
+    assert len(first.trace.context_calls) == len(second.trace.context_calls) == 1
+
+
+def test_full_history_makes_no_extra_calls(config: AgentConfig, sandbox: Sandbox) -> None:
+    result, _ = run(config, sandbox, [*four_tool_turns(), text_response()])
+    assert result.trace.context_calls == []
+
+
+def test_truncating_strategy_elides_old_results_in_the_request(
+    config: AgentConfig, sandbox: Sandbox
+) -> None:
+    cfg = config.model_copy(
+        update={"context_strategy": "truncate_tool_outputs", "context_keep_last": 1}
+    )
+    (sandbox.root / "big.txt").write_text("B" * 500)
+    script = [
+        tool_use_response(("a", "read_file", {"path": "big.txt"})),
+        tool_use_response(("b", "read_file", {"path": "big.txt"})),
+        text_response(),
+    ]
+    result, client = run(cfg, sandbox, script)
+    third = client.requests[2]["messages"]
+    assert third[2]["content"][0]["content"].startswith("[tool output elided: ")
+    assert "BBBB" in third[4]["content"][0]["content"]
+    assert "BBBB" in result.messages[2]["content"][0]["content"]  # the stored history is whole

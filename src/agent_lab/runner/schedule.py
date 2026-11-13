@@ -10,7 +10,6 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from agent_lab.harness.config import AgentConfig
-from agent_lab.harness.context import ContextStrategy
 from agent_lab.harness.pricing import PriceTable, PricingError
 
 
@@ -136,11 +135,14 @@ class ExperimentSchedule:
     def config_hash(config: AgentConfig) -> str:
         """First 12 hex of sha256 over the canonical JSON of the config, minus its name.
 
+        Fields that are None are left out, so adding an optional field (the context strategy
+        parameters) does not change the hash of any config that does not use it.
+
         The prompt text is part of the config, so editing a prompt changes the hash;
         renaming a config does not.
         """
         canonical = json.dumps(
-            config.model_dump(exclude={"name"}),
+            config.model_dump(exclude={"name"}, exclude_none=True),
             sort_keys=True,
             separators=(",", ":"),
             ensure_ascii=False,
@@ -216,10 +218,6 @@ class ExperimentSchedule:
             prices.price(config.model)
         except PricingError:
             problems.append(f"model {config.model!r} has no entry in config/pricing.yaml")
-        try:
-            ContextStrategy.from_name(config.context_strategy)
-        except NotImplementedError as exc:
-            problems.append(str(exc))
         return problems
 
     @staticmethod

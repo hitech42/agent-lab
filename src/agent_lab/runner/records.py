@@ -85,6 +85,9 @@ class AttemptRecord(BaseModel):
     error: str | None
     error_type: str | None
     error_status: int | None
+    # extra model calls made to build the context (summaries); not counted in ``turns``
+    context_calls: int = 0
+    context_call_tokens: int = 0  # all four token kinds of those calls (included in the totals)
     # provenance
     git_sha: str
     git_dirty: bool | None = None  # None: unknown (git unavailable) or an older record
@@ -121,6 +124,9 @@ class ConfigRecord(BaseModel):
     max_tokens_per_call: int
     tool_output_max_chars: int
     context_strategy: str
+    context_keep_last: int | None = None
+    context_after_turns: int | None = None
+    context_summary_max_tokens: int | None = None
 
 
 class SkippedAttempt(BaseModel):
@@ -272,6 +278,14 @@ class RecordBuilder:
             "retries": trace.total_retries,
             "tool_calls": trace.tool_call_count,
             "tool_errors": trace.tool_error_count,
+            "context_calls": len(trace.context_calls),
+            "context_call_tokens": sum(
+                c.input_tokens
+                + c.output_tokens
+                + c.cache_creation_input_tokens
+                + c.cache_read_input_tokens
+                for c in trace.context_calls
+            ),
             "error": result.error,
             "error_type": result.error_type,
             "error_status": result.error_status,

@@ -66,3 +66,22 @@ def test_the_effort_option_accepts_only_the_known_levels() -> None:
     assert script.parse_args(["--effort", "xhigh"]).effort == "xhigh"
     with pytest.raises(SystemExit):
         script.parse_args(["--effort", "extreme"])
+
+
+def test_the_context_option_is_parsed_into_an_override() -> None:
+    script = load_script()
+    assert script.parse_args([]).context is None
+    args = script.parse_args(["--context", "truncate_tool_outputs:keep_last=2"])
+    assert (args.context.strategy, args.context.params) == (
+        "truncate_tool_outputs",
+        {"keep_last": 2},
+    )
+
+
+def test_a_bad_context_option_exits_before_anything_runs(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        load_script().parse_args(["--context", "magic"])
+    assert excinfo.value.code == 2
+    assert "unknown context strategy" in capsys.readouterr().err

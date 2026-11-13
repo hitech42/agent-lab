@@ -21,8 +21,8 @@ from agent_lab.runner.storage import ResultsStore
 DAYS = {
     "2026-11-02": "model-comparison",
     "2026-11-03": "tool-design",
-    "2026-11-04": "turn-budget",
-    "2026-11-05": "plan-first",
+    "2026-11-04": "context-truncate",
+    "2026-11-05": "turn-budget",
     "2026-11-06": "self-verify",
     "2026-11-07": "effort-sweep",
     "2026-11-08": "aa-test",
@@ -424,3 +424,54 @@ def test_a_run_registers_both_configs_and_a_dry_run_registers_none(tmp_path: Pat
     configs, bad = ResultsStore(world.results_dir).read_configs()
     assert bad == 0 and {c.first_name for c in configs} == {"baseline", "model-comparison"}
     assert {c.model for c in configs} == {"claude-haiku-5-5", "claude-sonnet-5-5"}
+
+
+# --- context strategies -----------------------------------------------------------------
+
+
+def test_dry_run_names_the_context_strategy_and_its_parameters(tmp_path: Path) -> None:
+    _, output = build_cli(tmp_path, api_key=None).run("--date", "2026-11-04", "--dry-run")
+    assert "track: context-truncate" in output
+    assert "hash=0d83bf23c762" in output and "context=full" in output
+    assert "context=truncate_tool_outputs(keep_last=2)" in output
+
+
+def test_dry_run_on_thursday_is_turn_budget_with_the_old_hash(tmp_path: Path) -> None:
+    _, output = build_cli(tmp_path, api_key=None).run("--date", "2026-11-05", "--dry-run")
+    assert "track: turn-budget" in output and "hash=af7fb1581948" in output
+
+
+def test_context_override_parses_and_applies() -> None:
+    from runner_support import schedule
+
+    from agent_lab.runner.run_command import ContextOverride
+
+    spec = "summarize:after_turns=4,keep_last=2,summary_max_tokens=400"
+    override = ContextOverride.parse(spec)
+    assert override.strategy == "summarize"
+    assert override.params == {"after_turns": 4, "keep_last": 2, "summary_max_tokens": 400}
+    config = override.apply(schedule().baseline)
+    assert (config.context_strategy, config.context_after_turns) == ("summarize", 4)
+    swapped = ContextOverride.parse("truncate_tool_outputs:keep_last=3").apply(config)
+    assert swapped.context_after_turns is None and swapped.context_keep_last == 3
+    assert ContextOverride.parse("full").apply(config).context_keep_last is None
+
+
+@pytest.mark.parametrize(
+    "spec", ["nope", "summarize:after_turns", "full:speed=3", "full:keep_last=x", "full:keep_last="]
+)
+def test_a_bad_context_spec_is_rejected(spec: str) -> None:
+    from agent_lab.runner.run_command import ContextOverride
+
+    with pytest.raises(ValueError):
+        ContextOverride.parse(spec)
+
+
+def test_a_context_override_with_wrong_parameters_fails_validation() -> None:
+    from pydantic import ValidationError
+    from runner_support import schedule
+
+    from agent_lab.runner.run_command import ContextOverride
+
+    with pytest.raises(ValidationError, match="takes exactly"):
+        ContextOverride.parse("summarize:keep_last=2").apply(schedule().baseline)

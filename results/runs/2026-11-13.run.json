@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "run_id": "2026-11-13-self-verify",
+  "date": "2026-11-13",
+  "track": "self-verify",
+  "status": "completed",
+  "started": "2026-11-13T00:42:17+00:00",
+  "finished": "2026-11-13T01:11:44+00:00",
+  "planned": 64,
+  "completed": 64,
+  "errored": 0,
+  "skipped_budget": 0,
+  "skipped_aborted": 0,
+  "skipped_attempts": [],
+  "abort_count": 0,
+  "corrupt_lines": 0,
+  "warmup_cost_usd": 0.000138355,
+  "total_cost_usd": 0.440864335,
+  "estimate_usd": 0.2780372033410138
+}

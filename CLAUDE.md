@@ -77,7 +77,8 @@ directly; no agent frameworks.
   - `build.py` — `ReportBuilder` (pure: files in memory); `command.py` — `ReportCommand` (I/O, `--check`)
 - `README.md` — hand-written text plus the generated dashboard between the report markers
 - `report/` — generated: `tracks.svg`, `daily.svg`, `summary.json` (committed)
-- `.github/workflows/` — `ci.yml` (checks, isolation tests) and `daily.yml` (the daily run)
+- `.github/workflows/` — `ci.yml` (checks, isolation tests) and `daily.yml` (the daily run); `.github/dependabot.yml`
+  (weekly github-actions updates)
 - `tasks/` — task fixtures (see Task authoring)
 - `experiments/schedule.yaml` — baseline, defaults and one track per ISO weekday
 - `experiments/prompts/` — system prompts referenced by the schedule
@@ -301,16 +302,23 @@ It has separate jobs so that the job that executes agent code can never push:
   resumable` after an abort, `…partial results, N attempts, day resumable` for a killed run,
   `eval: register configs`; `, N unreadable line(s)` is appended when there are fragments.
 - **Pinned runner and actions:** every job in `ci.yml` and `daily.yml` runs on `ubuntu-24.04`
-  (not `ubuntu-latest`), so the OS cannot change under the experiment. Actions use their Node.js 24
-  major versions; `astral-sh/setup-uv` publishes no major tags, so it is pinned to an exact
-  release. Records carry `runner_image` (`ImageOS/ImageVersion`, e.g. `ubuntu24/20251020.1`)
+  (not `ubuntu-latest`), so the OS cannot change under the experiment. Records carry `runner_image` (`ImageOS/ImageVersion`, e.g. `ubuntu24/20251020.1`)
   alongside the other provenance fields, so a drift in the image shows up in the data.
   **Upgrading deliberately:** change `runs-on` in both workflows in one PR (for example to
   `ubuntu-26.04` once it exists), read the runner-images release notes, check that the CI jobs
   (especially `isolation`, which depends on sudo, `unshare` and `setpriv`) pass, and run the daily
   workflow once with `dry_run`. Expect a possible step in the data at the switch; `runner_image`
-  and `git_sha` mark where. Bump action versions the same way, one reviewed PR, and update
-  `ACTION_VERSIONS` in `tests/test_ci_workflow.py`.
+  and `git_sha` mark where.
+- **Pinned actions:** every `uses:` is `owner/repo@<40-hex commit sha>  # vX.Y.Z` (exact version in
+  the comment), so a moved or compromised tag cannot change what runs; `tests/test_ci_workflow.py`
+  enforces the format. Update one by hand with `git ls-remote https://github.com/<owner>/<repo>
+  refs/tags/<tag> refs/tags/<tag>^{}` (for an annotated tag use the `^{}` commit, not the tag
+  object), then write the SHA and the exact version in the comment, in every place the action is
+  used, in one reviewed PR. Dependabot (`.github/dependabot.yml`, github-actions, weekly, prefix
+  `chore(ci)`) proposes these updates and keeps the comment current; review each like any action
+  bump (release notes, CI green). The `publish` job's `setup-uv` has `enable-cache: false`: the job
+  that can push to `main` restores no cache (another supply-chain input); `ci.yml` and the
+  `experiment` job keep caching.
 - **Manual setup (not automated):** create the Environment `experiment`, restricted to `main`,
   with the secret `ANTHROPIC_API_KEY`; set the repository variables `COMMIT_AUTHOR_NAME` and
   `COMMIT_AUTHOR_EMAIL`; make sure nothing (branch protection, workflow permission limits) blocks

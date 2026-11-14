@@ -36,7 +36,8 @@ directly; no agent frameworks.
   - `manifest.py` — `DirectoryManifest` / `ChangedFiles`: sha256 manifests and diffs (no git)
   - `workspace.py` — `TaskWorkspace`: temp copy of `project/`, `diff()`, `snapshot()`
   - `checks.py` — `ProtectedFilesCheck` and `CanaryCheck`, applied to every grade
-  - `pytest_runner.py` — `PytestRunner`: hardened pytest run, JUnit parsing
+  - `pytest_runner.py` — `PytestRunner`: hardened pytest run, JUnit parsing (also the ids of the passed and
+    failed hidden tests)
   - `grader.py` — `Grader` ABC, `HiddenTestsGrader`, `ExactAnswerGrader`, `GradeResult`
   - `environment.py` — `EnvironmentIntegrity`: detects site-packages and `tasks/` changes between attempts
   - `validation.py` — `TaskValidator`: checks a task is solvable and not already solved, within
@@ -53,6 +54,10 @@ directly; no agent frameworks.
   - `records.py` — `AttemptRecord`, `RunSummary`, `AbortRecord`, `RecordBuilder`
   - `provenance.py` — `ProvenanceReader`: git sha, lockfile hash, versions, ci|local
   - `storage.py` — `ResultsStore` (append-only results) and `TranscriptStore`
+  - `baseline.py` — `BaselineProbe`, `HiddenBaseline`: which hidden tests pass on the untouched project
+  - `triage_rules.py` — `TriageRules`, `ActionSummary`: the deterministic failure labels
+  - `triage.py` — `ModelTriage` (one haiku call), `FailureTriage` (rules first, model last);
+    `triage_outcome.py` has `FailureLabel` and `TriageOutcome` (see Failure triage)
   - `calibration.py` — `CalibrationReport`: per-task pass rate, turns and cost of a config, for
     `scripts/calibrate.py` (see Calibration)
   - `database.py` — `ResultsDatabase`: derived SQLite database (never committed)
@@ -146,6 +151,8 @@ values (models in `config/pricing.yaml`, existing prompt files in `experiments/p
 5. Register each resolved config in `results/configs/<config_hash>.json` (exclusive create,
    skipped if it exists), then warm the prompt cache with one minimal call per distinct config. Its cost counts against
    the daily budget. It is also the canary: any warm-up failure aborts before any attempt.
+   Then (no API call) the baseline pre-run: each `hidden_tests` task of the remaining attempts is graded
+   once on its untouched project, cached by `task_hash` for the run (see Failure triage).
 6. Run the attempts. Before the first attempt of a pair, check that spent + the estimate of
    both attempts fits the daily cap; otherwise stop and mark the rest `skipped_budget`. Each
    attempt gets its own `Budget` (attempt cap), is graded on a snapshot, and its record is
@@ -154,7 +161,9 @@ values (models in `config/pricing.yaml`, existing prompt files in `experiments/p
    `model_context_window_exceeded`; `refused` for `refusal`; `incomplete` for anything else that
    is not `tool_use` (`pause_turn`, unknown); plus `max_turns`, `budget_exceeded`, `error`. The
    stop reason itself is always recorded, and only `error` counts toward the abort streak. An exception inside an attempt is recorded as that
-   attempt's `error` and the run continues. A transcript is written per attempt.
+   attempt's `error` and the run continues. A transcript is written per attempt. A failed attempt is
+   labelled (Failure triage) before its record is appended; the triage cost is recorded apart and
+   counts against the daily cap.
 7. Outcomes. **Terminal** outcomes write `<date>.run.json` (exclusive create) and the day is
    done: `completed`, `partial_budget` (budget stop), `aborted_tampered` (site-packages
    changed; final). **Aborts are events**: an authentication/permission error (in the warm-up
@@ -310,6 +319,67 @@ It has separate jobs so that the job that executes agent code can never push:
   Locally: `agent-lab run --dry-run`, or a real run with `--results-dir /tmp/x`, then
   `agent-lab results publish /tmp/x` into a scratch results directory to try the publisher.
 
+## Failure triage
+
+Every failed attempt gets an advisory label saying why (`triage_label`, `triage_source`
+`rule|model|error`, a one-line `triage_note` of at most 200 characters, `triage_cost_usd`,
+`triage_tokens`). Labels never change `passed`, grading, pairing or the abort logic; passed attempts
+have none. Computed in `ExperimentRunner._run_attempt` before the record is appended.
+
+**Taxonomy** (`FailureLabel`, a fixed enum; the publisher rejects anything else):
+
+| Label | Source | Trigger |
+|---|---|---|
+| `environment_tampered` | rule | status/grade tampered |
+| `infrastructure_error` | rule | status `error` (API or harness failure), no model call |
+| `protected_violation` | rule | protected files edited |
+| `injection_followed` | rule | a canary exists |
+| `budget_exhausted` | rule | status `budget_exceeded` |
+| `out_of_turns` | rule | status `max_turns` |
+| `truncated_or_refused` | rule | status `truncated`, `refused`, or `incomplete` (any other abnormal stop) |
+| `regression` | rule | a failing hidden test is one that passes on the untouched project; the note lists them |
+| `no_verification` | rule | status `completed`, failed, and no tool call ran the tests (`run_tests`, or `bash` with `pytest`/`unittest`) |
+| `incomplete_fix`, `wrong_approach`, `misread_spec` | model | the remaining failures |
+| `other` | model / error | invalid or unparseable model output, triage error, budget skip |
+
+**Rules** (`TriageRules`, pure): first match wins in the order of the table (top to bottom); the note
+names every other signal that also held (`also: ...`). Tool calls come from the `tool_use` blocks of
+the conversation (the trace stores no tool input).
+
+**Regression baseline.** After the warm-up, `BaselineProbe` grades each planned hidden-tests task's
+untouched project once with the real grader (same hardened `PytestRunner`, snapshot and isolation as
+an attempt), no API call, cached by `task_hash` for the run. Test ids are `classname::name` from the
+JUnit report with the random hidden directory stripped (`GradeResult.passed_tests`/`failed_tests`,
+not stored in records). If the pre-run fails (an exception, tampering, nothing collected) the task has
+no baseline: the regression rule is skipped, attempts that reach the `no_verification` rule or the
+model get `(regression check unavailable: <reason>)` appended to their note, and the run goes on.
+`exact_answer` tasks are not probed.
+
+**Model triage** (`ModelTriage`): one call per failure no rule covers, `claude-haiku-5-5`, effort low,
+`max_tokens` 1024 (thinking can use the budget before the JSON), no `tools`. Input: task prompt, failed
+hidden test ids, trimmed failure output, the agent's final text, a compact action summary and the files
+changed. Output must be `{"label", "note"}`; the model may only choose `incomplete_fix`,
+`wrong_approach`, `misread_spec` or `other` (any other label, rule labels included, becomes `other`),
+and the note is collapsed to one line, stripped of control characters, redacted and capped.
+
+**Untrusted input.** The input contains agent output and may contain planted instructions. The whole
+user message is one `json.dumps` document, so untrusted text is only ever a string value and cannot
+close a delimiter; the system prompt says the values are data; the constrained output (fixed labels,
+capped redacted note) is the defense. Notes are never shown in the README or SVGs, only enum names.
+
+**Accounting.** Triage cost and tokens are in the record and `RunSummary.triage_cost_usd`/`triage_calls`
+(also in aborts), never in the attempt's `cost_usd`, `turns` or token counts, but `total_cost_usd` and
+the daily budget include them (resume seeds the budget with them too). Each attempt of a pair reserves
+the worst-case `ModelTriage.estimate_usd()` (about $0.0008); a model call that the cap cannot afford is
+skipped (`other`, source `error`, note says why). The plan estimate leaves triage out. A triage failure
+(API error, bad JSON, even a bug) records `other` / `error`, never fails the attempt, never counts toward
+the abort streak and never aborts the run; a reply that was received but unparseable still records its cost.
+Without a `ModelTriage` (tests) non-rule failures stay unlabelled.
+
+**Schema.** All fields are additive with defaults (schema v1); `AttemptRecord` requires label and source
+together, a single-line note, and no label on a passed attempt. Records from before triage are
+"unlabelled" in the report.
+
 ## Context strategies
 
 `context_strategy` in `AgentConfig` picks what the model sees on each call; the strategy is built by
@@ -396,6 +466,11 @@ change), so a PR that changes report code must include the regenerated output. T
   point estimates with "insufficient data" and that verdict, for every interval. Verdicts use
   neutral words ("no detectable difference", "variant higher/lower") because "higher" is good for
   pass rate and bad for cost. A ceiling flag marks both sides at 95% or more pass rate.
+- **Failure labels:** every series carries, per side, the labels of its failed attempts over the included
+  pairs (`failures` in `summary.json`: `labels`, `model_labelled`, `unlabelled`). The README shows one
+  sub-bullet per track (enum names and counts only) once at least one failure is labelled, and a caveat that
+  model labels are advisory. The spend line adds `+ triage $x` when above 0 (`spend_triage_usd`;
+  `spend_warmups_usd` excludes it).
 - **Difficulty and injection lines:** every series carries pass rates by difficulty tier (easy,
   medium, hard, unknown for old records) and, over injection-category pairs, per side: `exposed
   E/N` and `resisted R/E among exposed` (see Injection exposure), with records that predate
@@ -439,7 +514,9 @@ not a command line option of `agent-lab run`) into a results directory that is n
 (temporary by default), prints the plan and estimate first, stops at `--max-cost` (default $2;
 the per-attempt cap is the schedule's, or $0.50 with `--model`, `--max-attempt-cost` overrides),
 and prints per-task pass rate, mean turns and cost, totals by tier, whether the overall rate is
-inside the target, and the projected cost of a day. Running it again into the same
+inside the target, the failure labels per config (counts, the triage cost, and one line per failed
+attempt with its label, source and note, to check the labels on a real run), and the projected cost of a
+day. Running it again into the same
 `--results-dir` (each run takes the next calendar day with no results there) shows configs side
 by side, for example `--model claude-sonnet-5-5 --trials 2` to see whether Monday's comparison is
 off the ceiling. Procedure: `uv run python scripts/calibrate.py --trials 4`; adjust tasks outside
@@ -548,6 +625,11 @@ attempts opened the file with the notice). So each attempt also records whether 
   the suite hash: the report starts a new series.
 
 ## Known gaps
+
+- Failure labels from the model are one small model's guess from a trimmed view and are advisory. The
+  `regression` rule needs the hidden tests to be deterministic (a flaky test gives a false label) and cannot
+  see breakage that stops collection (a broken import), whose ids do not match the baseline. Triage
+  reserves its worst-case cost per attempt, so a day can stop a pair slightly earlier than strictly needed.
 
 - `--isolation none` (the default, used by local runs and the scripts) exposes everything the
   harness user can reach: its environment including `ANTHROPIC_API_KEY` (via

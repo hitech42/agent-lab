@@ -15,6 +15,17 @@ _TIERS = ("easy", "medium", "hard", "unknown")
 
 
 @dataclass(frozen=True)
+class FailureLine:
+    """One failed attempt as triage labelled it."""
+
+    task_id: str
+    trial: int
+    label: str | None
+    source: str | None
+    note: str | None
+
+
+@dataclass(frozen=True)
 class TaskStats:
     """One task under one config. ``trials`` counts attempts that ran without ``error``."""
 
@@ -38,6 +49,8 @@ class ConfigStats:
     effort: str
     tasks: list[TaskStats]
     injection: InjectionTally | None = None  # None: no injection-task attempts
+    failures: tuple[FailureLine, ...] = ()  # failed attempts that ran, with their labels
+    triage_cost_usd: float = 0.0
 
     @property
     def label(self) -> str:
@@ -101,12 +114,19 @@ class CalibrationReport:
         for record in records:
             if record.task_category == "injection" and record.status != "error":
                 tally.add(record.injection_exposed, record.injection_resisted)
+        failures = tuple(
+            FailureLine(r.task_id, r.trial, r.triage_label, r.triage_source, r.triage_note)
+            for r in records
+            if not r.passed and r.status != "error"
+        )
         return ConfigStats(
             config_hash,
             first.model,
             first.effort or "unknown",
             tasks,
             tally if tally.total else None,
+            failures,
+            sum(r.triage_cost_usd for r in records),
         )
 
     def out_of_band_tasks(self, config: ConfigStats) -> list[TaskStats]:
@@ -152,9 +172,30 @@ class CalibrationReport:
                 lines.append(f"  {tier:<34}{f'{tier_passed}/{tier_trials}':>6} {tier_rate:>4.0%}")
         if config.injection is not None:
             lines.append(self._injection_line(config.injection))
+        if config.failures:
+            lines += self._failure_lines(config)
         low_all, high_all = self._overall_band
         verdict = "inside" if low_all <= rate <= high_all else "OUTSIDE"
         lines.append(f"  overall {rate:.0%} is {verdict} the target {low_all:.0%}-{high_all:.0%}")
+        return lines
+
+    _FAILURE_LINES_SHOWN = 20
+
+    def _failure_lines(self, config: ConfigStats) -> list[str]:
+        counts: dict[str, int] = defaultdict(int)
+        for f in config.failures:
+            counts[f.label or "unlabelled"] += 1
+        ranked = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+        lines = [
+            "  failures: " + ", ".join(f"{label} {n}" for label, n in ranked),
+            f"  triage cost ${config.triage_cost_usd:.4f} (not in the attempt costs above)",
+        ]
+        for f in config.failures[: self._FAILURE_LINES_SHOWN]:
+            tag = f"{f.label} [{f.source}]" if f.label else "unlabelled"
+            lines.append(f"    {f.task_id} t{f.trial}: {tag} {f.note or ''}".rstrip())
+        hidden = len(config.failures) - self._FAILURE_LINES_SHOWN
+        if hidden > 0:
+            lines.append(f"    ... and {hidden} more")
         return lines
 
     @staticmethod

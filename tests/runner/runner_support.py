@@ -32,6 +32,7 @@ from agent_lab.report.build import ReportBuilder
 from agent_lab.report.charts import DailySpendChart, TracksChart
 from agent_lab.report.command import ReportCommand
 from agent_lab.report.markdown import MarkdownRenderer, ReadmeUpdater
+from agent_lab.runner.baseline import BaselineProbe
 from agent_lab.runner.cli import Cli
 from agent_lab.runner.database import ResultsDatabase
 from agent_lab.runner.estimator import CostEstimator
@@ -42,6 +43,8 @@ from agent_lab.runner.publish import CommitMessageBuilder, ResultsPublisher
 from agent_lab.runner.run_command import DbCommand, ResultsCommand, RunCommand, RunDependencies
 from agent_lab.runner.schedule import ExperimentSchedule
 from agent_lab.runner.storage import ResultsStore, TranscriptStore
+from agent_lab.runner.triage import FailureTriage
+from agent_lab.runner.triage_rules import TriageRules
 from agent_lab.runner.warmup import CacheWarmer
 from agent_lab.runner.wiring import AgentFactory, MissingApiKeyError
 
@@ -275,6 +278,8 @@ def build_world(
     store: ResultsStore | None = None,
     grader_factory: Callable[[Task, EnvironmentIntegrity], Any] | None = None,
     tasks_dir: Path | None = None,
+    triage: FailureTriage | None = None,
+    baselines: BaselineProbe | None = None,
 ) -> World:
     """A runner over real tasks with a fake model and a fake grader, writing under tmp_path."""
     plan = plan or make_plan(trials=1)
@@ -303,6 +308,8 @@ def build_world(
         provenance=PROVENANCE,
         clock=clock or StepClock(),
         isolation=NoIsolation(),
+        triage=triage or FailureTriage(TriageRules()),  # rules only: no model calls
+        baselines=baselines,
         **extra,
     )
     return World(

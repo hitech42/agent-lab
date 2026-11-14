@@ -164,3 +164,47 @@ def test_stale_bytecode_in_the_workspace_is_ignored(tmp_path: Path) -> None:
     (hidden / "test_a.py").write_text(HIDDEN_CALC)
     with Sandbox(root) as sandbox:
         assert PytestRunner().run(sandbox, hidden).ok
+
+
+def test_outcomes_carry_test_ids_without_the_hidden_directory_name(tmp_path: Path) -> None:
+    src = (
+        "import pytest\n"
+        "def test_p():\n    pass\n"
+        "def test_f():\n    assert False\n"
+        "def test_s():\n    pytest.skip('no')\n"
+        "@pytest.fixture\ndef broken():\n    raise RuntimeError('boom')\n"
+        "def test_e(broken):\n    pass\n"
+        "@pytest.mark.parametrize('n', [1, 2])\n"
+        "def test_param(n):\n    assert n == 1\n"
+        "class TestGroup:\n    def test_inside(self):\n        pass\n"
+    )
+    result = outcome(tmp_path, {"test_a.py": src})
+    assert sorted(result.passed_tests) == [
+        "test_a.TestGroup::test_inside",
+        "test_a::test_p",
+        "test_a::test_param[1]",
+    ]
+    assert sorted(result.failed_tests) == [
+        "test_a::test_e",
+        "test_a::test_f",
+        "test_a::test_param[2]",
+    ]  # failed and errored tests; the skipped one is in neither list
+
+
+def test_ids_do_not_depend_on_the_random_hidden_directory_name(tmp_path: Path) -> None:
+    files = {"test_a.py": "def test_ok():\n    pass\n\n\ndef test_bad():\n    assert False\n"}
+    first = outcome(tmp_path / "one", files)
+    other = tmp_path / "two"
+    root = other / "ws"
+    hidden = root / "grade_fedcba9876543210"
+    hidden.mkdir(parents=True)
+    (hidden / "test_a.py").write_text(files["test_a.py"])
+    with Sandbox(root) as sandbox:
+        second = PytestRunner().run(sandbox, hidden)
+    assert first.passed_tests == second.passed_tests == ["test_a::test_ok"]
+    assert first.failed_tests == second.failed_tests == ["test_a::test_bad"]
+
+
+def test_an_unreadable_report_has_no_ids(tmp_path: Path) -> None:
+    result = outcome(tmp_path, {"test_a.py": "import os\nos._exit(0)\n"})
+    assert result.passed_tests == [] and result.failed_tests == [] and not result.ok

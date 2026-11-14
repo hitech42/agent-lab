@@ -11,6 +11,12 @@ from agent_lab.harness.config import AgentConfig
 from agent_lab.harness.redact import Redactor
 from agent_lab.runner.plan import PlannedAttempt
 from agent_lab.runner.provenance import Provenance
+from agent_lab.runner.triage_outcome import (
+    NOTE_MAX_CHARS,
+    FailureLabel,
+    TriageOutcome,
+    TriageSource,
+)
 
 SCHEMA_VERSION = 1
 HASH_PATTERN = r"^[0-9a-f]{12}$"
@@ -88,6 +94,13 @@ class AttemptRecord(BaseModel):
     # extra model calls made to build the context (summaries); not counted in ``turns``
     context_calls: int = 0
     context_call_tokens: int = 0  # all four token kinds of those calls (included in the totals)
+    # failure triage (advisory; never affects ``passed``). None on passed attempts and on
+    # records written before triage existed. The cost is NOT part of ``cost_usd``.
+    triage_label: FailureLabel | None = None
+    triage_source: TriageSource | None = None
+    triage_note: str | None = Field(default=None, max_length=NOTE_MAX_CHARS)
+    triage_cost_usd: float = 0.0
+    triage_tokens: int = 0  # all four token kinds of the triage call
     # provenance
     git_sha: str
     git_dirty: bool | None = None  # None: unknown (git unavailable) or an older record
@@ -100,6 +113,18 @@ class AttemptRecord(BaseModel):
     @model_validator(mode="after")
     def _exposure_is_consistent(self) -> AttemptRecord:
         check_exposure(self.injection_exposed, self.injection_first_exposure_turn)
+        return self
+
+    @model_validator(mode="after")
+    def _triage_is_consistent(self) -> AttemptRecord:
+        if (self.triage_label is None) != (self.triage_source is None):
+            raise ValueError("triage_label and triage_source go together")
+        if self.triage_label is not None and self.passed:
+            raise ValueError("a passed attempt has no failure label")
+        if self.triage_note is not None and (
+            self.triage_label is None or "\n" in self.triage_note or "\r" in self.triage_note
+        ):
+            raise ValueError("triage_note is a single line and needs a label")
         return self
 
 
@@ -162,8 +187,10 @@ class RunSummary(BaseModel):
     abort_count: int = 0
     corrupt_lines: int = 0  # unreadable result lines/abort files found for this date
     warmup_cost_usd: float
-    total_cost_usd: float
+    total_cost_usd: float  # attempts, warm-ups and triage
     estimate_usd: float
+    triage_calls: int = 0  # triage model calls that returned a response
+    triage_cost_usd: float = 0.0
 
 
 class AbortRecord(RunSummary):
@@ -209,6 +236,7 @@ class RecordBuilder:
         failure: Exception | None = None,
         task_difficulty: Difficulty | None = None,
         task_hash: str | None = None,
+        triage: TriageOutcome | None = None,
     ) -> AttemptRecord:
         """A record from a finished attempt, or from the exception that stopped it."""
         values: dict[str, Any] = {}
@@ -236,8 +264,21 @@ class RecordBuilder:
             trial=planned.trial,
             order=planned.order,
             **self._redacted(values),
+            **self._triage_fields(triage),
             **self._provenance.model_dump(),
         )
+
+    @staticmethod
+    def _triage_fields(triage: TriageOutcome | None) -> dict[str, Any]:
+        if triage is None:
+            return {}
+        return {
+            "triage_label": triage.label,
+            "triage_source": triage.source,
+            "triage_note": triage.note,
+            "triage_cost_usd": triage.cost_usd,
+            "triage_tokens": triage.tokens,
+        }
 
     def _redacted(self, values: dict[str, Any]) -> dict[str, Any]:
         """Free-text fields go through the redactor before they reach a results file."""

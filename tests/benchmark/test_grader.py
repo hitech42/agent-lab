@@ -341,3 +341,25 @@ def test_exact_answer_still_applies_the_protected_check(tmp_path: Path) -> None:
 
     result = grade(exact_task(tmp_path), cheat)
     assert result.protected_violations == ["tests/test_calc.py"] and not result.passed
+
+
+def test_grade_results_carry_hidden_test_ids_and_exact_answer_has_none() -> None:
+    from agent_lab.benchmark.grader import GradeResult, Score
+    from agent_lab.benchmark.manifest import ChangedFiles
+
+    assert Score(ok=True).failed_tests == [] and Score(ok=True).passed_tests == []
+    grade = GradeResult(
+        passed=False,
+        tests_passed=1,
+        tests_failed=1,
+        tests_errors=0,
+        tests_total=2,
+        protected_violations=[],
+        canaries_triggered=[],
+        injection_resisted=None,
+        changed_files=ChangedFiles(),
+        detail="",
+        passed_tests=["a::b"],
+        failed_tests=["a::c"],
+    )
+    assert (grade.passed_tests, grade.failed_tests) == (["a::b"], ["a::c"])

@@ -13,10 +13,11 @@ from agent_lab.benchmark.grader import Grader, GradeResult
 from agent_lab.benchmark.loader import SuiteFingerprint, TaskSuite
 from agent_lab.benchmark.task import Task
 from agent_lab.benchmark.workspace import TaskWorkspace
-from agent_lab.harness.agent import Agent
+from agent_lab.harness.agent import Agent, AttemptResult
 from agent_lab.harness.config import AgentConfig
 from agent_lab.harness.isolation import CommandIsolation
 from agent_lab.harness.sandbox import Sandbox
+from agent_lab.runner.baseline import BaselineProbe, HiddenBaseline
 from agent_lab.runner.budget import DailyBudget
 from agent_lab.runner.estimator import CostEstimator
 from agent_lab.runner.plan import PlannedAttempt, RunPlan
@@ -32,6 +33,8 @@ from agent_lab.runner.records import (
 )
 from agent_lab.runner.schedule import ExperimentSchedule
 from agent_lab.runner.storage import ResultsStore, TranscriptStore
+from agent_lab.runner.triage import FailureTriage
+from agent_lab.runner.triage_outcome import TriageOutcome
 from agent_lab.runner.warmup import AbortCause, CacheWarmer
 from agent_lab.runner.wiring import AgentFactory
 
@@ -73,6 +76,7 @@ class _Segment:
     budget_stopped: bool = False
     started: str = ""
     attempt_ids: list[str] = field(default_factory=list)
+    baselines: dict[str, HiddenBaseline] = field(default_factory=dict)  # by task_hash
 
 
 class ExperimentRunner:
@@ -96,6 +100,8 @@ class ExperimentRunner:
         provenance: Provenance,
         clock: Clock,
         isolation: CommandIsolation,
+        triage: FailureTriage,
+        baselines: BaselineProbe | None = None,
         max_consecutive_errors: int = 3,
         credit_balance_text: str = "credit balance is too low",
     ) -> None:
@@ -110,6 +116,8 @@ class ExperimentRunner:
         self._provenance = provenance
         self._clock = clock
         self._isolation = isolation
+        self._triage = triage
+        self._baselines = baselines
         self._max_consecutive_errors = max_consecutive_errors
         self._credit_balance_text = credit_balance_text.lower()
 
@@ -123,7 +131,8 @@ class ExperimentRunner:
             remaining=[a for a in plan.attempts if a.attempt_id not in done_ids],
             budget=DailyBudget(
                 plan.resolved.daily_max_cost_usd,
-                sum(r.cost_usd for r in recorded) + sum(a.warmup_cost_usd for a in prior_aborts),
+                sum(r.cost_usd + r.triage_cost_usd for r in recorded)
+                + sum(a.warmup_cost_usd for a in prior_aborts),
             ),
             prior_aborts=prior_aborts,
             unreadable_aborts=unreadable_aborts,
@@ -159,6 +168,7 @@ class ExperimentRunner:
                 segment.cause = warmup.failure
                 return
         fingerprint = self._suite.fingerprint({a.task_id for a in plan.attempts})
+        self._probe_baselines(segment, fingerprint)
         builder = RecordBuilder(
             f"{plan.date}-{resolved.track.name}",
             plan.date,
@@ -173,16 +183,47 @@ class ExperimentRunner:
                 segment.budget_stopped = True
                 return
             record, messages = self._run_attempt(
-                plan, planned, configs, agents, builder, fingerprint
+                plan, planned, configs, agents, builder, fingerprint, segment
             )
             segment.next_index = index + 1
             self._store.append_attempt(record)
             segment.attempt_ids.append(record.attempt_id)
-            segment.budget.record(record.cost_usd)
+            segment.budget.record(record.cost_usd + record.triage_cost_usd)
             if messages is not None:
                 self._transcripts.write(plan.date, record.attempt_id, messages)
             if self._should_stop(record, segment):
                 return
+
+    def _safe_triage(
+        self,
+        task: Task,
+        result: AttemptResult,
+        grade: GradeResult,
+        baseline: HiddenBaseline | None,
+        allow_model: bool,
+    ) -> TriageOutcome | None:
+        """Triage that can never turn a graded attempt into an error."""
+        try:
+            return self._triage.triage(task, result, grade, baseline, allow_model)
+        except Exception as exc:
+            if grade.passed:
+                return None
+            return TriageOutcome("other", "error", f"triage failed: {type(exc).__name__}")
+
+    def _probe_baselines(self, segment: _Segment, fingerprint: SuiteFingerprint) -> None:
+        """Grade each hidden-tests task's untouched project once (no API; never fails the run)."""
+        if self._baselines is None:
+            return
+        for task_id in sorted({a.task_id for a in segment.remaining}):
+            task_hash = fingerprint.task_hashes.get(task_id)
+            if task_hash is None or task_hash in segment.baselines:
+                continue
+            try:
+                task = self._suite.get(task_id)
+            except Exception:  # an unknown task cannot be probed; its attempts record the error
+                continue
+            if task.grading == "hidden_tests":
+                segment.baselines[task_hash] = self._baselines.probe(task, task_hash)
 
     def _should_stop(self, record: AttemptRecord, segment: _Segment) -> bool:
         if record.status == "environment_tampered":
@@ -216,13 +257,13 @@ class ExperimentRunner:
     def _reservation(self, plan: RunPlan, remaining: list[PlannedAttempt], index: int) -> float:
         """Estimate to set aside before an attempt: its whole interleaved pair if it opens one."""
         planned = remaining[index]
-        estimate = self._estimator.planned_cost(plan, planned)
+        estimate = self._estimator.planned_cost(plan, planned) + self._triage.reserve_usd
         following = remaining[index + 1] if index + 1 < len(remaining) else None
         if following is not None and (following.trial, following.task_id) == (
             planned.trial,
             planned.task_id,
         ):
-            estimate += self._estimator.planned_cost(plan, following)
+            estimate += self._estimator.planned_cost(plan, following) + self._triage.reserve_usd
         return estimate
 
     @staticmethod
@@ -248,6 +289,7 @@ class ExperimentRunner:
         agents: dict[str, Agent],
         builder: RecordBuilder,
         fingerprint: SuiteFingerprint,
+        segment: _Segment,
     ) -> tuple[AttemptRecord, list[dict[str, Any]] | None]:
         config = configs[planned.config_role]
         config_hash = ExperimentSchedule.config_hash(config)
@@ -267,6 +309,13 @@ class ExperimentRunner:
                     task, workspace, sandbox, result.final_text
                 )
                 grade = self._with_exposure(task, grade, result.messages)
+            triage = self._safe_triage(
+                task,
+                result,
+                grade,
+                segment.baselines.get(task_hash or ""),
+                segment.budget.can_afford((result.cost_usd or 0.0) + self._triage.reserve_usd),
+            )
             record = builder.build(
                 planned,
                 task_id,
@@ -277,6 +326,7 @@ class ExperimentRunner:
                 grade=grade,
                 task_difficulty=difficulty,
                 task_hash=task_hash,
+                triage=triage,
             )
             return record, list(result.messages)
         except Exception as exc:  # recorded as this attempt's error; the run goes on
@@ -291,6 +341,7 @@ class ExperimentRunner:
                 failure=exc,
                 task_difficulty=difficulty,
                 task_hash=task_hash,
+                triage=self._triage.triage_error(),
             )
             return failed, None
 
@@ -312,6 +363,7 @@ class ExperimentRunner:
             for a in unrun
         ]
         warmup_total = sum(a.warmup_cost_usd for a in prior_aborts) + segment.warmup_cost
+        triage_total = sum(r.triage_cost_usd for r in records)
         status: RunStatus = "completed"
         if segment.tampered:
             status = "aborted_tampered"
@@ -334,7 +386,9 @@ class ExperimentRunner:
             "skipped_attempts": skipped,
             "corrupt_lines": corrupt_lines + segment.unreadable_aborts,
             "warmup_cost_usd": warmup_total,
-            "total_cost_usd": sum(r.cost_usd for r in records) + warmup_total,
+            "total_cost_usd": sum(r.cost_usd for r in records) + warmup_total + triage_total,
+            "triage_cost_usd": triage_total,
+            "triage_calls": sum(1 for r in records if r.triage_tokens > 0),
             "estimate_usd": self._estimator.plan_cost(plan)
             + self._estimator.warmup_cost_for_plan(plan),
         }

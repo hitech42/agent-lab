@@ -173,3 +173,37 @@ def test_the_bands_are_constructor_arguments(tmp_path: Path) -> None:
 
 def test_without_records_there_is_nothing_to_show() -> None:
     assert CalibrationReport.from_records([]).render() == "no attempts recorded"
+
+
+def test_failures_are_listed_with_label_source_and_note(tmp_path: Path) -> None:
+    records = baseline_records(tmp_path, trials=2)
+
+    def fail(record: AttemptRecord, label: str | None) -> AttemptRecord:
+        update: dict[str, object] = {"passed": False, "triage_cost_usd": 0.0004}
+        if label:
+            update |= {"triage_label": label, "triage_source": "model", "triage_note": "why"}
+        return record.model_copy(update=update)
+
+    records = [
+        fail(records[0], "incomplete_fix"),
+        fail(records[1], "incomplete_fix"),
+        fail(records[2], None),
+        *records[3:],
+    ]
+    text = CalibrationReport.from_records(records).render()
+    assert "failures: incomplete_fix 2, unlabelled 1" in text
+    assert "triage cost $0.0012 (not in the attempt costs above)" in text
+    assert "incomplete_fix [model] why" in text and "unlabelled" in text
+
+
+def test_a_config_without_failures_prints_no_failure_lines(tmp_path: Path) -> None:
+    text = CalibrationReport.from_records(baseline_records(tmp_path, trials=2)).render()
+    assert "failures:" not in text and "triage cost" not in text
+
+
+def test_a_long_failure_list_is_capped(tmp_path: Path) -> None:
+    records = [
+        r.model_copy(update={"passed": False}) for r in baseline_records(tmp_path, trials=10)
+    ]
+    text = CalibrationReport.from_records(records).render()
+    assert "... and 10 more" in text

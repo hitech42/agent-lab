@@ -23,6 +23,7 @@ from agent_lab.harness.isolation import (
     NoIsolation,
 )
 from agent_lab.harness.pricing import PriceTable, PricingError
+from agent_lab.runner.baseline import BaselineProbe
 from agent_lab.runner.database import ResultsDatabase
 from agent_lab.runner.estimator import CostEstimator
 from agent_lab.runner.experiment import Clock, ExperimentRunner, RunOutcome, SystemClock
@@ -32,6 +33,7 @@ from agent_lab.runner.provenance import ProvenanceReader
 from agent_lab.runner.publish import CommitMessageBuilder, PublishRejected, ResultsPublisher
 from agent_lab.runner.schedule import ExperimentSchedule, ScheduleError
 from agent_lab.runner.storage import ResultsStore, TranscriptStore
+from agent_lab.runner.triage import FailureTriage
 from agent_lab.runner.warmup import CacheWarmer
 from agent_lab.runner.wiring import AgentFactory, MissingApiKeyError
 
@@ -216,6 +218,8 @@ class RunCommand:
             ).read(),
             clock=self._deps.clock,
             isolation=isolation,
+            triage=FailureTriage.default(agents.client, agents.prices, agents.redactor),
+            baselines=BaselineProbe(self._deps.grader_factory(integrity), isolation),
         )
         outcome = runner.run(plan)
         self._print_outcome(outcome)
@@ -397,7 +401,7 @@ class RunCommand:
         say(
             f"  completed {summary.completed}/{summary.planned}, errored {summary.errored}, "
             f"skipped {summary.skipped_budget + summary.skipped_aborted}, "
-            f"cost ${summary.total_cost_usd:.4f}"
+            f"cost ${summary.total_cost_usd:.4f} (triage ${summary.triage_cost_usd:.4f})"
         )
 
     @staticmethod

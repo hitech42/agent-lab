@@ -32,6 +32,10 @@ class PytestOutcome(BaseModel):
     errors: int
     skipped: int
     detail: str
+    # Ids ("module.Class::name", the hidden directory's name stripped) of the tests that
+    # passed, and of those that failed or errored.
+    passed_tests: list[str] = []
+    failed_tests: list[str] = []
 
 
 class PytestRunner:
@@ -57,7 +61,9 @@ class PytestRunner:
             )
             if result.timed_out:
                 return self._failure(f"hidden tests timed out after {self._timeout_s:g}s")
-            return self._score(scratch / "junit.xml", result.exit_code, result.output)
+            return self._score(
+                scratch / "junit.xml", result.exit_code, result.output, tests_dir.name
+            )
 
     def _command(self, root: Path, tests_dir: Path, scratch: Path) -> str:
         args = [
@@ -84,11 +90,14 @@ class PytestRunner:
         ]
         return " ".join(shlex.quote(a) for a in args)
 
-    def _score(self, report: Path, exit_code: int | None, output: str) -> PytestOutcome:
+    def _score(
+        self, report: Path, exit_code: int | None, output: str, dir_name: str = ""
+    ) -> PytestOutcome:
         tail = output[-self._DETAIL_CHARS :]
-        cases = self._read_cases(report)
-        if isinstance(cases, str):
-            return self._failure(f"{cases}\n{tail}")
+        found = self._read_cases(report, dir_name)
+        if isinstance(found, str):
+            return self._failure(f"{found}\n{tail}")
+        cases = [outcome for outcome, _ in found]
         passed = sum(1 for c in cases if c == "passed")
         failed, errors, skipped = (cases.count(k) for k in ("failed", "error", "skipped"))
         problems = []
@@ -109,10 +118,16 @@ class PytestRunner:
             errors=errors,
             skipped=skipped,
             detail=detail[: self._DETAIL_CHARS * 2],
+            passed_tests=[test for outcome, test in found if outcome == "passed"],
+            failed_tests=[test for outcome, test in found if outcome in ("failed", "error")],
         )
 
-    def _read_cases(self, report: Path) -> list[str] | str:
-        """Outcome per testcase ('passed'/'failed'/'error'/'skipped'), or an error message."""
+    def _read_cases(self, report: Path, dir_name: str = "") -> list[tuple[str, str]] | str:
+        """(outcome, test id) per testcase, or an error message.
+
+        The outcome is 'passed'/'failed'/'error'/'skipped'. The id is the JUnit classname
+        without the leading hidden directory (its name is random per grade) plus ``::name``.
+        """
         if not report.is_file():
             return "no JUnit report was written (process exited early or crashed)"
         if report.stat().st_size > self._MAX_REPORT_BYTES:
@@ -124,17 +139,25 @@ class PytestRunner:
             root = ET.fromstring(data)
         except ET.ParseError as exc:
             return f"JUnit report is not valid XML: {exc}"
-        cases: list[str] = []
+        cases: list[tuple[str, str]] = []
         for case in root.iter("testcase"):
             if case.find("failure") is not None:
-                cases.append("failed")
+                outcome = "failed"
             elif case.find("error") is not None:
-                cases.append("error")
+                outcome = "error"
             elif case.find("skipped") is not None:
-                cases.append("skipped")
+                outcome = "skipped"
             else:
-                cases.append("passed")
+                outcome = "passed"
+            cases.append((outcome, self._test_id(case, dir_name)))
         return cases
+
+    @staticmethod
+    def _test_id(case: ET.Element, dir_name: str) -> str:
+        classname = case.get("classname") or ""
+        if dir_name and classname.split(".")[0] == dir_name:
+            classname = classname[len(dir_name) :].lstrip(".")
+        return f"{classname}::{case.get('name') or ''}"
 
     @staticmethod
     def _failure(detail: str) -> PytestOutcome:

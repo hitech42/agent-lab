@@ -40,6 +40,9 @@ class GradeResult(BaseModel):
     environment_tampered: bool = False
     changed_files: ChangedFiles
     detail: str
+    # Hidden-test ids (see PytestOutcome); empty for exact-answer grading. Not stored in records.
+    passed_tests: list[str] = []
+    failed_tests: list[str] = []
 
     @model_validator(mode="after")
     def _exposure_is_consistent(self) -> GradeResult:
@@ -56,6 +59,8 @@ class Score(BaseModel):
     tests_errors: int = 0
     tests_total: int = 0
     detail: str = ""
+    passed_tests: list[str] = []
+    failed_tests: list[str] = []
 
 
 class Grader(ABC):
@@ -121,6 +126,8 @@ class Grader(ABC):
             environment_tampered=tampered,
             changed_files=changes,
             detail=score.detail,
+            passed_tests=score.passed_tests,
+            failed_tests=score.failed_tests,
         )
 
     @abstractmethod
@@ -171,6 +178,8 @@ class HiddenTestsGrader(Grader):
             tests_errors=outcome.errors,
             tests_total=outcome.total,
             detail=outcome.detail,
+            passed_tests=outcome.passed_tests,
+            failed_tests=outcome.failed_tests,
         )
 
     @staticmethod

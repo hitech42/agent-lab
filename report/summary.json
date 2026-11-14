@@ -1,12 +1,12 @@
 {
-  "attempts": 632,
+  "attempts": 696,
   "cluster_min_tasks": 8,
   "comparisons_by_metric": {
-    "cost": 12,
-    "pass": 12,
-    "turns": 12
+    "cost": 13,
+    "pass": 13,
+    "turns": 13
   },
-  "comparisons_shown": 36,
+  "comparisons_shown": 39,
   "daily": [
     {
       "date": "2026-11-01",
@@ -72,16 +72,21 @@
       "date": "2026-11-13",
       "spend_usd": 0.440864,
       "track": "self-verify"
+    },
+    {
+      "date": "2026-11-14",
+      "spend_usd": 0.300213,
+      "track": "effort-sweep"
     }
   ],
-  "days_run": 13,
-  "latest_date": "2026-11-13",
-  "latest_day": "eval(self-verify): baseline 30/32 vs variant 26/32 passed, $0.4409 [completed]",
+  "days_run": 14,
+  "latest_date": "2026-11-14",
+  "latest_day": "eval(effort-sweep): baseline 28/32 vs variant 27/32 passed, $0.3002 [completed]",
   "min_pairs": 10,
   "resamples": 2000,
-  "spend_attempts_usd": 3.692953,
-  "spend_usd": 3.706151,
-  "spend_warmups_usd": 0.013198,
+  "spend_attempts_usd": 3.993039,
+  "spend_usd": 4.006364,
+  "spend_warmups_usd": 0.013325,
   "tracks": [
     {
       "current": {
@@ -291,6 +296,122 @@
         }
       ],
       "track": "aa-test",
+      "unattributed_exclusions": 0
+    },
+    {
+      "current": {
+        "baseline": {
+          "ci_high": 0.950299,
+          "ci_low": 0.719317,
+          "cost_per_solved_usd": 0.004114,
+          "mean_cost_usd": 0.0036,
+          "n": 32,
+          "passed": 28,
+          "rate": 0.875
+        },
+        "baseline_hash": "0d83bf23c762",
+        "by_difficulty": [
+          {
+            "baseline_passed": 11,
+            "baseline_rate": 0.916667,
+            "difficulty": "easy",
+            "pairs": 12,
+            "tasks": 3,
+            "variant_passed": 11,
+            "variant_rate": 0.916667
+          },
+          {
+            "baseline_passed": 8,
+            "baseline_rate": 1.0,
+            "difficulty": "medium",
+            "pairs": 8,
+            "tasks": 2,
+            "variant_passed": 8,
+            "variant_rate": 1.0
+          },
+          {
+            "baseline_passed": 9,
+            "baseline_rate": 0.75,
+            "difficulty": "hard",
+            "pairs": 12,
+            "tasks": 3,
+            "variant_passed": 8,
+            "variant_rate": 0.666667
+          }
+        ],
+        "ceiling": false,
+        "current": true,
+        "days": 1,
+        "delta_cost_usd": {
+          "high": 0.004104,
+          "low": 0.000736,
+          "mean": 0.002178,
+          "verdict": "variant higher"
+        },
+        "delta_output_tokens": {
+          "high": 3739.25,
+          "low": 430.9375,
+          "mean": 1794.09375,
+          "verdict": "variant higher"
+        },
+        "delta_pass_pp": {
+          "high": 15.625,
+          "low": -21.875,
+          "mean": -3.125,
+          "verdict": "no detectable difference"
+        },
+        "delta_turns": {
+          "high": 1.625,
+          "low": 0.84375,
+          "mean": 1.1875,
+          "verdict": "variant higher"
+        },
+        "description": "effort: low \u2192 medium",
+        "excluded": {
+          "error": 0,
+          "tampered": 0,
+          "unpaired": 0
+        },
+        "first_date": "2026-11-14",
+        "injection": {
+          "baseline": {
+            "exposed": 0,
+            "resisted_exposed": 0,
+            "resisted_rate": null,
+            "resisted_unknown": 0,
+            "unknown": 0
+          },
+          "pairs": 8,
+          "variant": {
+            "exposed": 5,
+            "resisted_exposed": 5,
+            "resisted_rate": 1.0,
+            "resisted_unknown": 0,
+            "unknown": 0
+          }
+        },
+        "last_date": "2026-11-14",
+        "method": "task-clustered percentile bootstrap for every metric, pass rate included",
+        "noise_floor": false,
+        "pairs": 32,
+        "question": "How much does more thinking (effort medium vs low) improve pass rate, and at what cost?",
+        "suite_hash": "690bbe394be7",
+        "suite_tasks": 8,
+        "tasks": 8,
+        "track": "effort-sweep",
+        "variant": {
+          "ci_high": 0.931356,
+          "ci_low": 0.682459,
+          "cost_per_solved_usd": 0.006848,
+          "mean_cost_usd": 0.005778,
+          "n": 32,
+          "passed": 27,
+          "rate": 0.84375
+        },
+        "variant_hash": "3016aba7e85c"
+      },
+      "older": [],
+      "track": "effort-sweep",
       "unattributed_exclusions": 0
     },
     {

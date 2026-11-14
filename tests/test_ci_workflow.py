@@ -466,13 +466,6 @@ def test_hostile_values_cannot_break_out_of_the_alert_script(tmp_path: Path) -> 
 # --- pinned runner and actions ---------------------------------------------------------------
 
 WORKFLOWS = {"ci": WORKFLOW, "daily": DAILY}
-# Node.js 24 releases. setup-uv publishes no major tags any more, so it is pinned exactly.
-ACTION_VERSIONS = {
-    "actions/checkout": "v7",
-    "actions/upload-artifact": "v7",
-    "actions/download-artifact": "v8",
-    "astral-sh/setup-uv": "v10.3.3",
-}
 
 
 def test_every_job_in_every_workflow_runs_on_the_pinned_runner_image() -> None:
@@ -481,16 +474,85 @@ def test_every_job_in_every_workflow_runs_on_the_pinned_runner_image() -> None:
             assert job["runs-on"] == "ubuntu-24.04", f"{name}/{job_name}"
 
 
-def test_actions_are_on_their_node24_versions_everywhere() -> None:
-    seen: set[str] = set()
+USES_LINE = re.compile(r"^\s*(?:-\s+)?uses:\s*(\S+)(.*)$")
+PINNED_REF = re.compile(r"^[\w.-]+/[\w.-]+@[0-9a-f]{40}$")
+VERSION_COMMENT = re.compile(r"^\s+# v\d+\.\d+\.\d+\S*\s*$")
+
+
+def unpinned(lines: list[str]) -> list[str]:
+    """The `uses:` lines that are not `owner/repo@<40 hex>  # vX.Y.Z`."""
+    bad = []
+    for line in lines:
+        found = USES_LINE.match(line)
+        if found and not (PINNED_REF.match(found[1]) and VERSION_COMMENT.match(found[2])):
+            bad.append(line.strip())
+    return bad
+
+
+def test_every_action_is_pinned_to_a_full_sha_with_a_version_comment() -> None:
+    refs: dict[str, set[str]] = {}
     for path in WORKFLOWS.values():
-        for job in yaml.safe_load(path.read_text())["jobs"].values():
-            for step in job["steps"]:
-                if "uses" in step:
-                    action, _, version = step["uses"].partition("@")
-                    assert ACTION_VERSIONS[action] == version, step["uses"]
-                    seen.add(action)
-    assert seen == set(ACTION_VERSIONS)
+        lines = path.read_text().splitlines()
+        assert unpinned(lines) == []
+        matched = [m[1] for line in lines if (m := USES_LINE.match(line))]
+        steps = [
+            s["uses"]
+            for job in yaml.safe_load(path.read_text())["jobs"].values()
+            for s in job["steps"]
+            if "uses" in s
+        ]
+        assert sorted(matched) == sorted(steps)  # the text scan sees every step
+        for ref in matched:
+            action, _, sha = ref.partition("@")
+            refs.setdefault(action, set()).add(sha)
+    assert set(refs) == {
+        "actions/checkout",
+        "actions/upload-artifact",
+        "actions/download-artifact",
+        "astral-sh/setup-uv",
+    }
+    assert all(len(shas) == 1 for shas in refs.values())  # one SHA per action everywhere
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "- uses: actions/checkout@v7",
+        "- uses: actions/checkout@v7  # v7.0.1",
+        f"- uses: actions/checkout@{'a' * 39}  # v7.0.1",
+        f"- uses: actions/checkout@{'A' * 40}  # v7.0.1",
+        f"- uses: actions/checkout@{'a' * 40}",
+        f"- uses: actions/checkout@{'a' * 40} # 7.0.1",
+        "- uses: ./local-action",
+    ],
+)
+def test_the_pin_check_rejects_tags_short_shas_and_missing_comments(line: str) -> None:
+    assert len(unpinned([line])) == 1
+
+
+def test_the_pin_check_accepts_a_sha_with_an_exact_version() -> None:
+    assert unpinned([f"      - uses: actions/checkout@{'a' * 40}  # v7.0.1"]) == []
+
+
+def test_the_publish_job_restores_no_uv_cache() -> None:
+    setup = next(
+        s for s in steps_of("publish") if s.get("uses", "").startswith("astral-sh/setup-uv")
+    )
+    assert setup["with"]["enable-cache"] is False
+    for job_name, job in (
+        ("ci/check", load()["jobs"]["check"]),
+        ("experiment", daily()["jobs"]["experiment"]),
+    ):
+        uv = next(s for s in job["steps"] if s.get("uses", "").startswith("astral-sh/setup-uv"))
+        assert uv["with"]["enable-cache"] is True, job_name
+
+
+def test_dependabot_proposes_weekly_github_actions_updates() -> None:
+    config = yaml.safe_load((WORKFLOW.parents[1] / "dependabot.yml").read_text())
+    assert config["version"] == 2
+    (update,) = config["updates"]
+    assert update["package-ecosystem"] == "github-actions" and update["directory"] == "/"
+    assert update["schedule"]["interval"] == "weekly"
 
 
 # --- the report ---------------------------------------------------------------------------------

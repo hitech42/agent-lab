@@ -604,6 +604,36 @@ def test_a_forged_context_parameter_is_rejected(tmp_path: Path) -> None:
     assert any("must all agree" in v for v in violations(incoming, tmp_path / "repo"))
 
 
+def test_a_config_with_message_caching_is_accepted(tmp_path: Path) -> None:
+    from runner_support import schedule
+
+    from agent_lab.runner.schedule import ExperimentSchedule
+    from agent_lab.runner.storage import ResultsStore
+
+    incoming = tmp_path / "incoming"
+    config = schedule().baseline
+    assert config.cache_messages is True
+    ResultsStore(incoming).register_config(ExperimentSchedule.config_hash(config), config)
+    report = publish(incoming, tmp_path / "repo")
+    assert len(report.copied) == 1 and report.copied[0].startswith("configs/")
+
+
+def test_a_forged_cache_flag_is_rejected(tmp_path: Path) -> None:
+    from runner_support import schedule
+
+    from agent_lab.runner.schedule import ExperimentSchedule
+    from agent_lab.runner.storage import ResultsStore
+
+    incoming = tmp_path / "incoming"
+    config = schedule().baseline
+    ResultsStore(incoming).register_config(ExperimentSchedule.config_hash(config), config)
+    path = next((incoming / "configs").glob("*.json"))
+    data = json.loads(path.read_text())
+    data["cache_messages"] = False
+    path.write_text(json.dumps(data))
+    assert any("must all agree" in v for v in violations(incoming, tmp_path / "repo"))
+
+
 # --- failure triage fields -------------------------------------------------------------------
 
 

@@ -11,6 +11,7 @@ baseline:
   max_tokens_per_call: 16000
   tool_output_max_chars: 4000
   context_strategy: full
+  cache_messages: true
   system_prompt: baseline.md
 
 defaults:

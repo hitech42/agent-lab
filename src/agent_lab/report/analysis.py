@@ -39,6 +39,7 @@ _CONFIG_FIELDS = (
     "context_keep_last",
     "context_after_turns",
     "context_summary_max_tokens",
+    "cache_messages",
 )
 _DIFFICULTIES = ("easy", "medium", "hard", "unknown")
 

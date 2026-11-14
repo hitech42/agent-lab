@@ -22,6 +22,7 @@ AttemptStatus = Literal[
 
 _COMPLETED_STOPS = frozenset({"end_turn", "stop_sequence"})
 _TRUNCATED_STOPS = frozenset({"max_tokens", "model_context_window_exceeded"})
+_UNCACHEABLE_BLOCKS = frozenset({"thinking", "redacted_thinking"})  # cannot carry cache_control
 
 
 class AttemptResult(BaseModel):
@@ -162,7 +163,36 @@ class Agent:
                     retries=call.retries,
                 )
             )
-        return self._request(result.messages, max_tokens=self._config.max_tokens_per_call)
+        messages = result.messages
+        if self._config.cache_messages:
+            messages = self._with_message_cache(messages)
+        return self._request(messages, max_tokens=self._config.max_tokens_per_call)
+
+    @staticmethod
+    def _with_message_cache(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """A copy of ``messages`` with ``cache_control`` on the last block of the last message.
+
+        Only the copy changes: the last message, its content list and its last block are new
+        objects, so neither the context strategy's output nor the Conversation is touched. A
+        plain-string prompt becomes one text block to carry the marker. A last block that cannot
+        carry it (a thinking block, an empty text block) is left alone: the request goes out
+        unmarked rather than failing. Together with the system prompt and the last tool this is
+        three breakpoints; the API allows four.
+        """
+        if not messages:
+            return messages
+        last = messages[-1]
+        content = last["content"]
+        blocks = [{"type": "text", "text": content}] if isinstance(content, str) else list(content)
+        if not blocks:
+            return messages
+        tail = blocks[-1]
+        if tail.get("type") in _UNCACHEABLE_BLOCKS or (
+            tail.get("type") == "text" and not tail.get("text")
+        ):
+            return messages
+        blocks[-1] = {**tail, "cache_control": {"type": "ephemeral"}}
+        return [*messages[:-1], {**last, "content": blocks}]
 
     def _request(self, messages: list[dict[str, Any]], max_tokens: int) -> ModelRequest:
         cache = {"type": "ephemeral"}

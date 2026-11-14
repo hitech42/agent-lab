@@ -1,10 +1,10 @@
 """Context management strategies for the agent conversation.
 
-Caching note: only the system prompt and the last tool definition carry ``cache_control``;
-messages are never cache-marked. Changing earlier messages therefore cannot invalidate a
-cached prefix in this harness today, and the saving of a strategy is plain uncached input.
-(If message-level caching is added, compressing old messages would break the cached prefix
-and can raise cost; that interplay is not measured yet.)
+Caching note: with ``AgentConfig.cache_messages`` the agent marks the last block of whatever
+a strategy returns (``Agent._with_message_cache``). A strategy that rewrites old messages
+changes the prefix from the first changed block onward, so the cache breaks from there:
+``TruncateToolOutputs`` changes one more result on every call, ``Summarize`` only when it
+writes a new summary. See CLAUDE.md, "Message caching".
 """
 
 from __future__ import annotations

@@ -264,6 +264,21 @@ def test_a_config_is_registered_once_and_never_overwritten(tmp_path: Path) -> No
     assert path.read_bytes() == before
 
 
+def test_a_cached_config_registers_its_flag_and_an_old_style_one_omits_it(tmp_path: Path) -> None:
+    store = ResultsStore(tmp_path)
+    cached = schedule().baseline
+    old_style = cached.model_copy(update={"cache_messages": None})
+    paths = {}
+    for config in (cached, old_style):
+        digest = ExperimentSchedule.config_hash(config)
+        store.register_config(digest, config)
+        paths[config.cache_messages] = json.loads(
+            (store.configs_dir / f"{digest}.json").read_text()
+        )
+    assert paths[True]["cache_messages"] is True
+    assert "cache_messages" not in paths[None]  # old-style files are written exactly as before
+
+
 def test_the_registered_file_holds_exactly_what_the_hash_covers(tmp_path: Path) -> None:
     store = ResultsStore(tmp_path)
     config = schedule().baseline

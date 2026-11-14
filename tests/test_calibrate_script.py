@@ -85,3 +85,12 @@ def test_a_bad_context_option_exits_before_anything_runs(
         load_script().parse_args(["--context", "magic"])
     assert excinfo.value.code == 2
     assert "unknown context strategy" in capsys.readouterr().err
+
+
+def test_the_cache_messages_option_is_on_off_or_unset() -> None:
+    script = load_script()
+    assert script.parse_args([]).cache_messages is None
+    assert script.parse_args(["--cache-messages", "on"]).cache_messages == "on"
+    assert script.parse_args(["--cache-messages", "off"]).cache_messages == "off"
+    with pytest.raises(SystemExit):
+        script.parse_args(["--cache-messages", "maybe"])

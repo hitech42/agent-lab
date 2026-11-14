@@ -18,6 +18,16 @@ def test_config_validation_and_frozen(config: AgentConfig) -> None:
     assert config.context_strategy == "full"
 
 
+def test_cache_messages_is_off_by_default_and_accepts_true_and_false(config: AgentConfig) -> None:
+    assert config.cache_messages is None
+    for value in (True, False):
+        assert (
+            AgentConfig(**{**config.model_dump(), "cache_messages": value}).cache_messages is value
+        )
+    with pytest.raises(ValidationError):
+        AgentConfig(**{**config.model_dump(), "cache_messages": "sometimes"})
+
+
 def build(**changes: object) -> AgentConfig:
     base: dict[str, object] = {
         "name": "n",

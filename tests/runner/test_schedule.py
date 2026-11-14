@@ -257,6 +257,8 @@ def test_hash_is_pinned_so_accidental_changes_to_the_scheme_are_noticed() -> Non
         {"system_prompt": "a different prompt"},
         {"context_strategy": "truncate_tool_outputs", "context_keep_last": 2},
         {"context_strategy": "truncate_tool_outputs", "context_keep_last": 3},
+        {"cache_messages": None},
+        {"cache_messages": False},
     ],
 )
 def test_hash_changes_with_every_config_field(change: dict[str, object]) -> None:
@@ -316,29 +318,68 @@ def test_saturday_sweeps_effort_and_monday_compares_models_at_the_same_effort() 
     assert monday.variant.effort == monday.baseline.effort == "low"
 
 
-def test_every_hash_that_ran_before_context_strategies_is_unchanged() -> None:
-    """Results already in results/ carry these hashes; None-valued fields must not alter them."""
+def uncached(config: AgentConfig) -> AgentConfig:
+    """The config as it was before message caching existed (the field absent, i.e. None)."""
+    return config.model_copy(update={"cache_messages": None})
+
+
+def test_every_hash_that_ran_before_message_caching_is_unchanged() -> None:
+    """Results already in results/ carry these hashes; a None cache_messages must not alter them."""
     sched = schedule()
     hash_of = ExperimentSchedule.config_hash
-    assert hash_of(sched.baseline) == "0d83bf23c762"
+    assert hash_of(uncached(sched.baseline)) == "0d83bf23c762"
     pinned = {
         "model-comparison": "a39f80189bd1",
         "tool-design": "dc66825c56db",
+        "context-truncate": "3a27c9a4c761",
         "turn-budget": "af7fb1581948",
         "self-verify": "b9f0162f65dc",
         "effort-sweep": "3016aba7e85c",
         "aa-test": "0d83bf23c762",
     }
     for name, expected in pinned.items():
-        assert hash_of(sched.track_named(name).variant) == expected, name
+        assert hash_of(uncached(sched.track_named(name).variant)) == expected, name
     plan_first = (SCHEDULE_PATH.parent / "prompts" / "plan_first.md").read_text().strip()
-    unscheduled = sched.baseline.model_copy(update={"system_prompt": plan_first})
+    unscheduled = uncached(sched.baseline).model_copy(update={"system_prompt": plan_first})
     assert hash_of(unscheduled) == "7f8e50e2ce25"  # the track left the schedule, the file stays
 
 
-def test_the_context_truncate_hash_is_pinned() -> None:
-    variant = schedule().track_named("context-truncate").variant
-    assert ExperimentSchedule.config_hash(variant) == "3a27c9a4c761"
+def test_the_scheduled_baseline_caches_messages_and_every_track_inherits_it() -> None:
+    sched = schedule()
+    assert sched.baseline.cache_messages is True
+    for name in ("model-comparison", "tool-design", "context-truncate", "turn-budget"):
+        assert sched.track_named(name).variant.cache_messages is True, name
+    for name in ("self-verify", "effort-sweep", "aa-test"):
+        assert sched.track_named(name).variant.cache_messages is True, name
+
+
+def test_the_hashes_with_message_caching_are_pinned_and_start_new_series() -> None:
+    """Turning caching on changed every scheduled hash on purpose (then a configuration freeze)."""
+    sched = schedule()
+    hash_of = ExperimentSchedule.config_hash
+    assert hash_of(sched.baseline) == "f7dddf5269a8"
+    pinned = {
+        "model-comparison": "a08eba792e5e",
+        "tool-design": "371efa20a8b7",
+        "context-truncate": "0e51521e6169",
+        "turn-budget": "69fcff5566d5",
+        "self-verify": "93ee6f37066f",
+        "effort-sweep": "386ac61db6bc",
+        "aa-test": "f7dddf5269a8",  # identical configs still hash alike
+    }
+    for name, expected in pinned.items():
+        assert hash_of(sched.track_named(name).variant) == expected, name
+    plan_first = (SCHEDULE_PATH.parent / "prompts" / "plan_first.md").read_text().strip()
+    assert (
+        hash_of(sched.baseline.model_copy(update={"system_prompt": plan_first})) == "d36f55f15a31"
+    )
+
+
+def test_none_true_and_false_are_three_different_hashes() -> None:
+    hash_of = ExperimentSchedule.config_hash
+    base = schedule().baseline
+    hashes = {hash_of(base.model_copy(update={"cache_messages": v})) for v in (None, True, False)}
+    assert len(hashes) == 3
 
 
 def test_thursday_is_turn_budget_and_wednesday_truncates() -> None:

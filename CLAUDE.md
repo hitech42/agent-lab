@@ -15,7 +15,8 @@ directly; no agent frameworks.
 - `src/agent_lab/harness/`
   - `config.py` — pydantic models for agent configuration
   - `agent.py` — `Agent`, the hand-written agent loop on the Messages API; every request,
-    the cache warm-up included, sends `output_config={"effort": config.effort}`
+    the cache warm-up included, sends `output_config={"effort": config.effort}`; with
+    `cache_messages` it marks the last block of the last message (see Message caching)
   - `model_client.py` — `ModelClient` and `RetryPolicy` (the harness owns retries: 4 attempts,
     2s/4s/8s backoff, a numeric `retry-after` header replaces the wait, capped at 60s)
   - `conversation.py` — `Conversation`, the message history
@@ -203,6 +204,17 @@ follow the calibration means; the estimator uses history per config hash once th
 61-89%), and the daily runs will refine it. The tasks were not made easier to get there: the
 effort setting did the lowering. Changing the baseline effort changes its `config_hash`, so every
 track started a new report series. Per attempt about $0.004 (haiku low) and $0.04 (sonnet low).
+Those costs were measured before message caching (see Message caching); the estimator falls back to
+`cost_defaults` for the new hashes until history exists, so it over-estimates if caching saves money,
+which only makes the daily cap more conservative.
+
+**Baseline message caching and the configuration freeze.** The baseline sets `cache_messages: true`, so
+every track inherits it. This intentionally changes every scheduled `config_hash` (baseline and aa-test
+`0d83bf23c762` to `f7dddf5269a8`, each track's variant too; the pins are in `tests/runner/test_schedule.py`)
+and therefore starts a new report series for every track. **Configuration freeze:** from the first daily run
+with these hashes, make no config, prompt, schedule or task-suite changes to the scheduled tracks for about
+four weeks, so each series can accumulate enough pairs (any such change starts another series). Calibration
+runs into scratch directories and documentation changes are not affected.
 
 **Resuming:** Phase 4 always calls `agent-lab run --resume`, which is safe unconditionally: with
 no JSONL for the date it is a normal run, with a finished day it prints "already done", and
@@ -427,16 +439,68 @@ calls `fresh()` once per attempt (stateless strategies return themselves, `Summa
 **Calibrating a strategy:** `uv run python scripts/calibrate.py --context SPEC`, with SPEC `full`,
 `truncate_tool_outputs:keep_last=2` or `summarize:after_turns=4,keep_last=2,summary_max_tokens=400`.
 
-**Caching note (as found).** `cache_control` is set only on the system prompt and the last tool definition; messages are
-never cache-marked. Editing earlier messages therefore cannot invalidate a cached prefix today, and a strategy's saving
-is plain uncached input (history: `cache_write_tokens` 0, cache reads about 19% of input, from tools + system). If message
-caching is added (a separate step), compressing old messages will break the cached prefix and can raise cost; that
-interplay is not measured yet.
+**Caching.** With `cache_messages` the conversation is cached too; see Message caching below for how it composes
+with these strategies (truncation and summarization change the prefix, which breaks the cache from the first changed block).
 
 **config_hash.** `None`-valued fields are left out of the canonical JSON, so adding optional fields did not change any
-existing hash; `tests/runner/test_schedule.py` pins the baseline (`0d83bf23c762`) and every track's hash, including
-`context-truncate` and the unscheduled `plan-first` (the prompt file `plan_first.md` is kept for later). Registry files
-(`results/configs`) omit `None` fields too, so old-style configs are stored exactly as before.
+existing hash; `tests/runner/test_schedule.py` pins every track's hash twice: with `cache_messages` stripped (None), where
+the pre-caching values (baseline `0d83bf23c762`, plus `context-truncate` and the unscheduled `plan-first`) prove the rule, and
+as scheduled (baseline `f7dddf5269a8`). `None`, `true` and `false` are three different hashes. Registry files
+(`results/configs`) omit `None` fields too, so old-style configs are stored exactly as before. `ConfigRecord` carries
+`cache_messages` because the publisher rebuilds an `AgentConfig` from each registry file and checks that the recomputed hash
+agrees; a config field missing there would make the publish job reject every config of that kind.
+
+## Message caching
+
+`AgentConfig.cache_messages: bool | None = None` (None = off, absent from the hash; `true` = on; an explicit `false`
+has its own hash). When on, `Agent._build_request` takes the messages the context strategy produced and puts
+`cache_control: {"type": "ephemeral"}` on the last content block of the last message of every request, on a copy
+(`Agent._with_message_cache`): the strategy's output and the `Conversation` are never mutated, and transcripts never contain
+markers. A plain-string prompt (first request) becomes one text block to carry the marker. A last block that cannot carry it
+(thinking, redacted thinking, empty text) is left unmarked: the request goes out uncached rather than failing. The warm-up
+request is unchanged, and so are the summary calls of `Summarize` (no tools, a different prefix). Breakpoints per request:
+last tool, system prompt, last message = 3 of the API's 4. Caching changes cost, not behavior: a test checks that with the markers
+removed the requests equal the uncached ones.
+
+**What was verified** (Anthropic prompt-caching docs, https://platform.claude.com/docs/en/build-with-claude/prompt-caching, read
+2026-11-14, and `anthropic` 2.3.0 types):
+- `cache_control` is accepted on text, tool_use and tool_result blocks (also image and document); thinking blocks and empty
+  text blocks cannot carry it. Our last message is always a user message (the task prompt or a run of tool_results), so the marker
+  lands on a text or tool_result block.
+- Lookback: each breakpoint checks at most 20 positions back (the breakpoint counts as the first); on the Claude API a run of
+  consecutive tool_use blocks counts as one position, and so does a run of consecutive tool_results. A turn here adds about four
+  positions (thinking, text, tool_use run, tool_result run) and `max_turns` is at most 15, so the previous request's entry is
+  always inside the window.
+- Minimum cacheable prompt: 512 tokens for both claude-haiku-5-5 and claude-sonnet-5-5 (shorter prompts are silently not cached,
+  `cache_creation_input_tokens` 0). System + tools alone are about 730-820 tokens per call in the history, so every request clears it.
+- Price: 5-minute write 1.25x input, read 0.1x (0.05x for Sonnet 5.5; `config/pricing.yaml` has `$0.10` on `$2.00`). The default
+  TTL is 5 minutes and each read refreshes it; turns are seconds apart.
+- A change of `effort` or the thinking configuration invalidates the messages cache; both are constant within an attempt. On Haiku
+  5.5 (and Sonnet 4.6 and later, which the docs state without naming 5.5) earlier thinking blocks are preserved, so tool-result
+  turns do not break the cache.
+
+**Composition with the context strategies** (the marked block is whatever is last after the strategy). Caching is a prefix match, so
+a strategy that rewrites old messages breaks the cache from the first changed block onward:
+- `full`: the prefix only grows; each turn reads everything before it and writes only the new tail.
+- `truncate_tool_outputs(keep_last=n)`: one more old result becomes a placeholder on every call, so the prefix changes at that block
+  each turn, the previous request's breakpoint no longer matches, and only system + tools are read while the whole tail is
+  rewritten at 1.25x. Expect truncation to cost more, not less, under caching; the `context-truncate` track now measures exactly
+  that (a truncating variant against a cached `full` baseline).
+- `summarize`: the summary sits in the first user message, so the cache breaks from there whenever a summary is written and
+  recovers between rewrites (the previous summary is reused byte for byte).
+
+**Follow-up (candidate experiment after the configuration freeze).** A cache-friendly truncation variant: elide old tool outputs in
+batches, so the prefix changes only every few turns instead of every turn and the cache survives in between. Truncation stays as
+it is until then.
+
+**Accounting (already in place, nothing added).** `TokenUsage` carries `cache_creation_input_tokens` and `cache_read_input_tokens`;
+`Budget.record` sums them; `PriceTable.compute_cost` prices them with `cache_write` (the 5-minute write price) and `cache_read`;
+`AttemptTrace` totals (context calls included) feed `AttemptRecord.cache_write_tokens` / `cache_read_tokens`. With message caching
+`cache_write_tokens` is no longer 0 in attempt records (before, only the warm-up wrote the cache).
+
+**Calibrating it.** `uv run python scripts/calibrate.py --cache-messages on|off [--trials 4 --results-dir DIR]` overrides the
+baseline's setting (`off` is an explicit `false`, a different hash from an unset field). Run both into the same `--results-dir` to
+compare cost per attempt side by side.
 
 ## Report
 
@@ -659,9 +723,10 @@ attempts opened the file with the notice). So each attempt also records whether 
   needs containers. The sandbox also remains writable outside the workspace.
 - Grading uses a snapshot, so processes that outlive an attempt cannot change its grade,
   but they can still run during later attempts.
-- Prompt caching only helps if the shared prefix (tools + system prompt) reaches the model's
-  minimum cacheable length. With five short tool definitions it may not, which would make the
-  warm-up a harmless no-op. Check `cache_write_tokens`/`cache_read_tokens` in the first day's records.
+- Prompt caching only helps if the shared prefix reaches the model's minimum cacheable length (512 tokens for
+  haiku-5-5 and sonnet-5-5). System + tools measured about 730-820 tokens per call in the first runs, so they clear it;
+  re-check `cache_write_tokens`/`cache_read_tokens` if the prompt or the tool set shrinks. Message caching of a very short
+  attempt (first turns) may fall under the minimum and silently not cache.
 - `effort` (`output_config`) support depends on the model. It was added without a real call:
   if a model rejects it, the warm-up canary aborts the run with a 400 before any attempt. Check
   the first manual run.

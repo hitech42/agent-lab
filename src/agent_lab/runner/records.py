@@ -152,6 +152,7 @@ class ConfigRecord(BaseModel):
     context_keep_last: int | None = None
     context_after_turns: int | None = None
     context_summary_max_tokens: int | None = None
+    cache_messages: bool | None = None
 
 
 class SkippedAttempt(BaseModel):

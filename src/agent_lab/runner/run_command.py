@@ -92,6 +92,7 @@ class RunArgs:
     model: str | None = None
     effort: Effort | None = None
     context: ContextOverride | None = None
+    cache_messages: bool | None = None
     max_cost_usd: float | None = None
     max_attempt_cost_usd: float | None = None
 
@@ -252,6 +253,17 @@ class RunCommand:
                     "variant": args.context.apply(resolved.variant),
                 }
             )
+        if args.cache_messages is not None:
+            resolved = resolved.model_copy(
+                update={
+                    "baseline": resolved.baseline.model_copy(
+                        update={"cache_messages": args.cache_messages}
+                    ),
+                    "variant": resolved.variant.model_copy(
+                        update={"cache_messages": args.cache_messages}
+                    ),
+                }
+            )
         if args.max_cost_usd is not None:
             resolved = resolved.model_copy(update={"daily_max_cost_usd": args.max_cost_usd})
         if args.max_attempt_cost_usd is not None:
@@ -362,7 +374,8 @@ class RunCommand:
                 f"{role}: {config.name} hash={ExperimentSchedule.config_hash(config)} "
                 f"model={config.model} effort={config.effort} tool_set={config.tool_set} "
                 f"max_turns={config.max_turns} max_tokens={config.max_tokens_per_call} "
-                f"context={ContextStrategy.describe(config)}"
+                f"context={ContextStrategy.describe(config)} "
+                f"cache_messages={config.cache_messages}"
             )
         say(
             f"trials per task: {resolved.trials_per_task}; daily cap: "

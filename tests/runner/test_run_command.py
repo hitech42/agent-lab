@@ -432,13 +432,37 @@ def test_a_run_registers_both_configs_and_a_dry_run_registers_none(tmp_path: Pat
 def test_dry_run_names_the_context_strategy_and_its_parameters(tmp_path: Path) -> None:
     _, output = build_cli(tmp_path, api_key=None).run("--date", "2026-11-04", "--dry-run")
     assert "track: context-truncate" in output
-    assert "hash=0d83bf23c762" in output and "context=full" in output
+    assert "hash=f7dddf5269a8" in output and "context=full" in output
     assert "context=truncate_tool_outputs(keep_last=2)" in output
 
 
-def test_dry_run_on_thursday_is_turn_budget_with_the_old_hash(tmp_path: Path) -> None:
+def test_dry_run_on_thursday_is_turn_budget_with_its_cached_hash(tmp_path: Path) -> None:
     _, output = build_cli(tmp_path, api_key=None).run("--date", "2026-11-05", "--dry-run")
-    assert "track: turn-budget" in output and "hash=af7fb1581948" in output
+    assert "track: turn-budget" in output and "hash=69fcff5566d5" in output
+
+
+def test_dry_run_shows_whether_messages_are_cached(tmp_path: Path) -> None:
+    _, output = build_cli(tmp_path, api_key=None).run("--date", "2026-11-05", "--dry-run")
+    lines = [ln for ln in output.splitlines() if ln.startswith(("baseline:", "variant:"))]
+    assert len(lines) == 2 and all("cache_messages=True" in ln for ln in lines)
+
+
+@pytest.mark.parametrize(("setting", "expected"), [(True, True), (False, False), (None, True)])
+def test_the_calibration_override_sets_caching_on_both_sides(
+    setting: bool | None, expected: bool
+) -> None:
+    from dataclasses import replace
+
+    from runner_support import prices, schedule, suite
+
+    from agent_lab.runner.plan import PlanOptions, RunPlanner
+    from agent_lab.runner.run_command import RunArgs, RunCommand
+
+    plan = RunPlanner(schedule(), suite()).plan(date(2026, 11, 2), PlanOptions())
+    args = replace(RunArgs(), cache_messages=setting)
+    calibrated = RunCommand._calibrated(plan, args, prices())
+    assert calibrated.resolved.baseline.cache_messages is expected
+    assert calibrated.resolved.variant.cache_messages is expected
 
 
 def test_context_override_parses_and_applies() -> None:

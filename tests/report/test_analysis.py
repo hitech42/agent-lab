@@ -327,3 +327,22 @@ def test_a_context_strategy_and_its_parameters_are_named_in_the_description() ->
     )
     assert "context_strategy: full → truncate_tool_outputs" in text
     assert "context_keep_last: None → 2" in text
+
+
+def test_a_change_of_message_caching_is_named_in_the_description() -> None:
+    from runner_support import schedule
+
+    from agent_lab.report.analysis import ResultsAnalyzer
+    from agent_lab.runner.records import ConfigRecord
+    from agent_lab.runner.schedule import ExperimentSchedule
+
+    def record(cache: bool | None) -> ConfigRecord:
+        config = schedule().baseline.model_copy(update={"cache_messages": cache})
+        return ConfigRecord(
+            config_hash=ExperimentSchedule.config_hash(config),
+            first_name=config.name,
+            **config.model_dump(exclude={"name"}),
+        )
+
+    assert "cache_messages: None → True" in ResultsAnalyzer._describe(record(None), record(True))
+    assert ResultsAnalyzer._describe(record(True), record(True)) == "identical configs"

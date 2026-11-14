@@ -27,6 +27,10 @@ class AgentConfig(BaseModel):
     context_keep_last: int | None = Field(default=None, gt=0)
     context_after_turns: int | None = Field(default=None, gt=0)
     context_summary_max_tokens: int | None = Field(default=None, gt=0)
+    # Cache the growing conversation: cache_control on the last block of the last message of every
+    # request. None = off and absent from the config hash (existing hashes stay valid); an explicit
+    # False is a different hash from None.
+    cache_messages: bool | None = None
 
     @model_validator(mode="after")
     def _params_match_strategy(self) -> AgentConfig:

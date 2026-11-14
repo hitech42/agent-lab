@@ -2,8 +2,8 @@
 
 Usage:
     ANTHROPIC_API_KEY=... uv run python scripts/calibrate.py [--tasks id,id] [--trials 4] \\
-        [--model claude-sonnet-5-5] [--effort high] [--context SPEC] [--results-dir DIR] \\
-        [--max-cost 2.0]
+        [--model claude-sonnet-5-5] [--effort high] [--context SPEC] [--cache-messages on|off] \\
+        [--results-dir DIR] [--max-cost 2.0]
 
 Results go to a results directory that is NOT results/ (a fresh temporary directory by
 default, printed at the start). Run the script twice with the same ``--results-dir`` (for
@@ -52,6 +52,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="context strategy for the run, e.g. truncate_tool_outputs:keep_last=2 or "
         "summarize:after_turns=4,keep_last=2,summary_max_tokens=400",
     )
+    parser.add_argument(
+        "--cache-messages",
+        choices=["on", "off"],
+        help="cache the conversation (on) or not (off) instead of the baseline's setting; "
+        "off is an explicit false, a different config hash from an unset field",
+    )
     parser.add_argument("--results-dir", help="where to write (default: a new temporary dir)")
     parser.add_argument("--max-cost", type=float, default=2.0, help="hard stop in USD (default 2)")
     parser.add_argument(
@@ -88,6 +94,7 @@ def main(argv: list[str]) -> int:
         model=args.model,
         effort=args.effort,
         context=args.context,
+        cache_messages=None if args.cache_messages is None else args.cache_messages == "on",
         max_cost_usd=args.max_cost,
         max_attempt_cost_usd=args.max_attempt_cost or (0.50 if args.model else None),
     )

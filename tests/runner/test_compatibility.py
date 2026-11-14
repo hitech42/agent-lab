@@ -29,6 +29,7 @@ def test_v1_attempt_records_still_parse() -> None:
     records = [AttemptRecord.model_validate_json(line) for line in attempt_lines()]
     assert len(records) == 2 and {r.schema_version for r in records} == {1}
     assert all(r.effort is None and r.git_dirty is None for r in records)  # fields added later
+    assert all(r.triage_label is None and r.triage_cost_usd == 0.0 for r in records)
 
 
 def test_v1_summary_and_abort_still_parse() -> None:

@@ -85,6 +85,7 @@
   "min_pairs": 10,
   "resamples": 2000,
   "spend_attempts_usd": 3.993039,
+  "spend_triage_usd": 0.0,
   "spend_usd": 4.006364,
   "spend_warmups_usd": 0.013325,
   "tracks": [
@@ -161,6 +162,20 @@
           "error": 2,
           "tampered": 0,
           "unpaired": 0
+        },
+        "failures": {
+          "baseline": {
+            "failed": 4,
+            "labels": {},
+            "model_labelled": 0,
+            "unlabelled": 4
+          },
+          "variant": {
+            "failed": 2,
+            "labels": {},
+            "model_labelled": 0,
+            "unlabelled": 2
+          }
         },
         "first_date": "2026-11-08",
         "injection": {
@@ -256,6 +271,7 @@
             "tampered": 0,
             "unpaired": 0
           },
+          "failures": null,
           "first_date": "2026-11-01",
           "injection": {
             "baseline": {
@@ -371,6 +387,20 @@
           "error": 0,
           "tampered": 0,
           "unpaired": 0
+        },
+        "failures": {
+          "baseline": {
+            "failed": 4,
+            "labels": {},
+            "model_labelled": 0,
+            "unlabelled": 4
+          },
+          "variant": {
+            "failed": 5,
+            "labels": {},
+            "model_labelled": 0,
+            "unlabelled": 5
+          }
         },
         "first_date": "2026-11-14",
         "injection": {
@@ -488,6 +518,20 @@
           "tampered": 0,
           "unpaired": 0
         },
+        "failures": {
+          "baseline": {
+            "failed": 2,
+            "labels": {},
+            "model_labelled": 0,
+            "unlabelled": 2
+          },
+          "variant": {
+            "failed": 0,
+            "labels": {},
+            "model_labelled": 0,
+            "unlabelled": 0
+          }
+        },
         "first_date": "2026-11-09",
         "injection": {
           "baseline": {
@@ -582,6 +626,7 @@
             "tampered": 0,
             "unpaired": 0
           },
+          "failures": null,
           "first_date": "2026-11-02",
           "injection": {
             "baseline": {
@@ -698,6 +743,20 @@
           "tampered": 0,
           "unpaired": 0
         },
+        "failures": {
+          "baseline": {
+            "failed": 3,
+            "labels": {},
+            "model_labelled": 0,
+            "unlabelled": 3
+          },
+          "variant": {
+            "failed": 3,
+            "labels": {},
+            "model_labelled": 0,
+            "unlabelled": 3
+          }
+        },
         "first_date": "2026-11-12",
         "injection": {
           "baseline": {
@@ -792,6 +851,7 @@
             "tampered": 0,
             "unpaired": 0
           },
+          "failures": null,
           "first_date": "2026-11-05",
           "injection": {
             "baseline": {
@@ -908,6 +968,20 @@
           "tampered": 0,
           "unpaired": 0
         },
+        "failures": {
+          "baseline": {
+            "failed": 2,
+            "labels": {},
+            "model_labelled": 0,
+            "unlabelled": 2
+          },
+          "variant": {
+            "failed": 6,
+            "labels": {},
+            "model_labelled": 0,
+            "unlabelled": 6
+          }
+        },
         "first_date": "2026-11-13",
         "injection": {
           "baseline": {
@@ -1019,6 +1093,20 @@
             "error": 0,
             "tampered": 0,
             "unpaired": 0
+          },
+          "failures": {
+            "baseline": {
+              "failed": 3,
+              "labels": {},
+              "model_labelled": 0,
+              "unlabelled": 3
+            },
+            "variant": {
+              "failed": 4,
+              "labels": {},
+              "model_labelled": 0,
+              "unlabelled": 4
+            }
           },
           "first_date": "2026-11-06",
           "injection": {
@@ -1136,6 +1224,20 @@
           "tampered": 0,
           "unpaired": 0
         },
+        "failures": {
+          "baseline": {
+            "failed": 6,
+            "labels": {},
+            "model_labelled": 0,
+            "unlabelled": 6
+          },
+          "variant": {
+            "failed": 15,
+            "labels": {},
+            "model_labelled": 0,
+            "unlabelled": 15
+          }
+        },
         "first_date": "2026-11-07",
         "injection": {
           "baseline": {
@@ -1229,6 +1331,20 @@
             "error": 0,
             "tampered": 0,
             "unpaired": 0
+          },
+          "failures": {
+            "baseline": {
+              "failed": 0,
+              "labels": {},
+              "model_labelled": 0,
+              "unlabelled": 0
+            },
+            "variant": {
+              "failed": 1,
+              "labels": {},
+              "model_labelled": 0,
+              "unlabelled": 1
+            }
           },
           "first_date": "2026-11-03",
           "injection": {
@@ -1346,6 +1462,20 @@
           "tampered": 0,
           "unpaired": 0
         },
+        "failures": {
+          "baseline": {
+            "failed": 4,
+            "labels": {},
+            "model_labelled": 0,
+            "unlabelled": 4
+          },
+          "variant": {
+            "failed": 4,
+            "labels": {},
+            "model_labelled": 0,
+            "unlabelled": 4
+          }
+        },
         "first_date": "2026-11-11",
         "injection": {
           "baseline": {
@@ -1439,6 +1569,20 @@
             "error": 0,
             "tampered": 0,
             "unpaired": 0
+          },
+          "failures": {
+            "baseline": {
+              "failed": 0,
+              "labels": {},
+              "model_labelled": 0,
+              "unlabelled": 0
+            },
+            "variant": {
+              "failed": 2,
+              "labels": {},
+              "model_labelled": 0,
+              "unlabelled": 2
+            }
           },
           "first_date": "2026-11-04",
           "injection": {

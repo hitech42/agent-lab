@@ -602,3 +602,43 @@ def test_a_forged_context_parameter_is_rejected(tmp_path: Path) -> None:
     data["context_keep_last"] = 3
     path.write_text(json.dumps(data))
     assert any("must all agree" in v for v in violations(incoming, tmp_path / "repo"))
+
+
+# --- failure triage fields -------------------------------------------------------------------
+
+
+def with_labels(incoming: Path, label: str = "incomplete_fix", note: str = "n") -> int:
+    """Label every record of the day's JSONL; returns how many lines there are."""
+    import json
+
+    lines = []
+    for line in jsonl(incoming).read_text().splitlines():
+        data = json.loads(line)
+        data.update(
+            {"passed": False, "triage_label": label, "triage_source": "model", "triage_note": note}
+        )
+        lines.append(json.dumps(data))
+    jsonl(incoming).write_text("\n".join(lines) + "\n")
+    return len(lines)
+
+
+def test_records_with_valid_triage_labels_are_published(day: tuple[Path, Path]) -> None:
+    incoming, repo = day
+    with_labels(incoming)
+    report = publish(incoming, repo)
+    assert report.unreadable_lines == 0 and report.copied
+
+
+def test_an_unknown_label_is_an_unreadable_line_not_a_published_record(
+    day: tuple[Path, Path],
+) -> None:
+    incoming, repo = day
+    count = with_labels(incoming, label="made_up")
+    assert publish(incoming, repo, max_unreadable_lines=count).unreadable_lines == count
+    rejects(incoming, repo, "unreadable lines", max_unreadable_lines=count - 1)
+
+
+def test_an_over_long_note_is_unreadable_too(day: tuple[Path, Path]) -> None:
+    incoming, repo = day
+    count = with_labels(incoming, note="x" * 500)
+    assert publish(incoming, repo, max_unreadable_lines=count).unreadable_lines == count

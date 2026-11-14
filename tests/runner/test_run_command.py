@@ -475,3 +475,17 @@ def test_a_context_override_with_wrong_parameters_fails_validation() -> None:
 
     with pytest.raises(ValidationError, match="takes exactly"):
         ContextOverride.parse("summarize:keep_last=2").apply(schedule().baseline)
+
+
+def test_a_real_run_probes_the_baselines_and_labels_failures(tmp_path: Path) -> None:
+    from runner_support import FakeGrader
+
+    grader = FakeGrader(passed=False)
+    world = build_cli(tmp_path, grader=grader)
+    code, output = world.run("--date", "2026-11-08")
+    assert code == 0
+    records, _ = ResultsStore(world.results_dir).read_all_attempts()
+    assert grader.calls == len(records) + 3  # one pre-run per task, before any attempt
+    assert grader.log[:3] == sorted({r.task_id for r in records})
+    assert {r.triage_label for r in records} == {"no_verification"}
+    assert "(triage $" in output

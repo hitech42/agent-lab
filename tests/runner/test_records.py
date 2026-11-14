@@ -288,3 +288,81 @@ def test_context_calls_are_counted_apart_but_their_tokens_are_in_the_totals() ->
     assert record.output_tokens == plain["output_tokens"] + 7
     assert (record.context_calls, record.context_call_tokens) == (1, 60)
     assert (plain["context_calls"], plain["context_call_tokens"]) == (0, 0)
+
+
+# --- failure triage fields -------------------------------------------------------------------
+
+
+def failed_grade() -> GradeResult:
+    return grade(passed=False, tests_passed=1, tests_failed=3)
+
+
+def test_triage_fields_default_to_none_and_zero() -> None:
+    record = build()
+    assert (record.triage_label, record.triage_source, record.triage_note) == (None, None, None)
+    assert (record.triage_cost_usd, record.triage_tokens) == (0.0, 0)
+
+
+def test_the_builder_copies_a_triage_outcome_into_the_record() -> None:
+    from agent_lab.runner.triage_outcome import TriageOutcome
+
+    outcome = TriageOutcome("incomplete_fix", "model", "missed one edge", 0.0004, 2300)
+    record = build(grade=failed_grade(), triage=outcome)
+    assert (record.triage_label, record.triage_source) == ("incomplete_fix", "model")
+    assert (record.triage_note, record.triage_cost_usd, record.triage_tokens) == (
+        "missed one edge",
+        0.0004,
+        2300,
+    )
+    assert record.cost_usd == 0.0123  # the attempt's own cost is untouched
+
+
+def test_the_triage_cost_is_not_part_of_the_attempt_cost_or_turns() -> None:
+    from agent_lab.runner.triage_outcome import TriageOutcome
+
+    plain = build(grade=failed_grade())
+    labelled = build(grade=failed_grade(), triage=TriageOutcome("other", "error", "n", 9.0, 9))
+    assert (plain.cost_usd, plain.turns) == (labelled.cost_usd, labelled.turns)
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"triage_label": "other"},  # a label without a source
+        {"triage_source": "rule"},  # a source without a label
+        {"triage_label": "not_a_label", "triage_source": "rule"},
+        {"triage_label": "other", "triage_source": "magic"},
+        {"triage_label": "other", "triage_source": "rule", "triage_note": "two\nlines"},
+        {"triage_label": "other", "triage_source": "rule", "triage_note": "x" * 201},
+        {"triage_note": "a note without a label"},
+    ],
+)
+def test_inconsistent_triage_fields_are_rejected(fields: dict[str, Any]) -> None:
+    data = json.loads(build(grade=failed_grade()).model_dump_json())
+    with pytest.raises(ValidationError):
+        AttemptRecord.model_validate({**data, **fields})
+
+
+def test_a_passed_attempt_cannot_carry_a_label() -> None:
+    data = json.loads(build().model_dump_json())
+    with pytest.raises(ValidationError):
+        AttemptRecord.model_validate({**data, "triage_label": "other", "triage_source": "rule"})
+
+
+def test_the_label_enum_is_the_documented_taxonomy() -> None:
+    from agent_lab.runner.triage_outcome import FailureLabel
+
+    assert set(get_args(FailureLabel)) == {
+        "out_of_turns", "budget_exhausted", "truncated_or_refused", "protected_violation",
+        "injection_followed", "environment_tampered", "infrastructure_error", "regression",
+        "no_verification", "incomplete_fix", "wrong_approach", "misread_spec", "other",
+    }  # fmt: skip
+
+
+def test_summary_triage_fields_default_for_old_files() -> None:
+    summary = RunSummary.model_validate_json(
+        (
+            __import__("pathlib").Path(__file__).parent / "fixtures" / "run_summary_v1.json"
+        ).read_text()
+    )
+    assert (summary.triage_calls, summary.triage_cost_usd) == (0, 0.0)

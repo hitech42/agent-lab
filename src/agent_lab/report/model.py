@@ -73,6 +73,24 @@ class InjectionStats(Frozen):
     variant: InjectionSideStats
 
 
+class FailureSideStats(Frozen):
+    """Failure labels of one side's failed attempts (included pairs only).
+
+    ``labels`` counts each label; ``unlabelled`` counts failures without one (written before
+    triage existed); ``model_labelled`` is how many labels came from the model (advisory).
+    """
+
+    failed: int
+    labels: dict[str, int]
+    model_labelled: int
+    unlabelled: int
+
+
+class FailureStats(Frozen):
+    baseline: FailureSideStats
+    variant: FailureSideStats
+
+
 class SeriesReport(Frozen):
     """One (track, baseline config, variant config) series."""
 
@@ -97,6 +115,7 @@ class SeriesReport(Frozen):
     delta_output_tokens: Delta
     by_difficulty: list[DifficultyStats] = Field(default_factory=list)
     injection: InjectionStats | None = None  # None: no injection-task pairs
+    failures: FailureStats | None = None  # None: no failed attempt on either side
     ceiling: bool
     noise_floor: bool
     method: str
@@ -123,6 +142,7 @@ class ReportData(Frozen):
     spend_usd: float  # attempts and warm-ups
     spend_attempts_usd: float
     spend_warmups_usd: float
+    spend_triage_usd: float = 0.0  # failure-triage model calls (not in attempts or warm-ups)
     unreadable: int  # unreadable result lines/files ignored
     min_pairs: int
     resamples: int

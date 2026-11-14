@@ -14,6 +14,8 @@ from agent_lab.report.model import (
     Delta,
     DifficultyStats,
     Exclusions,
+    FailureSideStats,
+    FailureStats,
     InjectionSideStats,
     InjectionStats,
     ReportData,
@@ -96,6 +98,7 @@ class ResultsAnalyzer:
             )
         tracks = self._tracks(series, unattributed)
         daily, attempts_spend = self._spend(records, summaries, aborts)
+        triage_spend = math.fsum(r.triage_cost_usd for r in records)
         total = math.fsum(d.spend_usd for d in daily)
         shown = Counter(
             {
@@ -110,7 +113,8 @@ class ResultsAnalyzer:
             attempts=len(records),
             spend_usd=total,
             spend_attempts_usd=attempts_spend,
-            spend_warmups_usd=max(0.0, total - attempts_spend),
+            spend_warmups_usd=max(0.0, total - attempts_spend - triage_spend),
+            spend_triage_usd=triage_spend,
             unreadable=bad_lines + bad_summaries + bad_aborts + bad_configs,
             min_pairs=self._min_pairs,
             resamples=self._resamples,
@@ -249,6 +253,7 @@ class ResultsAnalyzer:
             delta_output_tokens=self._delta(columns["output"], intervals.get("output")),
             by_difficulty=self._by_difficulty(pairs),
             injection=self._injection(pairs),
+            failures=self._failures(pairs),
             ceiling=bool(n) and stats.at_ceiling(b_rate, v_rate),
             noise_floor=track == NOISE_FLOOR_TRACK,
             method=self._method(enough, clustered),
@@ -273,6 +278,27 @@ class ResultsAnalyzer:
             for tier in _DIFFICULTIES
             if tiers.get(tier)
         ]
+
+    @staticmethod
+    def _failures(pairs: list[_Pair]) -> FailureStats | None:
+        sides = (
+            ResultsAnalyzer._failure_side([p.baseline for p in pairs]),
+            ResultsAnalyzer._failure_side([p.variant for p in pairs]),
+        )
+        if not sides[0].failed and not sides[1].failed:
+            return None
+        return FailureStats(baseline=sides[0], variant=sides[1])
+
+    @staticmethod
+    def _failure_side(records: list[AttemptRecord]) -> FailureSideStats:
+        failed = [r for r in records if not r.passed]
+        labels = Counter(r.triage_label for r in failed if r.triage_label is not None)
+        return FailureSideStats(
+            failed=len(failed),
+            labels=dict(sorted(labels.items())),
+            model_labelled=sum(1 for r in failed if r.triage_source == "model"),
+            unlabelled=sum(1 for r in failed if r.triage_label is None),
+        )
 
     @staticmethod
     def _injection(pairs: list[_Pair]) -> InjectionStats | None:
@@ -409,7 +435,7 @@ class ResultsAnalyzer:
                 last = max(aborts_for[day], key=lambda a: a.total_cost_usd)
                 spend, track = last.total_cost_usd, last.track
             else:
-                spend = math.fsum(r.cost_usd for r in by_day_records[day])
+                spend = math.fsum(r.cost_usd + r.triage_cost_usd for r in by_day_records[day])
                 track = by_day_records[day][0].track
             days.append(DayCost(date=day, track=track, spend_usd=spend))
         return days, math.fsum(r.cost_usd for r in records)

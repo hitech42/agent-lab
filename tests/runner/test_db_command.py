@@ -177,3 +177,18 @@ def test_unreadable_files_of_every_kind_are_counted(tmp_path: Path) -> None:
     (world.results_dir / "configs" / "broken.json").write_text("{bad")
     output = rebuild(world, tmp_path / "results.db")
     assert "skipped 3 unreadable line(s)/file(s)" in output
+
+
+def test_the_pairs_view_carries_the_triage_labels(tmp_path: Path) -> None:
+    world = finished_day(tmp_path)
+    db = tmp_path / "results.db"
+    rebuild(world, db)
+    assert rows(db, "SELECT DISTINCT baseline_triage_label, variant_triage_label FROM pairs") == [
+        (None, None)
+    ]
+    assert rows(
+        db, "SELECT count(*) FROM pragma_table_info('attempts') WHERE name LIKE 'triage_%'"
+    ) == [(5,)]
+    assert rows(
+        db, "SELECT count(*) FROM pragma_table_info('runs') WHERE name LIKE 'triage_%'"
+    ) == [(2,)]

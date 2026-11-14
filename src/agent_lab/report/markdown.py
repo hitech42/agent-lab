@@ -3,6 +3,8 @@
 import re
 
 from agent_lab.report.model import (
+    FailureSideStats,
+    FailureStats,
     InjectionSideStats,
     InjectionStats,
     ReportData,
@@ -55,7 +57,9 @@ class MarkdownRenderer:
             "",
             f"Data through **{data.latest_date}** · {data.days_run} day(s) run · "
             f"{data.attempts} attempts · **${data.spend_usd:.4f}** total spend "
-            f"(attempts ${data.spend_attempts_usd:.4f} + warm-ups ${data.spend_warmups_usd:.4f}).",
+            f"(attempts ${data.spend_attempts_usd:.4f} + warm-ups ${data.spend_warmups_usd:.4f}"
+            + (f" + triage ${data.spend_triage_usd:.4f}" if data.spend_triage_usd > 0 else "")
+            + ").",
         ]
         if data.latest_day:
             lines += ["", f"Latest day: {escape(data.latest_day)}"]
@@ -138,7 +142,29 @@ class MarkdownRenderer:
                 notes.append(f"  - By difficulty (baseline \u2192 variant pass): {tiers}")
             if s.injection is not None:
                 notes.append(self._injection_note(s.injection))
+            if s.failures is not None and self._any_label(s.failures):
+                notes.append(self._failure_note(s.failures))
         return notes
+
+    @staticmethod
+    def _any_label(f: FailureStats) -> bool:
+        return bool(f.baseline.labels or f.variant.labels)
+
+    @staticmethod
+    def _failure_note(f: FailureStats) -> str:
+        def side(name: str, s: FailureSideStats) -> str:
+            ranked = sorted(s.labels.items(), key=lambda item: (-item[1], item[0]))
+            parts = [f"{count} {label.replace('_', ' ')}" for label, count in ranked]
+            if s.unlabelled:
+                parts.append(f"{s.unlabelled} unlabelled")
+            return f"{name} {s.failed} failed: {', '.join(parts) or 'none'}"
+
+        return (
+            "  - Failures, advisory labels: "
+            + side("baseline", f.baseline)
+            + "; "
+            + side("variant", f.variant)
+        )
 
     @staticmethod
     def _injection_note(i: InjectionStats) -> str:
@@ -244,6 +270,13 @@ class MarkdownRenderer:
             "(an attempt that never saw the planted text resisted nothing). Records written "
             "before exposure was tracked are shown as unknown, with their old resisted count "
             "kept apart.",
+            "- Failure labels: rule labels (out of turns, budget, truncated or refused, protected "
+            "violation, injection followed, tampering, regression, no verification) come from "
+            "the record and a pre-run of the hidden tests on the untouched project; the rest "
+            "(incomplete fix, wrong approach, misread spec, other) are one small model's guess "
+            "from a trimmed view of the attempt. Labels are advisory, never change pass or fail, "
+            "and failures from before labelling existed are shown as unlabelled. Counts are "
+            "over the same included pairs as the pass rates; `summary.json` has the full counts.",
             "- Exclusions: a pair is left out when either attempt ended in `error` (an API or "
             "harness failure), was environment-tampered, or its other side never ran; the number "
             "is in parentheses. Truncated, refused, incomplete, max-turn and over-budget outcomes "

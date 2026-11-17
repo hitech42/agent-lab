@@ -135,7 +135,7 @@ resolved configs with their `config_hash`, the ordered plan and the cost estimat
 API calls and writes no files (no key needed).
 
 **Who writes `results/`:** only CI, and only through the daily workflow's `publish` job (see
-Daily workflow; the `heartbeat` job appends to `results/heartbeat.log` only). Local runs always use `--results-dir /tmp/somewhere` so they never pollute the
+Daily workflow). Local runs always use `--results-dir /tmp/somewhere` so they never pollute the
 repository. Transcripts
 (`.transcripts/`, gitignored) and the derived database (`*.db`, gitignored) are never committed.
 
@@ -278,14 +278,11 @@ It has separate jobs so that the job that executes agent code can never push:
   committer from the repository variables `COMMIT_AUTHOR_NAME` / `COMMIT_AUTHOR_EMAIL`, which
   must be set), with the message from `agent-lab results commit-message`, then pushes; on a
   rejected push it `pull --rebase`s and retries, three pushes at most.
-- **`heartbeat`** (`contents: write`, 5 min, no environment, no key, no sandbox, no agent code, no
-  uv; runs only if the `experiment` job succeeded, `changed` is `false` and `dry_run` is false, so
-  never together with `publish`): every slot after the first of a UTC day finds the day finished
-  and has nothing to publish, so this job appends one line to `results/heartbeat.log` and commits
-  and pushes it (`chore(heartbeat): no new results for <date> (run <id>)`, same author variables
-  and push retry as `publish`), so every run shows on the contribution graph. The log is outside
-  `results/runs` and `results/configs`, so nothing reads it; it is the one file in `results/` that
-  `publish` does not write, and it is only ever appended to.
+- **No heartbeat.** A run after the first of a UTC day finds the day finished and has nothing to publish: it
+  leaves no commit, and its record is the workflow run itself (about 20 s). `results/heartbeat.log` is kept as history
+  (the old `heartbeat` job appended to it); nothing writes to it any more. The job (a commit
+  `chore(heartbeat): no new results for <date> (run <id>)` per such run) can be restored from PR #12 (merge `ccd419c`;
+  it touched only `daily.yml`, `CLAUDE.md` and `tests/test_ci_workflow.py`).
 - **`alert`** (`needs: [experiment, publish]`, no token, no key, no checkout, 5 min): an abort or a
   tampered day still exits 0, so its record is collected and published first; this last job then
   fails the run so that GitHub notifies. The `experiment` job exposes the outcome file as job outputs

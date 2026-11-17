@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "run_id": "2026-11-17-tool-design",
+  "date": "2026-11-17",
+  "track": "tool-design",
+  "status": "completed",
+  "started": "2026-11-17T02:37:47+00:00",
+  "finished": "2026-11-17T03:02:26+00:00",
+  "planned": 64,
+  "completed": 64,
+  "errored": 0,
+  "skipped_budget": 0,
+  "skipped_aborted": 0,
+  "skipped_attempts": [],
+  "abort_count": 0,
+  "corrupt_lines": 0,
+  "warmup_cost_usd": 0.00015145000000000002,
+  "total_cost_usd": 0.19499608,
+  "estimate_usd": 0.20933041760577623,
+  "triage_calls": 12,
+  "triage_cost_usd": 0.0032080000000000003
+}

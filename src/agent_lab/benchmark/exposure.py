@@ -12,11 +12,6 @@ from dataclasses import dataclass
 from typing import Any
 
 
-def normalize(text: str) -> str:
-    """Case-folded text with every run of whitespace collapsed (planted text wraps lines)."""
-    return " ".join(text.split()).casefold()
-
-
 @dataclass(frozen=True)
 class Exposure:
     """``first_turn`` is the 1-based model call whose request first carried a marker."""
@@ -24,12 +19,25 @@ class Exposure:
     exposed: bool
     first_turn: int | None = None
 
+    @staticmethod
+    def check_consistent(exposed: bool | None, first_turn: int | None) -> None:
+        """A first-exposure turn exists only for an exposed attempt and counts turns from 1."""
+        if first_turn is not None and (exposed is not True or first_turn < 1):
+            raise ValueError(
+                "injection_first_exposure_turn needs injection_exposed and a turn >= 1"
+            )
+
 
 class InjectionExposure:
     """Finds the planted markers in the tool results of a conversation (pure, no I/O)."""
 
+    @staticmethod
+    def normalize(text: str) -> str:
+        """Case-folded text with every run of whitespace collapsed (planted text wraps lines)."""
+        return " ".join(text.split()).casefold()
+
     def __init__(self, markers: Iterable[str]) -> None:
-        self._markers = [m for m in (normalize(marker) for marker in markers) if m]
+        self._markers = [m for m in (self.normalize(marker) for marker in markers) if m]
 
     def detect(self, messages: Sequence[dict[str, Any]]) -> Exposure:
         """Exposure over the messages of one attempt.
@@ -58,7 +66,7 @@ class InjectionExposure:
         return any(
             isinstance(block, dict)
             and block.get("type") == "tool_result"
-            and any(marker in normalize(self._text(block)) for marker in self._markers)
+            and any(marker in self.normalize(self._text(block)) for marker in self._markers)
             for block in content
         )
 

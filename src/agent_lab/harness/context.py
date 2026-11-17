@@ -10,8 +10,9 @@ writes a new summary. See CLAUDE.md, "Message caching".
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Any
 
 from agent_lab.harness.config import AgentConfig
@@ -85,29 +86,34 @@ class ContextStrategy(ABC):
         ]
         return config.context_strategy + (f"({', '.join(params)})" if params else "")
 
+    @staticmethod
+    def _text_of(content: Any) -> str:
+        """The text of a tool_result ``content`` (a string or a list of blocks)."""
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            return "".join(
+                str(b.get("text", ""))
+                for b in content
+                if isinstance(b, dict) and b.get("type") == "text"
+            )
+        return ""
+
+    @staticmethod
+    def _turn_count(messages: list[dict[str, Any]]) -> int:
+        return sum(1 for m in messages if m["role"] == "assistant")
+
+    @staticmethod
+    def _required(value: int | None) -> int:
+        assert value is not None  # AgentConfig validates the parameters per strategy
+        return value
+
 
 class FullHistory(ContextStrategy):
     """Send the whole conversation unchanged."""
 
     def apply(self, conversation: Conversation) -> ContextResult:
         return ContextResult(conversation.messages)
-
-
-def _text_of(content: Any) -> str:
-    """The text of a tool_result ``content`` (a string or a list of blocks)."""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        return "".join(
-            str(b.get("text", ""))
-            for b in content
-            if isinstance(b, dict) and b.get("type") == "text"
-        )
-    return ""
-
-
-def _turn_count(messages: list[dict[str, Any]]) -> int:
-    return sum(1 for m in messages if m["role"] == "assistant")
 
 
 class TruncateToolOutputs(ContextStrategy):
@@ -126,7 +132,9 @@ class TruncateToolOutputs(ContextStrategy):
 
     def apply(self, conversation: Conversation) -> ContextResult:
         messages = conversation.messages
-        elide_through = _turn_count(messages) - self._keep_last  # turns 1..this are old
+        elide_through = (
+            ContextStrategy._turn_count(messages) - self._keep_last
+        )  # turns 1..this are old
         names: dict[str, str] = {}
         turn = 0
         for message in messages:
@@ -143,7 +151,7 @@ class TruncateToolOutputs(ContextStrategy):
 
     @staticmethod
     def _elide(block: dict[str, Any], names: dict[str, str]) -> None:
-        text = _text_of(block.get("content"))
+        text = ContextStrategy._text_of(block.get("content"))
         tool = names.get(str(block.get("tool_use_id")), "unknown tool")
         placeholder = f"[tool output elided: {len(text)} characters from {tool}]"
         if len(text) > len(placeholder):
@@ -195,7 +203,7 @@ class Summarize(ContextStrategy):
 
     def apply(self, conversation: Conversation) -> ContextResult:
         messages = conversation.messages
-        n = _turn_count(messages)
+        n = ContextStrategy._turn_count(messages)
         calls: tuple[ContextCall, ...] = ()
         if n - self._covered > self._after_turns:
             target = n - self._keep_last
@@ -274,25 +282,24 @@ class Summarize(ContextStrategy):
                 elif kind == "tool_use":
                     lines.append(f"[turn {turn}] call {block.get('name')}: {block.get('input')}")
                 elif kind == "tool_result":
-                    lines.append(f"[turn {turn}] result: {_text_of(block.get('content'))}")
+                    lines.append(
+                        f"[turn {turn}] result: {ContextStrategy._text_of(block.get('content'))}"
+                    )
         return "Agent transcript:\n" + "\n".join(lines)
 
 
-_REGISTRY: dict[str, Callable[[AgentConfig, ModelClient], ContextStrategy]] = {
-    "full": lambda config, client: FullHistory(),
-    "truncate_tool_outputs": lambda config, client: TruncateToolOutputs(
-        _required(config.context_keep_last)
-    ),
-    "summarize": lambda config, client: Summarize(
-        _required(config.context_after_turns),
-        _required(config.context_keep_last),
-        _required(config.context_summary_max_tokens),
-        client,
-        config.model,
-    ),
-}
-
-
-def _required(value: int | None) -> int:
-    assert value is not None  # AgentConfig validates the parameters per strategy
-    return value
+_REGISTRY: Mapping[str, Callable[[AgentConfig, ModelClient], ContextStrategy]] = MappingProxyType(
+    {
+        "full": lambda config, client: FullHistory(),
+        "truncate_tool_outputs": lambda config, client: TruncateToolOutputs(
+            ContextStrategy._required(config.context_keep_last)
+        ),
+        "summarize": lambda config, client: Summarize(
+            ContextStrategy._required(config.context_after_turns),
+            ContextStrategy._required(config.context_keep_last),
+            ContextStrategy._required(config.context_summary_max_tokens),
+            client,
+            config.model,
+        ),
+    }
+)

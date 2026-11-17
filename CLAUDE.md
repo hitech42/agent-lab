@@ -24,7 +24,7 @@ directly; no agent frameworks.
     `Summarize` (see Context strategies)
   - `tools/` — `Tool` ABC, file/exec tools, and `ToolRegistry`
   - `sandbox.py` — sandboxed execution with minimal explicit environment
-  - `isolation.py` — `CommandIsolation` ABC, `NoIsolation`, `LinuxUserIsolation` (commands as a
+  - `isolation.py` — `CommandIsolation` ABC (`from_name` builds one from `--isolation`), `NoIsolation`, `LinuxUserIsolation` (commands as a
     dedicated user, no network, processes killed after every command)
   - `redact.py` — `Redactor`, secret redaction
   - `budget.py` — per-attempt token/cost budget
@@ -74,7 +74,7 @@ directly; no agent frameworks.
   - `model.py` — pydantic data models; `ReportData` is what `summary.json` serializes
   - `analysis.py` — `ResultsAnalyzer`: pairs, exclusions, series, spend
   - `markdown.py` — `MarkdownRenderer` and `ReadmeUpdater` (the README markers)
-  - `charts.py` — `TracksChart` and `DailySpendChart` (SVG)
+  - `charts.py` — `TracksChart` and `DailySpendChart` (SVG), `Svg` (the shared markup)
   - `build.py` — `ReportBuilder` (pure: files in memory); `command.py` — `ReportCommand` (I/O, `--check`)
 - `README.md` — hand-written text plus the generated dashboard between the report markers
 - `report/` — generated: `tracks.svg`, `daily.svg`, `summary.json` (committed)
@@ -101,6 +101,16 @@ directly; no agent frameworks.
 - Collaborators are injected via constructors. No module-level mutable state; nothing reads env vars at import time.
 - Pydantic models are data only (AgentConfig, TokenUsage, traces, AttemptResult). Service logic lives in plain classes.
 - No getters/setters, no Manager/Helper classes. Small helpers become private or static methods on the class that owns the data.
+- **No module-level functions or mutable state** in `src/agent_lab`. A helper shared by several classes goes on the
+  class that owns its data (`ContextStrategy._text_of`, `Exposure.check_consistent`, `TriageRules.shorten`,
+  `MarkdownRenderer.escape`, `CommandIsolation.from_name`; `Svg` owns the SVG markup of the charts). Allowlist, the only
+  deliberate exceptions: `report/stats.py` (pure statistical functions, any) and `runner/cli.py` (`main`, the
+  console-script entry point). Module-level lookup tables are immutable (`MappingProxyType`, `frozenset`, tuple) or class
+  attributes; `__all__` is the one allowed module-level list. (On a pydantic model an underscore class attribute becomes a
+  private attribute, so `config.py` keeps its table at module level as a `MappingProxyType`.)
+  `tests/test_module_conventions.py` parses every module with `ast` and fails on a module-level function outside the
+  allowlist or a module-level name bound to a list/dict/set literal, comprehension or `list()`/`dict()`/`set()` call. Change
+  the allowlist there and here together, with a reason.
 - Tunable settings (caps, timeouts, limits) are constructor arguments with defaults, not module-level constants that tests monkeypatch.
 - Result and response types are plain data (frozen dataclasses or pydantic models), not wrappers that forward to another object through properties.
 - Tooling: `uv sync`, `uv run ruff check`, `uv run ruff format`, `uv run mypy`, `uv run pytest`.

@@ -9,7 +9,7 @@ from types import MappingProxyType
 
 from pydantic import BaseModel, Field
 
-from agent_lab.benchmark.exposure import normalize
+from agent_lab.benchmark.exposure import InjectionExposure
 from agent_lab.benchmark.grader import Grader, GradeResult
 from agent_lab.benchmark.task import Task
 from agent_lab.benchmark.workspace import TaskWorkspace
@@ -112,14 +112,14 @@ class TaskValidator:
         for path in sorted(project.rglob("*")):
             if path.is_file():
                 try:
-                    texts.append(normalize(path.read_text()))
+                    texts.append(InjectionExposure.normalize(path.read_text()))
                 except UnicodeDecodeError, OSError:
                     continue  # binary files cannot carry planted text the agent could read
-        prompt = normalize(task.prompt)
-        canaries = [normalize(c) for c in task.canaries]
+        prompt = InjectionExposure.normalize(task.prompt)
+        canaries = [InjectionExposure.normalize(c) for c in task.canaries]
         problems: list[str] = []
         for marker in task.injection_markers:
-            key = normalize(marker)
+            key = InjectionExposure.normalize(marker)
             if not any(key in text for text in texts):
                 problems.append(f"injection marker {marker!r} occurs in no file under project/")
             if key in prompt:

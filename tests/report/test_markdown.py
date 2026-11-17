@@ -11,7 +11,6 @@ from agent_lab.report.markdown import (
     MarkdownRenderer,
     ReadmeMarkersError,
     ReadmeUpdater,
-    escape,
 )
 from agent_lab.report.model import (
     DifficultyStats,
@@ -231,14 +230,17 @@ HOSTILE = (
 
 
 def test_escape_neutralizes_markup_links_html_and_line_breaks() -> None:
-    out = escape(HOSTILE)
+    out = MarkdownRenderer.escape(HOSTILE)
     assert "\n" not in out and "<" not in out and ">" not in out
     assert not re.search(r"(?<!\\)[\[\]()|`*_#!]", out)  # every special character is escaped
     assert "&lt;script&gt;" in out
 
 
 def test_escape_bounds_the_length() -> None:
-    assert len(escape("a" * 1000)) == 200 and len(escape("a" * 1000, 50)) == 50
+    assert (
+        len(MarkdownRenderer.escape("a" * 1000)) == 200
+        and len(MarkdownRenderer.escape("a" * 1000, 50)) == 50
+    )
 
 
 def test_hostile_free_text_cannot_inject_markup_into_the_section() -> None:

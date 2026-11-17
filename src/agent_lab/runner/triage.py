@@ -17,7 +17,7 @@ from agent_lab.harness.pricing import PriceTable
 from agent_lab.harness.redact import Redactor
 from agent_lab.runner.baseline import HiddenBaseline
 from agent_lab.runner.triage_outcome import NOTE_MAX_CHARS, FailureLabel, TriageOutcome
-from agent_lab.runner.triage_rules import ActionSummary, TriageRules, shorten
+from agent_lab.runner.triage_rules import ActionSummary, TriageRules
 
 MODEL_LABELS: tuple[FailureLabel, ...] = (
     "incomplete_fix",
@@ -101,7 +101,7 @@ class ModelTriage:
     def clean_note(self, note: str, limit: int | None = None) -> str:
         """One line, no control characters, secrets redacted, capped."""
         flat = _CONTROL.sub(" ", note)
-        return shorten(self._redactor.redact(flat), limit or self._note_chars)
+        return TriageRules.shorten(self._redactor.redact(flat), limit or self._note_chars)
 
     def _payload(
         self, task: Task, result: AttemptResult, grade: GradeResult, summary: ActionSummary
@@ -210,7 +210,7 @@ class FailureTriage:
     @staticmethod
     def _join(note: str, suffix: str, limit: int) -> str:
         """The note shortened to leave room for the suffix, so the whole fits ``limit``."""
-        head = shorten(note, max(limit - len(suffix) - 1, 0)) if note else ""
+        head = TriageRules.shorten(note, max(limit - len(suffix) - 1, 0)) if note else ""
         return f"{head} {suffix}".strip()
 
     @staticmethod

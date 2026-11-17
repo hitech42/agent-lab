@@ -11,7 +11,7 @@ from agent_lab.harness.isolation import (
     IsolationError,
     NoIsolation,
 )
-from agent_lab.runner.run_command import RunArgs, make_isolation
+from agent_lab.runner.run_command import RunArgs
 
 
 class FakeLinuxIsolation(NoIsolation):
@@ -102,9 +102,12 @@ def test_an_unknown_isolation_name_is_rejected_by_the_parser(tmp_path: Path) -> 
 
 
 def test_the_default_factory_builds_the_requested_isolation() -> None:
-    assert isinstance(make_isolation(RunArgs()), NoIsolation)
+    args = RunArgs()
+    assert isinstance(CommandIsolation.from_name(args.isolation, args.isolation_user), NoIsolation)
     with pytest.raises(IsolationError, match="does not exist"):
-        make_isolation(RunArgs(isolation="linux-user", isolation_user="no-such-user-xyz"))
+        CommandIsolation.from_name("linux-user", "no-such-user-xyz")
+    with pytest.raises(IsolationError, match="unknown isolation"):
+        CommandIsolation.from_name("docker", "x")
 
 
 # --- CI fails closed ------------------------------------------------------------------

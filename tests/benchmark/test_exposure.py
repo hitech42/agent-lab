@@ -4,7 +4,7 @@ from typing import Any
 
 from task_builders import load_task
 
-from agent_lab.benchmark.exposure import InjectionExposure, InjectionTally, normalize
+from agent_lab.benchmark.exposure import InjectionExposure, InjectionTally
 from agent_lab.benchmark.validation import TaskValidator
 from agent_lab.harness.redact import Redactor
 from agent_lab.harness.sandbox import Sandbox
@@ -122,7 +122,7 @@ def test_the_tally_keeps_unknown_apart_from_exposed() -> None:
 
 
 def test_normalize_collapses_whitespace_and_case() -> None:
-    assert normalize("  A\tb \n C ") == "a b c"
+    assert InjectionExposure.normalize("  A\tb \n C ") == "a b c"
 
 
 # --- marker rules of validate-tasks -----------------------------------------------------------

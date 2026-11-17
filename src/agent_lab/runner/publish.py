@@ -87,39 +87,24 @@ class _Jsonl:
     unreadable: int
     blank_lines: list[int]
 
-
-def _parse_jsonl(data: bytes) -> _Jsonl:
-    """Records and the number of unreadable lines; blank lines (not the final newline) listed."""
-    records: list[AttemptRecord] = []
-    unreadable = 0
-    blank: list[int] = []
-    lines = data.split(b"\n")
-    for number, raw in enumerate(lines, start=1):
-        if number == len(lines) and not raw:
-            continue  # the newline that ends the file
-        if not raw.strip():
-            blank.append(number)
-            continue
-        try:
-            records.append(AttemptRecord.model_validate_json(raw.decode("utf-8")))
-        except ValidationError, UnicodeDecodeError:
-            unreadable += 1
-    return _Jsonl(records, unreadable, blank)
-
-
-def _read_regular(path: Path) -> bytes:
-    """Read a file that was classified as regular, refusing to follow a link swapped in."""
-    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-    with os.fdopen(fd, "rb") as handle:
-        return handle.read()
-
-
-def _valid_day(text: str) -> bool:
-    try:
-        date.fromisoformat(text)
-    except ValueError:
-        return False
-    return True
+    @classmethod
+    def parse(cls, data: bytes) -> _Jsonl:
+        """Records, the unreadable-line count; blank lines (not the final newline) listed."""
+        records: list[AttemptRecord] = []
+        unreadable = 0
+        blank: list[int] = []
+        lines = data.split(b"\n")
+        for number, raw in enumerate(lines, start=1):
+            if number == len(lines) and not raw:
+                continue  # the newline that ends the file
+            if not raw.strip():
+                blank.append(number)
+                continue
+            try:
+                records.append(AttemptRecord.model_validate_json(raw.decode("utf-8")))
+            except ValidationError, UnicodeDecodeError:
+                unreadable += 1
+        return cls(records, unreadable, blank)
 
 
 class ResultsPublisher:
@@ -136,6 +121,21 @@ class ResultsPublisher:
         self._max_file_bytes = max_file_bytes
         self._max_files = max_files
         self._max_unreadable_lines = max_unreadable_lines
+
+    @staticmethod
+    def _read_regular(path: Path) -> bytes:
+        """Read a file that was classified as regular, refusing to follow a link swapped in."""
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, "rb") as handle:
+            return handle.read()
+
+    @staticmethod
+    def _valid_day(text: str) -> bool:
+        try:
+            date.fromisoformat(text)
+        except ValueError:
+            return False
+        return True
 
     def plan(self, incoming: Path) -> PublishPlan:
         """Validate everything; raises PublishRejected listing every violation."""
@@ -165,7 +165,7 @@ class ResultsPublisher:
             if item.action == "skip":
                 skipped.append(item.rel)
                 continue
-            data = _read_regular(item.source)
+            data = ResultsPublisher._read_regular(item.source)
             target.parent.mkdir(parents=True, exist_ok=True)
             if item.action == "copy":
                 with target.open("xb") as handle:  # never overwrites
@@ -224,7 +224,7 @@ class ResultsPublisher:
             return _Found(rel, path, "config", None, match["hash"]) if match else None
         for kind, pattern in _RUN_FILES:
             match = pattern.match(name)
-            if match and _valid_day(match["date"]):
+            if match and ResultsPublisher._valid_day(match["date"]):
                 return _Found(rel, path, kind, match["date"])
         return None
 
@@ -234,7 +234,7 @@ class ResultsPublisher:
 
     def _read_checked(self, item: _Found, violations: list[str]) -> bytes | None:
         try:
-            return _read_regular(item.path)
+            return ResultsPublisher._read_regular(item.path)
         except OSError as exc:
             violations.append(f"{item.rel}: cannot be read ({exc.strerror or exc})")
             return None
@@ -257,7 +257,7 @@ class ResultsPublisher:
         return 0
 
     def _check_jsonl(self, item: _Found, data: bytes, violations: list[str]) -> int:
-        parsed = _parse_jsonl(data)
+        parsed = _Jsonl.parse(data)
         for number in parsed.blank_lines:
             violations.append(f"{item.rel}: line {number} is blank")
         if parsed.unreadable > self._max_unreadable_lines:
@@ -409,7 +409,7 @@ class CommitMessageBuilder:
         unreadable = 0
         jsonl = runs / f"{latest}.jsonl"
         if jsonl.is_file():
-            parsed = _parse_jsonl(jsonl.read_bytes())
+            parsed = _Jsonl.parse(jsonl.read_bytes())
             records, unreadable = parsed.records, parsed.unreadable
         summary: RunSummary | None = None
         summary_path = runs / f"{latest}.run.json"

@@ -20,7 +20,6 @@ from agent_lab.harness.isolation import (
     CommandIsolation,
     IsolationError,
     LinuxUserIsolation,
-    NoIsolation,
 )
 from agent_lab.harness.pricing import PriceTable, PricingError
 from agent_lab.runner.baseline import BaselineProbe
@@ -97,13 +96,6 @@ class RunArgs:
     max_attempt_cost_usd: float | None = None
 
 
-def make_isolation(args: RunArgs) -> CommandIsolation:
-    """The isolation the command line asks for (raises IsolationError if unusable)."""
-    if args.isolation == "linux-user":
-        return LinuxUserIsolation(args.isolation_user)
-    return NoIsolation()
-
-
 @dataclass(frozen=True)
 class RunDependencies:
     """Everything the run command needs from the outside world (replaced in tests)."""
@@ -115,7 +107,7 @@ class RunDependencies:
     agent_factory: Callable[[Mapping[str, str]], AgentFactory]
     integrity: Callable[[Path], EnvironmentIntegrity]  # given the tasks directory to watch
     grader_factory: Callable[[EnvironmentIntegrity], Callable[[Task], Grader]]
-    isolation: Callable[[RunArgs], CommandIsolation] = make_isolation
+    isolation: Callable[[RunArgs], CommandIsolation]
     git_sha_lookup: Callable[[Path], str | None] | None = None  # None: ask git
     git_dirty_lookup: Callable[[Path], bool | None] | None = None
 
@@ -129,6 +121,7 @@ class RunDependencies:
             agent_factory=AgentFactory.from_env,
             integrity=lambda tasks_dir: EnvironmentIntegrity.for_running_interpreter(tasks_dir),
             grader_factory=lambda integrity: lambda task: Grader.for_task(task, integrity),
+            isolation=lambda args: CommandIsolation.from_name(args.isolation, args.isolation_user),
         )
 
 

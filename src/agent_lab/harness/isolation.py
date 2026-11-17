@@ -39,6 +39,15 @@ class CommandIsolation(ABC):
 
     warning: str | None = None  # shown once by `agent-lab run`; None when nothing to warn about
 
+    @staticmethod
+    def from_name(name: str, user: str) -> CommandIsolation:
+        """The isolation a ``--isolation`` value asks for (raises IsolationError if unusable)."""
+        if name == "linux-user":
+            return LinuxUserIsolation(user)
+        if name == "none":
+            return NoIsolation()
+        raise IsolationError(f"unknown isolation {name!r} (use none or linux-user)")
+
     @abstractmethod
     def wrap(self, shell_command: str, env: Mapping[str, str]) -> WrappedCommand:
         """The process to start for ``shell_command`` with inner environment ``env``."""

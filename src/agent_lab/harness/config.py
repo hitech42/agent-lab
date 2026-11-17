@@ -1,5 +1,7 @@
 """Pydantic models describing an agent configuration."""
 
+from collections.abc import Mapping
+from types import MappingProxyType
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -52,8 +54,10 @@ class AgentConfig(BaseModel):
 
 
 _PARAMS = ("context_keep_last", "context_after_turns", "context_summary_max_tokens")
-_REQUIRED: dict[str, set[str]] = {
-    "full": set(),
-    "truncate_tool_outputs": {"context_keep_last"},
-    "summarize": set(_PARAMS),
-}
+_REQUIRED: Mapping[str, frozenset[str]] = MappingProxyType(
+    {
+        "full": frozenset(),
+        "truncate_tool_outputs": frozenset({"context_keep_last"}),
+        "summarize": frozenset(_PARAMS),
+    }
+)

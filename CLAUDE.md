@@ -24,7 +24,7 @@ directly; no agent frameworks.
     `Summarize` (see Context strategies)
   - `tools/` — `Tool` ABC, file/exec tools, and `ToolRegistry`
   - `sandbox.py` — sandboxed execution with minimal explicit environment
-  - `isolation.py` — `CommandIsolation` ABC, `NoIsolation`, `LinuxUserIsolation` (commands as a
+  - `isolation.py` — `CommandIsolation` ABC (`from_name` builds one from `--isolation`), `NoIsolation`, `LinuxUserIsolation` (commands as a
     dedicated user, no network, processes killed after every command)
   - `redact.py` — `Redactor`, secret redaction
   - `budget.py` — per-attempt token/cost budget
@@ -74,7 +74,7 @@ directly; no agent frameworks.
   - `model.py` — pydantic data models; `ReportData` is what `summary.json` serializes
   - `analysis.py` — `ResultsAnalyzer`: pairs, exclusions, series, spend
   - `markdown.py` — `MarkdownRenderer` and `ReadmeUpdater` (the README markers)
-  - `charts.py` — `TracksChart` and `DailySpendChart` (SVG)
+  - `charts.py` — `TracksChart` and `DailySpendChart` (SVG), `Svg` (the shared markup)
   - `build.py` — `ReportBuilder` (pure: files in memory); `command.py` — `ReportCommand` (I/O, `--check`)
 - `README.md` — hand-written text plus the generated dashboard between the report markers
 - `report/` — generated: `tracks.svg`, `daily.svg`, `summary.json` (committed)
@@ -101,6 +101,16 @@ directly; no agent frameworks.
 - Collaborators are injected via constructors. No module-level mutable state; nothing reads env vars at import time.
 - Pydantic models are data only (AgentConfig, TokenUsage, traces, AttemptResult). Service logic lives in plain classes.
 - No getters/setters, no Manager/Helper classes. Small helpers become private or static methods on the class that owns the data.
+- **No module-level functions or mutable state** in `src/agent_lab`. A helper shared by several classes goes on the
+  class that owns its data (`ContextStrategy._text_of`, `Exposure.check_consistent`, `TriageRules.shorten`,
+  `MarkdownRenderer.escape`, `CommandIsolation.from_name`; `Svg` owns the SVG markup of the charts). Allowlist, the only
+  deliberate exceptions: `report/stats.py` (pure statistical functions, any) and `runner/cli.py` (`main`, the
+  console-script entry point). Module-level lookup tables are immutable (`MappingProxyType`, `frozenset`, tuple) or class
+  attributes; `__all__` is the one allowed module-level list. (On a pydantic model an underscore class attribute becomes a
+  private attribute, so `config.py` keeps its table at module level as a `MappingProxyType`.)
+  `tests/test_module_conventions.py` parses every module with `ast` and fails on a module-level function outside the
+  allowlist or a module-level name bound to a list/dict/set literal, comprehension or `list()`/`dict()`/`set()` call. Change
+  the allowlist there and here together, with a reason.
 - Tunable settings (caps, timeouts, limits) are constructor arguments with defaults, not module-level constants that tests monkeypatch.
 - Result and response types are plain data (frozen dataclasses or pydantic models), not wrappers that forward to another object through properties.
 - Tooling: `uv sync`, `uv run ruff check`, `uv run ruff format`, `uv run mypy`, `uv run pytest`.
@@ -125,7 +135,7 @@ resolved configs with their `config_hash`, the ordered plan and the cost estimat
 API calls and writes no files (no key needed).
 
 **Who writes `results/`:** only CI, and only through the daily workflow's `publish` job (see
-Daily workflow; the `heartbeat` job appends to `results/heartbeat.log` only). Local runs always use `--results-dir /tmp/somewhere` so they never pollute the
+Daily workflow). Local runs always use `--results-dir /tmp/somewhere` so they never pollute the
 repository. Transcripts
 (`.transcripts/`, gitignored) and the derived database (`*.db`, gitignored) are never committed.
 
@@ -268,14 +278,11 @@ It has separate jobs so that the job that executes agent code can never push:
   committer from the repository variables `COMMIT_AUTHOR_NAME` / `COMMIT_AUTHOR_EMAIL`, which
   must be set), with the message from `agent-lab results commit-message`, then pushes; on a
   rejected push it `pull --rebase`s and retries, three pushes at most.
-- **`heartbeat`** (`contents: write`, 5 min, no environment, no key, no sandbox, no agent code, no
-  uv; runs only if the `experiment` job succeeded, `changed` is `false` and `dry_run` is false, so
-  never together with `publish`): every slot after the first of a UTC day finds the day finished
-  and has nothing to publish, so this job appends one line to `results/heartbeat.log` and commits
-  and pushes it (`chore(heartbeat): no new results for <date> (run <id>)`, same author variables
-  and push retry as `publish`), so every run shows on the contribution graph. The log is outside
-  `results/runs` and `results/configs`, so nothing reads it; it is the one file in `results/` that
-  `publish` does not write, and it is only ever appended to.
+- **No heartbeat.** A run after the first of a UTC day finds the day finished and has nothing to publish: it
+  leaves no commit, and its record is the workflow run itself (about 20 s). `results/heartbeat.log` is kept as history
+  (the old `heartbeat` job appended to it); nothing writes to it any more. The job (a commit
+  `chore(heartbeat): no new results for <date> (run <id>)` per such run) can be restored from PR #12 (merge `ccd419c`;
+  it touched only `daily.yml`, `CLAUDE.md` and `tests/test_ci_workflow.py`).
 - **`alert`** (`needs: [experiment, publish]`, no token, no key, no checkout, 5 min): an abort or a
   tampered day still exits 0, so its record is collected and published first; this last job then
   fails the run so that GitHub notifies. The `experiment` job exposes the outcome file as job outputs

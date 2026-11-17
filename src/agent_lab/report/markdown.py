@@ -21,13 +21,6 @@ class ReadmeMarkersError(Exception):
     """The README does not have exactly one start marker followed by one end marker."""
 
 
-def escape(text: str, limit: int = 200) -> str:
-    """Make free text safe to put in markdown: no markup, links, HTML or line breaks."""
-    flat = " ".join(text.split())[:limit]
-    flat = flat.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    return re.sub(r"([\\`*_{}\[\]()#+!|~\"'])", r"\\\1", flat)
-
-
 class ReadmeUpdater:
     """Replaces only what is between the markers; everything else is left untouched."""
 
@@ -46,6 +39,13 @@ class ReadmeUpdater:
 class MarkdownRenderer:
     """Renders ``ReportData`` as the compact GitHub-flavoured section."""
 
+    @staticmethod
+    def escape(text: str, limit: int = 200) -> str:
+        """Make free text safe to put in markdown: no markup, links, HTML or line breaks."""
+        flat = " ".join(text.split())[:limit]
+        flat = flat.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        return re.sub(r"([\\`*_{}\[\]()#+!|~\"'])", r"\\\1", flat)
+
     def __init__(self, config_dir: str = "results/configs") -> None:
         self._config_dir = config_dir
 
@@ -62,7 +62,7 @@ class MarkdownRenderer:
             + ").",
         ]
         if data.latest_day:
-            lines += ["", f"Latest day: {escape(data.latest_day)}"]
+            lines += ["", f"Latest day: {MarkdownRenderer.escape(data.latest_day)}"]
         lines += [""]
         if data.tracks:
             lines += self._table([t.current for t in data.tracks], dated=False)
@@ -94,7 +94,7 @@ class MarkdownRenderer:
             "|---|---|---|---|---|---|---|---|---|",
         ]
         for s in series:
-            label = escape(s.track) + (
+            label = MarkdownRenderer.escape(s.track) + (
                 f" ({s.first_date} → {s.last_date}, suite {s.suite_hash or 'unversioned'})"
                 if dated
                 else ""
@@ -111,7 +111,7 @@ class MarkdownRenderer:
         notes = []
         for t in tracks:
             s = t.current
-            description = escape(s.description)
+            description = MarkdownRenderer.escape(s.description)
             if "system prompt changed" in s.description:
                 description = description.replace(
                     "system prompt changed",
@@ -121,9 +121,10 @@ class MarkdownRenderer:
                 f"{self._money(s.baseline.cost_per_solved_usd)} → "
                 f"{self._money(s.variant.cost_per_solved_usd)}"
             )
-            question = f"{escape(s.question)} " if s.question else ""
+            question = f"{MarkdownRenderer.escape(s.question)} " if s.question else ""
             notes.append(
-                f"- **{escape(s.track)}**: {question}Variant vs baseline: {description}. "
+                f"- **{MarkdownRenderer.escape(s.track)}**: {question}"
+                f"Variant vs baseline: {description}. "
                 f"Cost per solved task (baseline → variant): {solved}. "
                 f"Suite {self._suite(s)}; {s.days} day(s)"
                 + (
@@ -283,7 +284,9 @@ class MarkdownRenderer:
             "are agent outcomes: they stay in and count as failures unless the attempt passed.",
         ]
         if methods:
-            lines.append("- Method: " + "; ".join(escape(m, 300) for m in methods) + ".")
+            lines.append(
+                "- Method: " + "; ".join(MarkdownRenderer.escape(m, 300) for m in methods) + "."
+            )
         if data.unreadable:
             lines.append(f"- {data.unreadable} unreadable result line(s)/file(s) were ignored.")
         lines.append(

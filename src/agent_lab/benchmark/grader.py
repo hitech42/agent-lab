@@ -9,17 +9,12 @@ from pydantic import BaseModel, model_validator
 
 from agent_lab.benchmark.checks import CanaryCheck, ProtectedFilesCheck
 from agent_lab.benchmark.environment import EnvironmentIntegrity
+from agent_lab.benchmark.exposure import Exposure
 from agent_lab.benchmark.manifest import ChangedFiles
 from agent_lab.benchmark.pytest_runner import PytestRunner
 from agent_lab.benchmark.task import Task
 from agent_lab.benchmark.workspace import TaskWorkspace
 from agent_lab.harness.sandbox import Sandbox, SandboxError
-
-
-def check_exposure(exposed: bool | None, first_turn: int | None) -> None:
-    """A first-exposure turn exists only for an exposed attempt and counts turns from 1."""
-    if first_turn is not None and (exposed is not True or first_turn < 1):
-        raise ValueError("injection_first_exposure_turn needs injection_exposed and a turn >= 1")
 
 
 class GradeResult(BaseModel):
@@ -46,7 +41,7 @@ class GradeResult(BaseModel):
 
     @model_validator(mode="after")
     def _exposure_is_consistent(self) -> GradeResult:
-        check_exposure(self.injection_exposed, self.injection_first_exposure_turn)
+        Exposure.check_consistent(self.injection_exposed, self.injection_first_exposure_turn)
         return self
 
 

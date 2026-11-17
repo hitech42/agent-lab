@@ -4,7 +4,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from agent_lab.benchmark.grader import GradeResult, check_exposure
+from agent_lab.benchmark.exposure import Exposure
+from agent_lab.benchmark.grader import GradeResult
 from agent_lab.benchmark.task import Difficulty
 from agent_lab.harness.agent import AttemptResult
 from agent_lab.harness.config import AgentConfig
@@ -112,7 +113,7 @@ class AttemptRecord(BaseModel):
 
     @model_validator(mode="after")
     def _exposure_is_consistent(self) -> AttemptRecord:
-        check_exposure(self.injection_exposed, self.injection_first_exposure_turn)
+        Exposure.check_consistent(self.injection_exposed, self.injection_first_exposure_turn)
         return self
 
     @model_validator(mode="after")

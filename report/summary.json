@@ -1,12 +1,12 @@
 {
-  "attempts": 888,
+  "attempts": 952,
   "cluster_min_tasks": 8,
   "comparisons_by_metric": {
-    "cost": 16,
-    "pass": 16,
-    "turns": 16
+    "cost": 17,
+    "pass": 17,
+    "turns": 17
   },
-  "comparisons_shown": 48,
+  "comparisons_shown": 51,
   "daily": [
     {
       "date": "2026-11-01",
@@ -92,17 +92,22 @@
       "date": "2026-11-17",
       "spend_usd": 0.194996,
       "track": "tool-design"
+    },
+    {
+      "date": "2026-11-18",
+      "spend_usd": 0.197248,
+      "track": "context-truncate"
     }
   ],
-  "days_run": 17,
-  "latest_date": "2026-11-17",
-  "latest_day": "eval(tool-design): baseline 27/32 vs variant 23/32 passed, $0.1950 [completed]",
+  "days_run": 18,
+  "latest_date": "2026-11-18",
+  "latest_day": "eval(context-truncate): baseline 26/32 vs variant 24/32 passed, $0.1972 [completed]",
   "min_pairs": 10,
   "resamples": 2000,
-  "spend_attempts_usd": 5.24823,
-  "spend_triage_usd": 0.009404,
-  "spend_usd": 5.273543,
-  "spend_warmups_usd": 0.015909,
+  "spend_attempts_usd": 5.442793,
+  "spend_triage_usd": 0.011961,
+  "spend_usd": 5.47079,
+  "spend_warmups_usd": 0.016036,
   "tracks": [
     {
       "current": {
@@ -456,6 +461,141 @@
         }
       ],
       "track": "aa-test",
+      "unattributed_exclusions": 0
+    },
+    {
+      "current": {
+        "baseline": {
+          "ci_high": 0.911105,
+          "ci_low": 0.646908,
+          "cost_per_solved_usd": 0.00322,
+          "mean_cost_usd": 0.002616,
+          "n": 32,
+          "passed": 26,
+          "rate": 0.8125
+        },
+        "baseline_hash": "f7dddf5269a8",
+        "by_difficulty": [
+          {
+            "baseline_passed": 12,
+            "baseline_rate": 1.0,
+            "difficulty": "easy",
+            "pairs": 12,
+            "tasks": 3,
+            "variant_passed": 11,
+            "variant_rate": 0.916667
+          },
+          {
+            "baseline_passed": 8,
+            "baseline_rate": 1.0,
+            "difficulty": "medium",
+            "pairs": 8,
+            "tasks": 2,
+            "variant_passed": 8,
+            "variant_rate": 1.0
+          },
+          {
+            "baseline_passed": 6,
+            "baseline_rate": 0.5,
+            "difficulty": "hard",
+            "pairs": 12,
+            "tasks": 3,
+            "variant_passed": 5,
+            "variant_rate": 0.416667
+          }
+        ],
+        "ceiling": false,
+        "current": true,
+        "days": 1,
+        "delta_cost_usd": {
+          "high": 0.00148,
+          "low": 0.000418,
+          "mean": 0.000848,
+          "verdict": "variant higher"
+        },
+        "delta_output_tokens": {
+          "high": 413.0,
+          "low": -3479.8125,
+          "mean": -936.9375,
+          "verdict": "no detectable difference"
+        },
+        "delta_pass_pp": {
+          "high": 18.75,
+          "low": -37.5,
+          "mean": -6.25,
+          "verdict": "no detectable difference"
+        },
+        "delta_turns": {
+          "high": 3.59375,
+          "low": 0.84375,
+          "mean": 1.9375,
+          "verdict": "variant higher"
+        },
+        "description": "context_strategy: full \u2192 truncate_tool_outputs; context_keep_last: None \u2192 2",
+        "excluded": {
+          "error": 0,
+          "tampered": 0,
+          "unpaired": 0
+        },
+        "failures": {
+          "baseline": {
+            "failed": 6,
+            "labels": {
+              "incomplete_fix": 6
+            },
+            "model_labelled": 6,
+            "unlabelled": 0
+          },
+          "variant": {
+            "failed": 8,
+            "labels": {
+              "incomplete_fix": 4,
+              "out_of_turns": 4
+            },
+            "model_labelled": 4,
+            "unlabelled": 0
+          }
+        },
+        "first_date": "2026-11-18",
+        "injection": {
+          "baseline": {
+            "exposed": 0,
+            "resisted_exposed": 0,
+            "resisted_rate": null,
+            "resisted_unknown": 0,
+            "unknown": 0
+          },
+          "pairs": 8,
+          "variant": {
+            "exposed": 0,
+            "resisted_exposed": 0,
+            "resisted_rate": null,
+            "resisted_unknown": 0,
+            "unknown": 0
+          }
+        },
+        "last_date": "2026-11-18",
+        "method": "task-clustered percentile bootstrap for every metric, pass rate included",
+        "noise_floor": false,
+        "pairs": 32,
+        "question": "How much do old tool outputs matter? Pass rate and cost when tool outputs older than the last N turns are elided.",
+        "suite_hash": "690bbe394be7",
+        "suite_tasks": 8,
+        "tasks": 8,
+        "track": "context-truncate",
+        "variant": {
+          "ci_high": 0.867476,
+          "ci_low": 0.578934,
+          "cost_per_solved_usd": 0.004619,
+          "mean_cost_usd": 0.003464,
+          "n": 32,
+          "passed": 24,
+          "rate": 0.75
+        },
+        "variant_hash": "0e51521e6169"
+      },
+      "older": [],
+      "track": "context-truncate",
       "unattributed_exclusions": 0
     },
     {

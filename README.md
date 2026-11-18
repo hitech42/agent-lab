@@ -30,13 +30,14 @@ workflow; it states the data range it covers.
 <!-- agent-lab:report:start -->
 ## Results
 
-Data through **2026-11-17** · 17 day(s) run · 888 attempts · **$5.2735** total spend (attempts $5.2482 + warm-ups $0.0159 + triage $0.0094).
+Data through **2026-11-18** · 18 day(s) run · 952 attempts · **$5.4708** total spend (attempts $5.4428 + warm-ups $0.0160 + triage $0.0120).
 
-Latest day: eval\(tool-design\): baseline 27/32 vs variant 23/32 passed, $0.1950 \[completed\]
+Latest day: eval\(context-truncate\): baseline 26/32 vs variant 24/32 passed, $0.1972 \[completed\]
 
 | Track | Pairs (excl.) | Baseline pass | Variant pass | Δ pass (pp) | Δ cost / attempt | Δ turns | Verdict | Flags |
 |---|---|---|---|---|---|---|---|---|
 | aa-test | 32 (0) | 78% [61–89] | 75% [58–87] | -3.1 [-12.5, +6.2] | -$0.0002 [-$0.0004, +$0.0000] | +0.0 [-0.4, +0.3] | pass: no detectable difference; cost: variant lower | noise-floor reference |
+| context-truncate | 32 (0) | 81% [65–91] | 75% [58–87] | -6.2 [-37.5, +18.8] | +$0.0008 [+$0.0004, +$0.0015] | +1.9 [+0.8, +3.6] | pass: no detectable difference; cost: variant higher |  |
 | effort-sweep | 32 (0) | 88% [72–95] | 84% [68–93] | -3.1 [-21.9, +15.6] | +$0.0022 [+$0.0007, +$0.0041] | +1.2 [+0.8, +1.6] | pass: no detectable difference; cost: variant higher |  |
 | model-comparison | 32 (0) | 75% [58–87] | 100% [89–100] | +25.0 [+3.1, +53.1] | +$0.0232 [+$0.0140, +$0.0353] | -0.8 [-1.7, +0.1] | pass: variant higher; cost: variant higher |  |
 | plan-first | 32 (0) | 91% [76–97] | 91% [76–97] | +0.0 [-9.4, +9.4] | +$0.0004 [+$0.0001, +$0.0007] | +0.0 [-0.8, +0.7] | pass: no detectable difference; cost: variant higher |  |
@@ -48,6 +49,10 @@ Latest day: eval\(tool-design\): baseline 27/32 vs variant 23/32 passed, $0.1950
   - By difficulty (baseline → variant pass): easy 83% → 83% (12 pairs); medium 100% → 88% (8 pairs); hard 58% → 58% (12 pairs)
   - Injection tasks (baseline → variant): exposed 0/8 → 0/8; resisted among exposed 0/0 → 0/0 (n/a → n/a); exposure unknown 0/8 → 0/8
   - Failures, advisory labels: baseline 7 failed: 7 incomplete fix; variant 8 failed: 8 incomplete fix
+- **context-truncate**: How much do old tool outputs matter? Pass rate and cost when tool outputs older than the last N turns are elided. Variant vs baseline: context\_strategy: full → truncate\_tool\_outputs; context\_keep\_last: None → 2. Cost per solved task (baseline → variant): $0.0032 → $0.0046. Suite `690bbe394be7` (8 tasks); 1 day(s).
+  - By difficulty (baseline → variant pass): easy 100% → 92% (12 pairs); medium 100% → 100% (8 pairs); hard 50% → 42% (12 pairs)
+  - Injection tasks (baseline → variant): exposed 0/8 → 0/8; resisted among exposed 0/0 → 0/0 (n/a → n/a); exposure unknown 0/8 → 0/8
+  - Failures, advisory labels: baseline 6 failed: 6 incomplete fix; variant 8 failed: 4 incomplete fix, 4 out of turns
 - **effort-sweep**: How much does more thinking \(effort medium vs low\) improve pass rate, and at what cost? Variant vs baseline: effort: low → medium. Cost per solved task (baseline → variant): $0.0041 → $0.0068. Suite `690bbe394be7` (8 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): easy 92% → 92% (12 pairs); medium 100% → 100% (8 pairs); hard 75% → 67% (12 pairs)
   - Injection tasks (baseline → variant): exposed 0/8 → 5/8; resisted among exposed 0/0 → 5/5 (n/a → 100%); exposure unknown 0/8 → 0/8
@@ -95,7 +100,7 @@ Latest day: eval\(tool-design\): baseline 27/32 vs variant 23/32 passed, $0.1950
 - Sample size: a series with fewer than 10 included pairs shows point estimates only ("insufficient data"). Intervals are wide until a series has many days of data.
 - Ceiling: when both sides pass at least 95% of attempts, a pass-rate comparison cannot show an improvement; look at cost and turns instead.
 - Independence: trials of the same task are correlated, so treating pairs as independent understates uncertainty with few tasks. A task-clustered bootstrap is used automatically for a series with at least 8 tasks.
-- Multiple comparisons: 48 comparisons are shown (cost: 16, pass: 16, turns: 16), re-evaluated daily. At 95%, roughly 1 in 20 will show a difference by chance. The aa-test row compares identical configurations: it is the noise-floor reference and should show none.
+- Multiple comparisons: 51 comparisons are shown (cost: 17, pass: 17, turns: 17), re-evaluated daily. At 95%, roughly 1 in 20 will show a difference by chance. The aa-test row compares identical configurations: it is the noise-floor reference and should show none.
 - Subsets: the per-difficulty and injection lines are point rates over small subsets of the pairs, with no intervals; do not read a difference between tiers as significant.
 - Injection: an attempt is exposed only when a planted marker appeared in a tool result the model received, so resistance is read among the exposed attempts alone (an attempt that never saw the planted text resisted nothing). Records written before exposure was tracked are shown as unknown, with their old resisted count kept apart.
 - Failure labels: rule labels (out of turns, budget, truncated or refused, protected violation, injection followed, tampering, regression, no verification) come from the record and a pre-run of the hidden tests on the untouched project; the rest (incomplete fix, wrong approach, misread spec, other) are one small model's guess from a trimmed view of the attempt. Labels are advisory, never change pass or fail, and failures from before labelling existed are shown as unlabelled. Counts are over the same included pairs as the pass rates; `summary.json` has the full counts.

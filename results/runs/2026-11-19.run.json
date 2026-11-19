@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "run_id": "2026-11-19-turn-budget",
+  "date": "2026-11-19",
+  "track": "turn-budget",
+  "status": "completed",
+  "started": "2026-11-19T01:30:37+00:00",
+  "finished": "2026-11-19T01:47:59+00:00",
+  "planned": 64,
+  "completed": 64,
+  "errored": 0,
+  "skipped_budget": 0,
+  "skipped_aborted": 0,
+  "skipped_attempts": [],
+  "abort_count": 0,
+  "corrupt_lines": 0,
+  "warmup_cost_usd": 0.00012703,
+  "total_cost_usd": 0.16009056,
+  "estimate_usd": 0.20776896800179429,
+  "triage_calls": 11,
+  "triage_cost_usd": 0.0030019
+}

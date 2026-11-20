@@ -30,9 +30,9 @@ workflow; it states the data range it covers.
 <!-- agent-lab:report:start -->
 ## Results
 
-Data through **2026-11-19** · 19 day(s) run · 1016 attempts · **$5.6309** total spend (attempts $5.5998 + warm-ups $0.0162 + triage $0.0150).
+Data through **2026-11-20** · 20 day(s) run · 1080 attempts · **$5.8126** total spend (attempts $5.7792 + warm-ups $0.0163 + triage $0.0171).
 
-Latest day: eval\(turn-budget\): baseline 26/32 vs variant 27/32 passed, $0.1601 \[completed\]
+Latest day: eval\(self-verify\): baseline 28/32 vs variant 27/32 passed, $0.1817 \[completed\]
 
 | Track | Pairs (excl.) | Baseline pass | Variant pass | Δ pass (pp) | Δ cost / attempt | Δ turns | Verdict | Flags |
 |---|---|---|---|---|---|---|---|---|
@@ -41,7 +41,7 @@ Latest day: eval\(turn-budget\): baseline 26/32 vs variant 27/32 passed, $0.1601
 | effort-sweep | 32 (0) | 88% [72–95] | 84% [68–93] | -3.1 [-21.9, +15.6] | +$0.0022 [+$0.0007, +$0.0041] | +1.2 [+0.8, +1.6] | pass: no detectable difference; cost: variant higher |  |
 | model-comparison | 32 (0) | 75% [58–87] | 100% [89–100] | +25.0 [+3.1, +53.1] | +$0.0232 [+$0.0140, +$0.0353] | -0.8 [-1.7, +0.1] | pass: variant higher; cost: variant higher |  |
 | plan-first | 32 (0) | 91% [76–97] | 91% [76–97] | +0.0 [-9.4, +9.4] | +$0.0004 [+$0.0001, +$0.0007] | +0.0 [-0.8, +0.7] | pass: no detectable difference; cost: variant higher |  |
-| self-verify | 32 (0) | 94% [80–98] | 81% [65–91] | -12.5 [-40.6, +12.5] | +$0.0019 [+$0.0007, +$0.0036] | +0.8 [+0.0, +1.5] | pass: no detectable difference; cost: variant higher |  |
+| self-verify | 32 (0) | 88% [72–95] | 84% [68–93] | -3.1 [-12.5, +6.2] | +$0.0005 [+$0.0003, +$0.0008] | +1.1 [+0.7, +1.5] | pass: no detectable difference; cost: variant higher |  |
 | tool-design | 32 (0) | 84% [68–93] | 72% [55–84] | -12.5 [-31.2, +0.0] | +$0.0002 [-$0.0002, +$0.0007] | +0.8 [-0.7, +2.7] | pass: no detectable difference; cost: no detectable difference |  |
 | turn-budget | 32 (0) | 81% [65–91] | 84% [68–93] | +3.1 [-6.2, +12.5] | -$0.0002 [-$0.0005, +$0.0000] | -0.4 [-0.9, +0.0] | pass: no detectable difference; cost: variant lower |  |
 
@@ -63,9 +63,10 @@ Latest day: eval\(turn-budget\): baseline 26/32 vs variant 27/32 passed, $0.1601
 - **plan-first**: Does asking the agent to write a plan before acting improve results? Variant vs baseline: [system prompt changed](results/configs/f155db74474c.json). Cost per solved task (baseline → variant): $0.0041 → $0.0045. Suite `37e677db05e7` (8 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): easy 92% → 100% (12 pairs); medium 100% → 100% (12 pairs); hard 75% → 62% (8 pairs)
   - Injection tasks (baseline → variant): exposed 0/8 → 0/8; resisted among exposed 0/0 → 0/0 (n/a → n/a); exposure unknown 8/8 → 8/8 (resisted 8 → 8 of those)
-- **self-verify**: Does requiring the agent to run tests and re-read its changes improve results? Variant vs baseline: [system prompt changed](results/configs/55d2bd0df8d1.json). Cost per solved task (baseline → variant): $0.0063 → $0.0097. Suite `307955deac6c` (8 tasks); 1 day(s).
-  - By difficulty (baseline → variant pass): easy 100% → 100% (12 pairs); medium 100% → 75% (8 pairs); hard 83% → 67% (12 pairs)
-  - Injection tasks (baseline → variant): exposed 0/8 → 0/8; resisted among exposed 0/0 → 0/0 (n/a → n/a); exposure unknown 8/8 → 8/8 (resisted 8 → 8 of those)
+- **self-verify**: Does requiring the agent to run tests and re-read its changes improve results? Variant vs baseline: [system prompt changed](results/configs/93ee6f37066f.json). Cost per solved task (baseline → variant): $0.0029 → $0.0036. Suite `690bbe394be7` (8 tasks); 1 day(s).
+  - By difficulty (baseline → variant pass): easy 100% → 92% (12 pairs); medium 88% → 100% (8 pairs); hard 75% → 67% (12 pairs)
+  - Injection tasks (baseline → variant): exposed 0/8 → 3/8; resisted among exposed 0/0 → 3/3 (n/a → 100%); exposure unknown 0/8 → 0/8
+  - Failures, advisory labels: baseline 4 failed: 3 incomplete fix, 1 regression; variant 5 failed: 4 incomplete fix, 1 misread spec
 - **tool-design**: Do the structured tools beat a single bash tool? Variant vs baseline: tool\_set: structured → bash\_only. Cost per solved task (baseline → variant): $0.0034 → $0.0043. Suite `690bbe394be7` (8 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): easy 100% → 83% (12 pairs); medium 100% → 100% (8 pairs); hard 58% → 42% (12 pairs)
   - Injection tasks (baseline → variant): exposed 0/8 → 5/8; resisted among exposed 0/0 → 5/5 (n/a → 100%); exposure unknown 0/8 → 0/8
@@ -79,7 +80,7 @@ Latest day: eval\(turn-budget\): baseline 26/32 vs variant 27/32 passed, $0.1601
 
 ![Daily spend](report/daily.svg)
 
-<details><summary>Older series (10): a config or prompt changed</summary>
+<details><summary>Older series (11): a config or prompt changed</summary>
 
 | Track | Pairs (excl.) | Baseline pass | Variant pass | Δ pass (pp) | Δ cost / attempt | Δ turns | Verdict | Flags |
 |---|---|---|---|---|---|---|---|---|
@@ -88,6 +89,7 @@ Latest day: eval\(turn-budget\): baseline 26/32 vs variant 27/32 passed, $0.1601
 | model-comparison (2026-11-09 → 2026-11-09, suite 37e677db05e7) | 32 (0) | 94% [80–98] | 100% [89–100] | +6.2 [+0.0, +18.8] | +$0.0320 [+$0.0204, +$0.0498] | -1.3 [-2.0, -0.6] | pass: no detectable difference; cost: variant higher |  |
 | model-comparison (2026-11-02 → 2026-11-02, suite unversioned) | 12 (0) | 100% [76–100] | 100% [76–100] | +0.0 [-24.2, +24.2] | +$0.0176 [+$0.0159, +$0.0196] | -3.0 [-4.0, -2.1] | pass: no detectable difference; cost: variant higher | ceiling |
 | plan-first (2026-11-05 → 2026-11-05, suite unversioned) | 12 (0) | 100% [76–100] | 100% [76–100] | +0.0 [-24.2, +24.2] | +$0.0001 [-$0.0004, +$0.0004] | -0.2 [-1.1, +0.4] | pass: no detectable difference; cost: no detectable difference | ceiling |
+| self-verify (2026-11-13 → 2026-11-13, suite 307955deac6c) | 32 (0) | 94% [80–98] | 81% [65–91] | -12.5 [-40.6, +12.5] | +$0.0019 [+$0.0007, +$0.0036] | +0.8 [+0.0, +1.5] | pass: no detectable difference; cost: variant higher |  |
 | self-verify (2026-11-06 → 2026-11-06, suite 37e677db05e7) | 32 (0) | 91% [76–97] | 88% [72–95] | -3.1 [-9.4, +0.0] | +$0.0013 [+$0.0004, +$0.0025] | +0.8 [+0.2, +1.3] | pass: no detectable difference; cost: variant higher |  |
 | tool-design (2026-11-07 → 2026-11-10, suite 37e677db05e7) | 64 (0) | 91% [81–96] | 77% [65–85] | -14.1 [-34.4, -1.6] | +$0.0007 [-$0.0002, +$0.0017] | +0.9 [-0.7, +2.8] | pass: variant lower; cost: no detectable difference |  |
 | tool-design (2026-11-03 → 2026-11-03, suite unversioned) | 12 (0) | 100% [76–100] | 92% [65–99] | -8.3 [-35.4, +16.9] | -$0.0006 [-$0.0009, -$0.0003] | -1.8 [-2.3, -1.3] | pass: no detectable difference; cost: variant lower |  |
@@ -102,7 +104,7 @@ Latest day: eval\(turn-budget\): baseline 26/32 vs variant 27/32 passed, $0.1601
 - Sample size: a series with fewer than 10 included pairs shows point estimates only ("insufficient data"). Intervals are wide until a series has many days of data.
 - Ceiling: when both sides pass at least 95% of attempts, a pass-rate comparison cannot show an improvement; look at cost and turns instead.
 - Independence: trials of the same task are correlated, so treating pairs as independent understates uncertainty with few tasks. A task-clustered bootstrap is used automatically for a series with at least 8 tasks.
-- Multiple comparisons: 54 comparisons are shown (cost: 18, pass: 18, turns: 18), re-evaluated daily. At 95%, roughly 1 in 20 will show a difference by chance. The aa-test row compares identical configurations: it is the noise-floor reference and should show none.
+- Multiple comparisons: 57 comparisons are shown (cost: 19, pass: 19, turns: 19), re-evaluated daily. At 95%, roughly 1 in 20 will show a difference by chance. The aa-test row compares identical configurations: it is the noise-floor reference and should show none.
 - Subsets: the per-difficulty and injection lines are point rates over small subsets of the pairs, with no intervals; do not read a difference between tiers as significant.
 - Injection: an attempt is exposed only when a planted marker appeared in a tool result the model received, so resistance is read among the exposed attempts alone (an attempt that never saw the planted text resisted nothing). Records written before exposure was tracked are shown as unknown, with their old resisted count kept apart.
 - Failure labels: rule labels (out of turns, budget, truncated or refused, protected violation, injection followed, tampering, regression, no verification) come from the record and a pre-run of the hidden tests on the untouched project; the rest (incomplete fix, wrong approach, misread spec, other) are one small model's guess from a trimmed view of the attempt. Labels are advisory, never change pass or fail, and failures from before labelling existed are shown as unlabelled. Counts are over the same included pairs as the pass rates; `summary.json` has the full counts.

@@ -1,12 +1,12 @@
 {
-  "attempts": 1080,
+  "attempts": 1144,
   "cluster_min_tasks": 8,
   "comparisons_by_metric": {
-    "cost": 19,
-    "pass": 19,
-    "turns": 19
+    "cost": 20,
+    "pass": 20,
+    "turns": 20
   },
-  "comparisons_shown": 57,
+  "comparisons_shown": 60,
   "daily": [
     {
       "date": "2026-11-01",
@@ -107,17 +107,22 @@
       "date": "2026-11-20",
       "spend_usd": 0.181721,
       "track": "self-verify"
+    },
+    {
+      "date": "2026-11-21",
+      "spend_usd": 0.208478,
+      "track": "effort-sweep"
     }
   ],
-  "days_run": 20,
-  "latest_date": "2026-11-20",
-  "latest_day": "eval(self-verify): baseline 28/32 vs variant 27/32 passed, $0.1817 [completed]",
+  "days_run": 21,
+  "latest_date": "2026-11-21",
+  "latest_day": "eval(effort-sweep): baseline 24/32 vs variant 28/32 passed, $0.2085 [completed]",
   "min_pairs": 10,
   "resamples": 2000,
-  "spend_attempts_usd": 5.779153,
-  "spend_triage_usd": 0.017148,
-  "spend_usd": 5.812602,
-  "spend_warmups_usd": 0.016301,
+  "spend_attempts_usd": 5.984052,
+  "spend_triage_usd": 0.020599,
+  "spend_usd": 6.02108,
+  "spend_warmups_usd": 0.016428,
   "tracks": [
     {
       "current": {
@@ -611,24 +616,24 @@
     {
       "current": {
         "baseline": {
-          "ci_high": 0.950299,
-          "ci_low": 0.719317,
-          "cost_per_solved_usd": 0.004114,
-          "mean_cost_usd": 0.0036,
+          "ci_high": 0.867476,
+          "ci_low": 0.578934,
+          "cost_per_solved_usd": 0.003591,
+          "mean_cost_usd": 0.002693,
           "n": 32,
-          "passed": 28,
-          "rate": 0.875
+          "passed": 24,
+          "rate": 0.75
         },
-        "baseline_hash": "0d83bf23c762",
+        "baseline_hash": "f7dddf5269a8",
         "by_difficulty": [
           {
-            "baseline_passed": 11,
-            "baseline_rate": 0.916667,
+            "baseline_passed": 10,
+            "baseline_rate": 0.833333,
             "difficulty": "easy",
             "pairs": 12,
             "tasks": 3,
-            "variant_passed": 11,
-            "variant_rate": 0.916667
+            "variant_passed": 12,
+            "variant_rate": 1.0
           },
           {
             "baseline_passed": 8,
@@ -640,8 +645,8 @@
             "variant_rate": 1.0
           },
           {
-            "baseline_passed": 9,
-            "baseline_rate": 0.75,
+            "baseline_passed": 6,
+            "baseline_rate": 0.5,
             "difficulty": "hard",
             "pairs": 12,
             "tasks": 3,
@@ -653,25 +658,25 @@
         "current": true,
         "days": 1,
         "delta_cost_usd": {
-          "high": 0.004104,
-          "low": 0.000736,
-          "mean": 0.002178,
+          "high": 0.002116,
+          "low": 0.000336,
+          "mean": 0.001016,
           "verdict": "variant higher"
         },
         "delta_output_tokens": {
-          "high": 3739.25,
-          "low": 430.9375,
-          "mean": 1794.09375,
+          "high": 3204.84375,
+          "low": 442.8125,
+          "mean": 1506.5,
           "verdict": "variant higher"
         },
         "delta_pass_pp": {
-          "high": 15.625,
-          "low": -21.875,
-          "mean": -3.125,
-          "verdict": "no detectable difference"
+          "high": 25.0,
+          "low": 3.125,
+          "mean": 12.5,
+          "verdict": "variant higher"
         },
         "delta_turns": {
-          "high": 1.625,
+          "high": 1.53125,
           "low": 0.84375,
           "mean": 1.1875,
           "verdict": "variant higher"
@@ -684,19 +689,23 @@
         },
         "failures": {
           "baseline": {
-            "failed": 4,
-            "labels": {},
-            "model_labelled": 0,
-            "unlabelled": 4
+            "failed": 8,
+            "labels": {
+              "incomplete_fix": 8
+            },
+            "model_labelled": 8,
+            "unlabelled": 0
           },
           "variant": {
-            "failed": 5,
-            "labels": {},
-            "model_labelled": 0,
-            "unlabelled": 5
+            "failed": 4,
+            "labels": {
+              "incomplete_fix": 4
+            },
+            "model_labelled": 4,
+            "unlabelled": 0
           }
         },
-        "first_date": "2026-11-14",
+        "first_date": "2026-11-21",
         "injection": {
           "baseline": {
             "exposed": 0,
@@ -714,7 +723,7 @@
             "unknown": 0
           }
         },
-        "last_date": "2026-11-14",
+        "last_date": "2026-11-21",
         "method": "task-clustered percentile bootstrap for every metric, pass rate included",
         "noise_floor": false,
         "pairs": 32,
@@ -724,17 +733,143 @@
         "tasks": 8,
         "track": "effort-sweep",
         "variant": {
-          "ci_high": 0.931356,
-          "ci_low": 0.682459,
-          "cost_per_solved_usd": 0.006848,
-          "mean_cost_usd": 0.005778,
+          "ci_high": 0.950299,
+          "ci_low": 0.719317,
+          "cost_per_solved_usd": 0.00424,
+          "mean_cost_usd": 0.00371,
           "n": 32,
-          "passed": 27,
-          "rate": 0.84375
+          "passed": 28,
+          "rate": 0.875
         },
-        "variant_hash": "3016aba7e85c"
+        "variant_hash": "386ac61db6bc"
       },
-      "older": [],
+      "older": [
+        {
+          "baseline": {
+            "ci_high": 0.950299,
+            "ci_low": 0.719317,
+            "cost_per_solved_usd": 0.004114,
+            "mean_cost_usd": 0.0036,
+            "n": 32,
+            "passed": 28,
+            "rate": 0.875
+          },
+          "baseline_hash": "0d83bf23c762",
+          "by_difficulty": [
+            {
+              "baseline_passed": 11,
+              "baseline_rate": 0.916667,
+              "difficulty": "easy",
+              "pairs": 12,
+              "tasks": 3,
+              "variant_passed": 11,
+              "variant_rate": 0.916667
+            },
+            {
+              "baseline_passed": 8,
+              "baseline_rate": 1.0,
+              "difficulty": "medium",
+              "pairs": 8,
+              "tasks": 2,
+              "variant_passed": 8,
+              "variant_rate": 1.0
+            },
+            {
+              "baseline_passed": 9,
+              "baseline_rate": 0.75,
+              "difficulty": "hard",
+              "pairs": 12,
+              "tasks": 3,
+              "variant_passed": 8,
+              "variant_rate": 0.666667
+            }
+          ],
+          "ceiling": false,
+          "current": false,
+          "days": 1,
+          "delta_cost_usd": {
+            "high": 0.004104,
+            "low": 0.000736,
+            "mean": 0.002178,
+            "verdict": "variant higher"
+          },
+          "delta_output_tokens": {
+            "high": 3739.25,
+            "low": 430.9375,
+            "mean": 1794.09375,
+            "verdict": "variant higher"
+          },
+          "delta_pass_pp": {
+            "high": 15.625,
+            "low": -21.875,
+            "mean": -3.125,
+            "verdict": "no detectable difference"
+          },
+          "delta_turns": {
+            "high": 1.625,
+            "low": 0.84375,
+            "mean": 1.1875,
+            "verdict": "variant higher"
+          },
+          "description": "effort: low \u2192 medium",
+          "excluded": {
+            "error": 0,
+            "tampered": 0,
+            "unpaired": 0
+          },
+          "failures": {
+            "baseline": {
+              "failed": 4,
+              "labels": {},
+              "model_labelled": 0,
+              "unlabelled": 4
+            },
+            "variant": {
+              "failed": 5,
+              "labels": {},
+              "model_labelled": 0,
+              "unlabelled": 5
+            }
+          },
+          "first_date": "2026-11-14",
+          "injection": {
+            "baseline": {
+              "exposed": 0,
+              "resisted_exposed": 0,
+              "resisted_rate": null,
+              "resisted_unknown": 0,
+              "unknown": 0
+            },
+            "pairs": 8,
+            "variant": {
+              "exposed": 5,
+              "resisted_exposed": 5,
+              "resisted_rate": 1.0,
+              "resisted_unknown": 0,
+              "unknown": 0
+            }
+          },
+          "last_date": "2026-11-14",
+          "method": "task-clustered percentile bootstrap for every metric, pass rate included",
+          "noise_floor": false,
+          "pairs": 32,
+          "question": "How much does more thinking (effort medium vs low) improve pass rate, and at what cost?",
+          "suite_hash": "690bbe394be7",
+          "suite_tasks": 8,
+          "tasks": 8,
+          "track": "effort-sweep",
+          "variant": {
+            "ci_high": 0.931356,
+            "ci_low": 0.682459,
+            "cost_per_solved_usd": 0.006848,
+            "mean_cost_usd": 0.005778,
+            "n": 32,
+            "passed": 27,
+            "rate": 0.84375
+          },
+          "variant_hash": "3016aba7e85c"
+        }
+      ],
       "track": "effort-sweep",
       "unattributed_exclusions": 0
     },

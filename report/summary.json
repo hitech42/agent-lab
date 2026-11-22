@@ -1,5 +1,5 @@
 {
-  "attempts": 1144,
+  "attempts": 1208,
   "cluster_min_tasks": 8,
   "comparisons_by_metric": {
     "cost": 20,
@@ -112,84 +112,89 @@
       "date": "2026-11-21",
       "spend_usd": 0.208478,
       "track": "effort-sweep"
+    },
+    {
+      "date": "2026-11-22",
+      "spend_usd": 0.165746,
+      "track": "aa-test"
     }
   ],
-  "days_run": 21,
-  "latest_date": "2026-11-21",
-  "latest_day": "eval(effort-sweep): baseline 24/32 vs variant 28/32 passed, $0.2085 [completed]",
+  "days_run": 22,
+  "latest_date": "2026-11-22",
+  "latest_day": "eval(aa-test): baseline 25/32 vs variant 26/32 passed, $0.1657 [completed]",
   "min_pairs": 10,
   "resamples": 2000,
-  "spend_attempts_usd": 5.984052,
-  "spend_triage_usd": 0.020599,
-  "spend_usd": 6.02108,
-  "spend_warmups_usd": 0.016428,
+  "spend_attempts_usd": 6.146352,
+  "spend_triage_usd": 0.023935,
+  "spend_usd": 6.186826,
+  "spend_warmups_usd": 0.016539,
   "tracks": [
     {
       "current": {
         "baseline": {
-          "ci_high": 0.889762,
-          "ci_low": 0.61245,
-          "cost_per_solved_usd": 0.003313,
-          "mean_cost_usd": 0.002588,
-          "n": 32,
-          "passed": 25,
+          "ci_high": 0.864977,
+          "ci_low": 0.665672,
+          "cost_per_solved_usd": 0.003334,
+          "mean_cost_usd": 0.002604,
+          "n": 64,
+          "passed": 50,
           "rate": 0.78125
         },
         "baseline_hash": "f7dddf5269a8",
         "by_difficulty": [
           {
-            "baseline_passed": 10,
+            "baseline_passed": 20,
             "baseline_rate": 0.833333,
             "difficulty": "easy",
-            "pairs": 12,
+            "pairs": 24,
             "tasks": 3,
-            "variant_passed": 10,
-            "variant_rate": 0.833333
+            "variant_passed": 22,
+            "variant_rate": 0.916667
           },
           {
-            "baseline_passed": 8,
+            "baseline_passed": 16,
             "baseline_rate": 1.0,
             "difficulty": "medium",
-            "pairs": 8,
+            "pairs": 16,
             "tasks": 2,
-            "variant_passed": 7,
-            "variant_rate": 0.875
+            "variant_passed": 15,
+            "variant_rate": 0.9375
           },
           {
-            "baseline_passed": 7,
+            "baseline_passed": 14,
             "baseline_rate": 0.583333,
             "difficulty": "hard",
-            "pairs": 12,
+            "pairs": 24,
             "tasks": 3,
-            "variant_passed": 7,
-            "variant_rate": 0.583333
+            "variant_passed": 13,
+            "variant_rate": 0.541667
           }
         ],
         "ceiling": false,
         "current": true,
-        "days": 1,
+        "days": 2,
         "delta_cost_usd": {
-          "high": -3.2e-05,
-          "low": -0.000388,
-          "mean": -0.000183,
+          "high": -1e-06,
+          "low": -0.000393,
+          "mean": -0.000176,
           "verdict": "variant lower"
         },
         "delta_output_tokens": {
-          "high": 47.40625,
-          "low": -571.875,
-          "mean": -224.5,
+          "high": 25.03125,
+          "low": -507.078125,
+          "mean": -207.671875,
           "verdict": "no detectable difference"
         },
         "delta_pass_pp": {
-          "high": 6.25,
-          "low": -12.5,
-          "mean": -3.125,
+          "high": 9.375,
+          "low": -9.375,
+          "mean": 0.0,
           "verdict": "no detectable difference"
         },
         "delta_turns": {
-          "high": 0.3125,
-          "low": -0.375,
-          "mean": -0.03125,
+          "high": 0.546875,
+          "low": -0.34375,
+          "mean": 0.09375,
           "verdict": "no detectable difference"
         },
         "description": "identical configs",
@@ -200,32 +205,32 @@
         },
         "failures": {
           "baseline": {
-            "failed": 7,
+            "failed": 14,
             "labels": {
-              "incomplete_fix": 7
+              "incomplete_fix": 14
             },
-            "model_labelled": 7,
+            "model_labelled": 14,
             "unlabelled": 0
           },
           "variant": {
-            "failed": 8,
+            "failed": 14,
             "labels": {
-              "incomplete_fix": 8
+              "incomplete_fix": 14
             },
-            "model_labelled": 8,
+            "model_labelled": 14,
             "unlabelled": 0
           }
         },
         "first_date": "2026-11-15",
         "injection": {
           "baseline": {
-            "exposed": 0,
-            "resisted_exposed": 0,
-            "resisted_rate": null,
+            "exposed": 1,
+            "resisted_exposed": 1,
+            "resisted_rate": 1.0,
             "resisted_unknown": 0,
             "unknown": 0
           },
-          "pairs": 8,
+          "pairs": 16,
           "variant": {
             "exposed": 0,
             "resisted_exposed": 0,
@@ -234,23 +239,23 @@
             "unknown": 0
           }
         },
-        "last_date": "2026-11-15",
+        "last_date": "2026-11-22",
         "method": "task-clustered percentile bootstrap for every metric, pass rate included",
         "noise_floor": true,
-        "pairs": 32,
+        "pairs": 64,
         "question": "How large is the day-to-day noise when both configurations are identical?",
         "suite_hash": "690bbe394be7",
         "suite_tasks": 8,
         "tasks": 8,
         "track": "aa-test",
         "variant": {
-          "ci_high": 0.867476,
-          "ci_low": 0.578934,
-          "cost_per_solved_usd": 0.003207,
-          "mean_cost_usd": 0.002405,
-          "n": 32,
-          "passed": 24,
-          "rate": 0.75
+          "ci_high": 0.864977,
+          "ci_low": 0.665672,
+          "cost_per_solved_usd": 0.003108,
+          "mean_cost_usd": 0.002428,
+          "n": 64,
+          "passed": 50,
+          "rate": 0.78125
         },
         "variant_hash": "f7dddf5269a8"
       },

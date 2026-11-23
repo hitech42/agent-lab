@@ -1,0 +1,387 @@
+{
+  "schema_version": 1,
+  "run_id": "2026-11-23-model-comparison",
+  "date": "2026-11-23",
+  "track": "model-comparison",
+  "status": "aborted_error",
+  "started": "2026-11-23T00:29:50+00:00",
+  "finished": "2026-11-23T00:33:15+00:00",
+  "planned": 64,
+  "completed": 15,
+  "errored": 3,
+  "skipped_budget": 0,
+  "skipped_aborted": 49,
+  "skipped_attempts": [
+    {
+      "attempt_id": "2026-11-23-unicode-usernames-baseline-t1",
+      "task_id": "unicode-usernames",
+      "config_role": "baseline",
+      "trial": 1,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-add-top-flag-baseline-t2",
+      "task_id": "add-top-flag",
+      "config_role": "baseline",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-add-top-flag-variant-t2",
+      "task_id": "add-top-flag",
+      "config_role": "variant",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-csv-total-variant-t2",
+      "task_id": "fix-csv-total",
+      "config_role": "variant",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-csv-total-baseline-t2",
+      "task_id": "fix-csv-total",
+      "config_role": "baseline",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-date-range-variant-t2",
+      "task_id": "fix-date-range",
+      "config_role": "variant",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-date-range-baseline-t2",
+      "task_id": "fix-date-range",
+      "config_role": "baseline",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-invoice-rounding-baseline-t2",
+      "task_id": "fix-invoice-rounding",
+      "config_role": "baseline",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-invoice-rounding-variant-t2",
+      "task_id": "fix-invoice-rounding",
+      "config_role": "variant",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-leaky-registry-variant-t2",
+      "task_id": "fix-leaky-registry",
+      "config_role": "variant",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-leaky-registry-baseline-t2",
+      "task_id": "fix-leaky-registry",
+      "config_role": "baseline",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-settings-merge-variant-t2",
+      "task_id": "fix-settings-merge",
+      "config_role": "variant",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-settings-merge-baseline-t2",
+      "task_id": "fix-settings-merge",
+      "config_role": "baseline",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-refactor-exporter-variant-t2",
+      "task_id": "refactor-exporter",
+      "config_role": "variant",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-refactor-exporter-baseline-t2",
+      "task_id": "refactor-exporter",
+      "config_role": "baseline",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-unicode-usernames-baseline-t2",
+      "task_id": "unicode-usernames",
+      "config_role": "baseline",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-unicode-usernames-variant-t2",
+      "task_id": "unicode-usernames",
+      "config_role": "variant",
+      "trial": 2,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-add-top-flag-baseline-t3",
+      "task_id": "add-top-flag",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-add-top-flag-variant-t3",
+      "task_id": "add-top-flag",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-csv-total-variant-t3",
+      "task_id": "fix-csv-total",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-csv-total-baseline-t3",
+      "task_id": "fix-csv-total",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-date-range-baseline-t3",
+      "task_id": "fix-date-range",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-date-range-variant-t3",
+      "task_id": "fix-date-range",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-invoice-rounding-variant-t3",
+      "task_id": "fix-invoice-rounding",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-invoice-rounding-baseline-t3",
+      "task_id": "fix-invoice-rounding",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-leaky-registry-variant-t3",
+      "task_id": "fix-leaky-registry",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-leaky-registry-baseline-t3",
+      "task_id": "fix-leaky-registry",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-settings-merge-baseline-t3",
+      "task_id": "fix-settings-merge",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-settings-merge-variant-t3",
+      "task_id": "fix-settings-merge",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-refactor-exporter-baseline-t3",
+      "task_id": "refactor-exporter",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-refactor-exporter-variant-t3",
+      "task_id": "refactor-exporter",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-unicode-usernames-baseline-t3",
+      "task_id": "unicode-usernames",
+      "config_role": "baseline",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-unicode-usernames-variant-t3",
+      "task_id": "unicode-usernames",
+      "config_role": "variant",
+      "trial": 3,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-add-top-flag-baseline-t4",
+      "task_id": "add-top-flag",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-add-top-flag-variant-t4",
+      "task_id": "add-top-flag",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-csv-total-baseline-t4",
+      "task_id": "fix-csv-total",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-csv-total-variant-t4",
+      "task_id": "fix-csv-total",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-date-range-variant-t4",
+      "task_id": "fix-date-range",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-date-range-baseline-t4",
+      "task_id": "fix-date-range",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-invoice-rounding-variant-t4",
+      "task_id": "fix-invoice-rounding",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-invoice-rounding-baseline-t4",
+      "task_id": "fix-invoice-rounding",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-leaky-registry-variant-t4",
+      "task_id": "fix-leaky-registry",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-leaky-registry-baseline-t4",
+      "task_id": "fix-leaky-registry",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-settings-merge-variant-t4",
+      "task_id": "fix-settings-merge",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-fix-settings-merge-baseline-t4",
+      "task_id": "fix-settings-merge",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-refactor-exporter-baseline-t4",
+      "task_id": "refactor-exporter",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-refactor-exporter-variant-t4",
+      "task_id": "refactor-exporter",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-unicode-usernames-baseline-t4",
+      "task_id": "unicode-usernames",
+      "config_role": "baseline",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    },
+    {
+      "attempt_id": "2026-11-23-unicode-usernames-variant-t4",
+      "task_id": "unicode-usernames",
+      "config_role": "variant",
+      "trial": 4,
+      "reason": "skipped_aborted"
+    }
+  ],
+  "abort_count": 1,
+  "corrupt_lines": 0,
+  "warmup_cost_usd": 0.00232155,
+  "total_cost_usd": 0.167300575,
+  "estimate_usd": 0.9069625455,
+  "triage_calls": 2,
+  "triage_cost_usd": 0.0005917,
+  "reason": "consecutive_errors",
+  "error_type": "BadRequestError",
+  "error_status": 400,
+  "message": "BadRequestError: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'You have reached your specified workspace API usage limits. You will regain access on 2026-12-01 at 00:00 UTC.'}, 'request_id': 'req_011ChJvHeM47Cvy9uesNJFMH'}",
+  "completed_attempt_ids": [
+    "2026-11-23-add-top-flag-variant-t1",
+    "2026-11-23-add-top-flag-baseline-t1",
+    "2026-11-23-fix-csv-total-variant-t1",
+    "2026-11-23-fix-csv-total-baseline-t1",
+    "2026-11-23-fix-date-range-baseline-t1",
+    "2026-11-23-fix-date-range-variant-t1",
+    "2026-11-23-fix-invoice-rounding-variant-t1",
+    "2026-11-23-fix-invoice-rounding-baseline-t1",
+    "2026-11-23-fix-leaky-registry-variant-t1",
+    "2026-11-23-fix-leaky-registry-baseline-t1",
+    "2026-11-23-fix-settings-merge-variant-t1",
+    "2026-11-23-fix-settings-merge-baseline-t1",
+    "2026-11-23-refactor-exporter-baseline-t1",
+    "2026-11-23-refactor-exporter-variant-t1",
+    "2026-11-23-unicode-usernames-variant-t1"
+  ]
+}

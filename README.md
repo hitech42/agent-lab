@@ -30,16 +30,16 @@ workflow; it states the data range it covers.
 <!-- agent-lab:report:start -->
 ## Results
 
-Data through **2026-11-22** · 22 day(s) run · 1208 attempts · **$6.1868** total spend (attempts $6.1464 + warm-ups $0.0165 + triage $0.0239).
+Data through **2026-11-23** · 23 day(s) run · 1223 attempts · **$6.3541** total spend (attempts $6.3107 + warm-ups $0.0189 + triage $0.0245).
 
-Latest day: eval\(aa-test\): baseline 25/32 vs variant 26/32 passed, $0.1657 \[completed\]
+Latest day: eval\(model-comparison\): aborted \(consecutive\_errors: 400\), day resumable
 
 | Track | Pairs (excl.) | Baseline pass | Variant pass | Δ pass (pp) | Δ cost / attempt | Δ turns | Verdict | Flags |
 |---|---|---|---|---|---|---|---|---|
 | aa-test | 64 (0) | 78% [67–86] | 78% [67–86] | +0.0 [-9.4, +9.4] | -$0.0002 [-$0.0004, +$0.0000] | +0.1 [-0.3, +0.5] | pass: no detectable difference; cost: variant lower | noise-floor reference |
 | context-truncate | 32 (0) | 81% [65–91] | 75% [58–87] | -6.2 [-37.5, +18.8] | +$0.0008 [+$0.0004, +$0.0015] | +1.9 [+0.8, +3.6] | pass: no detectable difference; cost: variant higher |  |
 | effort-sweep | 32 (0) | 75% [58–87] | 88% [72–95] | +12.5 [+3.1, +25.0] | +$0.0010 [+$0.0003, +$0.0021] | +1.2 [+0.8, +1.5] | pass: variant higher; cost: variant higher |  |
-| model-comparison | 32 (0) | 75% [58–87] | 100% [89–100] | +25.0 [+3.1, +53.1] | +$0.0232 [+$0.0140, +$0.0353] | -0.8 [-1.7, +0.1] | pass: variant higher; cost: variant higher |  |
+| model-comparison | 38 (2) | 74% [58–85] | 100% [91–100] | +26.3 [+5.3, +52.6] | +$0.0232 [+$0.0141, +$0.0347] | -0.7 [-1.6, +0.1] | pass: variant higher; cost: variant higher |  |
 | plan-first | 32 (0) | 91% [76–97] | 91% [76–97] | +0.0 [-9.4, +9.4] | +$0.0004 [+$0.0001, +$0.0007] | +0.0 [-0.8, +0.7] | pass: no detectable difference; cost: variant higher |  |
 | self-verify | 32 (0) | 88% [72–95] | 84% [68–93] | -3.1 [-12.5, +6.2] | +$0.0005 [+$0.0003, +$0.0008] | +1.1 [+0.7, +1.5] | pass: no detectable difference; cost: variant higher |  |
 | tool-design | 32 (0) | 84% [68–93] | 72% [55–84] | -12.5 [-31.2, +0.0] | +$0.0002 [-$0.0002, +$0.0007] | +0.8 [-0.7, +2.7] | pass: no detectable difference; cost: no detectable difference |  |
@@ -57,10 +57,10 @@ Latest day: eval\(aa-test\): baseline 25/32 vs variant 26/32 passed, $0.1657 \[c
   - By difficulty (baseline → variant pass): easy 83% → 100% (12 pairs); medium 100% → 100% (8 pairs); hard 50% → 67% (12 pairs)
   - Injection tasks (baseline → variant): exposed 0/8 → 5/8; resisted among exposed 0/0 → 5/5 (n/a → 100%); exposure unknown 0/8 → 0/8
   - Failures, advisory labels: baseline 8 failed: 8 incomplete fix; variant 4 failed: 4 incomplete fix
-- **model-comparison**: Does claude-sonnet-5-5 solve more tasks than claude-haiku-5-5, and at what cost? Variant vs baseline: model: claude-haiku-5-5 → claude-sonnet-5-5. Cost per solved task (baseline → variant): $0.0034 → $0.0257. Suite `690bbe394be7` (8 tasks); 1 day(s).
-  - By difficulty (baseline → variant pass): easy 92% → 100% (12 pairs); medium 100% → 100% (8 pairs); hard 42% → 100% (12 pairs)
-  - Injection tasks (baseline → variant): exposed 0/8 → 0/8; resisted among exposed 0/0 → 0/0 (n/a → n/a); exposure unknown 0/8 → 0/8
-  - Failures, advisory labels: baseline 8 failed: 8 incomplete fix; variant 0 failed: none
+- **model-comparison**: Does claude-sonnet-5-5 solve more tasks than claude-haiku-5-5, and at what cost? Variant vs baseline: model: claude-haiku-5-5 → claude-sonnet-5-5. Cost per solved task (baseline → variant): $0.0033 → $0.0256. Suite `690bbe394be7` (8 tasks); 2 day(s).
+  - By difficulty (baseline → variant pass): easy 87% → 100% (15 pairs); medium 100% → 100% (9 pairs); hard 43% → 100% (14 pairs)
+  - Injection tasks (baseline → variant): exposed 0/10 → 0/10; resisted among exposed 0/0 → 0/0 (n/a → n/a); exposure unknown 0/10 → 0/10
+  - Failures, advisory labels: baseline 10 failed: 10 incomplete fix; variant 0 failed: none
 - **plan-first**: Does asking the agent to write a plan before acting improve results? Variant vs baseline: [system prompt changed](results/configs/f155db74474c.json). Cost per solved task (baseline → variant): $0.0041 → $0.0045. Suite `37e677db05e7` (8 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): easy 92% → 100% (12 pairs); medium 100% → 100% (12 pairs); hard 75% → 62% (8 pairs)
   - Injection tasks (baseline → variant): exposed 0/8 → 0/8; resisted among exposed 0/0 → 0/0 (n/a → n/a); exposure unknown 8/8 → 8/8 (resisted 8 → 8 of those)

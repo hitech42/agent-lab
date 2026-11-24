@@ -30,9 +30,9 @@ workflow; it states the data range it covers.
 <!-- agent-lab:report:start -->
 ## Results
 
-Data through **2026-11-23** · 23 day(s) run · 1223 attempts · **$6.3541** total spend (attempts $6.3107 + warm-ups $0.0189 + triage $0.0245).
+Data through **2026-11-24** · 24 day(s) run · 1223 attempts · **$6.3541** total spend (attempts $6.3107 + warm-ups $0.0189 + triage $0.0245).
 
-Latest day: eval\(model-comparison\): aborted \(consecutive\_errors: 400\), day resumable
+Latest day: eval\(tool-design\): aborted \(warmup\_failed: 400\), day resumable
 
 | Track | Pairs (excl.) | Baseline pass | Variant pass | Δ pass (pp) | Δ cost / attempt | Δ turns | Verdict | Flags |
 |---|---|---|---|---|---|---|---|---|

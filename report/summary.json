@@ -122,11 +122,16 @@
       "date": "2026-11-23",
       "spend_usd": 0.167301,
       "track": "model-comparison"
+    },
+    {
+      "date": "2026-11-24",
+      "spend_usd": 0.0,
+      "track": "tool-design"
     }
   ],
-  "days_run": 23,
-  "latest_date": "2026-11-23",
-  "latest_day": "eval(model-comparison): aborted (consecutive_errors: 400), day resumable",
+  "days_run": 24,
+  "latest_date": "2026-11-24",
+  "latest_day": "eval(tool-design): aborted (warmup_failed: 400), day resumable",
   "min_pairs": 10,
   "resamples": 2000,
   "spend_attempts_usd": 6.310739,

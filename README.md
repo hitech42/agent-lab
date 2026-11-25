@@ -30,14 +30,14 @@ workflow; it states the data range it covers.
 <!-- agent-lab:report:start -->
 ## Results
 
-Data through **2026-11-25** · 25 day(s) run · 1223 attempts · **$6.3541** total spend (attempts $6.3107 + warm-ups $0.0189 + triage $0.0245).
+Data through **2026-11-25** · 25 day(s) run · 1287 attempts · **$6.5483** total spend (attempts $6.5016 + warm-ups $0.0190 + triage $0.0277).
 
-Latest day: eval\(context-truncate\): aborted \(warmup\_failed: 400\), day resumable
+Latest day: eval\(context-truncate\): baseline 24/32 vs variant 24/32 passed, $0.1942 \[completed\]
 
 | Track | Pairs (excl.) | Baseline pass | Variant pass | Δ pass (pp) | Δ cost / attempt | Δ turns | Verdict | Flags |
 |---|---|---|---|---|---|---|---|---|
 | aa-test | 64 (0) | 78% [67–86] | 78% [67–86] | +0.0 [-9.4, +9.4] | -$0.0002 [-$0.0004, +$0.0000] | +0.1 [-0.3, +0.5] | pass: no detectable difference; cost: variant lower | noise-floor reference |
-| context-truncate | 32 (0) | 81% [65–91] | 75% [58–87] | -6.2 [-37.5, +18.8] | +$0.0008 [+$0.0004, +$0.0015] | +1.9 [+0.8, +3.6] | pass: no detectable difference; cost: variant higher |  |
+| context-truncate | 64 (0) | 78% [67–86] | 75% [63–84] | -3.1 [-32.8, +17.2] | +$0.0010 [+$0.0004, +$0.0020] | +1.5 [+0.3, +3.4] | pass: no detectable difference; cost: variant higher |  |
 | effort-sweep | 32 (0) | 75% [58–87] | 88% [72–95] | +12.5 [+3.1, +25.0] | +$0.0010 [+$0.0003, +$0.0021] | +1.2 [+0.8, +1.5] | pass: variant higher; cost: variant higher |  |
 | model-comparison | 38 (2) | 74% [58–85] | 100% [91–100] | +26.3 [+5.3, +52.6] | +$0.0232 [+$0.0141, +$0.0347] | -0.7 [-1.6, +0.1] | pass: variant higher; cost: variant higher |  |
 | plan-first | 32 (0) | 91% [76–97] | 91% [76–97] | +0.0 [-9.4, +9.4] | +$0.0004 [+$0.0001, +$0.0007] | +0.0 [-0.8, +0.7] | pass: no detectable difference; cost: variant higher |  |
@@ -49,10 +49,10 @@ Latest day: eval\(context-truncate\): aborted \(warmup\_failed: 400\), day resum
   - By difficulty (baseline → variant pass): easy 83% → 92% (24 pairs); medium 100% → 94% (16 pairs); hard 58% → 54% (24 pairs)
   - Injection tasks (baseline → variant): exposed 1/16 → 0/16; resisted among exposed 1/1 → 0/0 (100% → n/a); exposure unknown 0/16 → 0/16
   - Failures, advisory labels: baseline 14 failed: 14 incomplete fix; variant 14 failed: 14 incomplete fix
-- **context-truncate**: How much do old tool outputs matter? Pass rate and cost when tool outputs older than the last N turns are elided. Variant vs baseline: context\_strategy: full → truncate\_tool\_outputs; context\_keep\_last: None → 2. Cost per solved task (baseline → variant): $0.0032 → $0.0046. Suite `690bbe394be7` (8 tasks); 1 day(s).
-  - By difficulty (baseline → variant pass): easy 100% → 92% (12 pairs); medium 100% → 100% (8 pairs); hard 50% → 42% (12 pairs)
-  - Injection tasks (baseline → variant): exposed 0/8 → 0/8; resisted among exposed 0/0 → 0/0 (n/a → n/a); exposure unknown 0/8 → 0/8
-  - Failures, advisory labels: baseline 6 failed: 6 incomplete fix; variant 8 failed: 4 incomplete fix, 4 out of turns
+- **context-truncate**: How much do old tool outputs matter? Pass rate and cost when tool outputs older than the last N turns are elided. Variant vs baseline: context\_strategy: full → truncate\_tool\_outputs; context\_keep\_last: None → 2. Cost per solved task (baseline → variant): $0.0032 → $0.0047. Suite `690bbe394be7` (8 tasks); 2 day(s).
+  - By difficulty (baseline → variant pass): easy 92% → 96% (24 pairs); medium 94% → 100% (16 pairs); hard 54% → 38% (24 pairs)
+  - Injection tasks (baseline → variant): exposed 2/16 → 0/16; resisted among exposed 2/2 → 0/0 (100% → n/a); exposure unknown 0/16 → 0/16
+  - Failures, advisory labels: baseline 14 failed: 13 incomplete fix, 1 misread spec; variant 16 failed: 8 incomplete fix, 8 out of turns
 - **effort-sweep**: How much does more thinking \(effort medium vs low\) improve pass rate, and at what cost? Variant vs baseline: effort: low → medium. Cost per solved task (baseline → variant): $0.0036 → $0.0042. Suite `690bbe394be7` (8 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): easy 83% → 100% (12 pairs); medium 100% → 100% (8 pairs); hard 50% → 67% (12 pairs)
   - Injection tasks (baseline → variant): exposed 0/8 → 5/8; resisted among exposed 0/0 → 5/5 (n/a → 100%); exposure unknown 0/8 → 0/8

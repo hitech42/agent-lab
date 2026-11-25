@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 250" width="760" height="250" role="img" aria-labelledby="title desc">
 <title id="title">Daily spend</title>
-<desc id="desc">Total spend per day in USD (attempts and warm-ups), labelled by track. 2026-11-01 aa-test $0.0633; 2026-11-02 model-comparison $0.2795; 2026-11-03 tool-design $0.0596; 2026-11-04 turn-budget $0.0628; 2026-11-05 plan-first $0.0740; 2026-11-06 self-verify $0.2850; 2026-11-07 tool-design $0.2443; 2026-11-08 aa-test $0.2345; 2026-11-09 model-comparison $1.2512; 2026-11-10 tool-design $0.2458; 2026-11-11 turn-budget $0.2146; 2026-11-12 plan-first $0.2505; 2026-11-13 self-verify $0.4409; 2026-11-14 effort-sweep $0.3002; 2026-11-15 aa-test $0.1640; 2026-11-16 model-comparison $0.9082; 2026-11-17 tool-design $0.1950; 2026-11-18 context-truncate $0.1972; 2026-11-19 turn-budget $0.1601; 2026-11-20 self-verify $0.1817; 2026-11-21 effort-sweep $0.2085; 2026-11-22 aa-test $0.1657; 2026-11-23 model-comparison $0.1673; 2026-11-24 tool-design $0.0000; 2026-11-25 context-truncate $0.0000</desc>
+<desc id="desc">Total spend per day in USD (attempts and warm-ups), labelled by track. 2026-11-01 aa-test $0.0633; 2026-11-02 model-comparison $0.2795; 2026-11-03 tool-design $0.0596; 2026-11-04 turn-budget $0.0628; 2026-11-05 plan-first $0.0740; 2026-11-06 self-verify $0.2850; 2026-11-07 tool-design $0.2443; 2026-11-08 aa-test $0.2345; 2026-11-09 model-comparison $1.2512; 2026-11-10 tool-design $0.2458; 2026-11-11 turn-budget $0.2146; 2026-11-12 plan-first $0.2505; 2026-11-13 self-verify $0.4409; 2026-11-14 effort-sweep $0.3002; 2026-11-15 aa-test $0.1640; 2026-11-16 model-comparison $0.9082; 2026-11-17 tool-design $0.1950; 2026-11-18 context-truncate $0.1972; 2026-11-19 turn-budget $0.1601; 2026-11-20 self-verify $0.1817; 2026-11-21 effort-sweep $0.2085; 2026-11-22 aa-test $0.1657; 2026-11-23 model-comparison $0.1673; 2026-11-24 tool-design $0.0000; 2026-11-25 context-truncate $0.1942</desc>
 <style>
   :root { --fg: #57606a; --grid: #afb8c1; --accent: #0969da; --band: rgba(140,149,159,0.18); }
   @media (prefers-color-scheme: dark) {
@@ -77,6 +77,6 @@
 <rect class="bar" x="693.7" y="190.0" width="19.0" height="0.0"/>
 <text class="small" transform="translate(706.2 186.0) rotate(-90)">tool-design</text>
 <text class="small" x="730.4" y="206.0" text-anchor="middle">11-25</text>
-<rect class="bar" x="720.9" y="190.0" width="19.0" height="0.0"/>
-<text class="small" transform="translate(733.4 186.0) rotate(-90)">context-trunca</text>
+<rect class="bar" x="720.9" y="173.7" width="19.0" height="16.3"/>
+<text class="small" transform="translate(733.4 169.7) rotate(-90)">context-trunca</text>
 </svg>

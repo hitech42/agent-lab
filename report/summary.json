@@ -1,5 +1,5 @@
 {
-  "attempts": 1287,
+  "attempts": 1351,
   "cluster_min_tasks": 8,
   "comparisons_by_metric": {
     "cost": 20,
@@ -132,17 +132,22 @@
       "date": "2026-11-25",
       "spend_usd": 0.194163,
       "track": "context-truncate"
+    },
+    {
+      "date": "2026-11-26",
+      "spend_usd": 0.150484,
+      "track": "turn-budget"
     }
   ],
-  "days_run": 25,
-  "latest_date": "2026-11-25",
-  "latest_day": "eval(context-truncate): baseline 24/32 vs variant 24/32 passed, $0.1942 [completed]",
+  "days_run": 26,
+  "latest_date": "2026-11-26",
+  "latest_day": "eval(turn-budget): baseline 27/32 vs variant 26/32 passed, $0.1505 [completed]",
   "min_pairs": 10,
   "resamples": 2000,
-  "spend_attempts_usd": 6.501597,
-  "spend_triage_usd": 0.027705,
-  "spend_usd": 6.548289,
-  "spend_warmups_usd": 0.018987,
+  "spend_attempts_usd": 6.649141,
+  "spend_triage_usd": 0.030518,
+  "spend_usd": 6.698774,
+  "spend_warmups_usd": 0.019114,
   "tracks": [
     {
       "current": {
@@ -2230,70 +2235,70 @@
     {
       "current": {
         "baseline": {
-          "ci_high": 0.911105,
-          "ci_low": 0.646908,
-          "cost_per_solved_usd": 0.003142,
-          "mean_cost_usd": 0.002553,
-          "n": 32,
-          "passed": 26,
-          "rate": 0.8125
+          "ci_high": 0.901223,
+          "ci_low": 0.717868,
+          "cost_per_solved_usd": 0.002972,
+          "mean_cost_usd": 0.002461,
+          "n": 64,
+          "passed": 53,
+          "rate": 0.828125
         },
         "baseline_hash": "f7dddf5269a8",
         "by_difficulty": [
           {
-            "baseline_passed": 12,
+            "baseline_passed": 24,
             "baseline_rate": 1.0,
             "difficulty": "easy",
-            "pairs": 12,
+            "pairs": 24,
             "tasks": 3,
-            "variant_passed": 12,
-            "variant_rate": 1.0
+            "variant_passed": 23,
+            "variant_rate": 0.958333
           },
           {
-            "baseline_passed": 7,
-            "baseline_rate": 0.875,
+            "baseline_passed": 15,
+            "baseline_rate": 0.9375,
             "difficulty": "medium",
-            "pairs": 8,
+            "pairs": 16,
             "tasks": 2,
-            "variant_passed": 8,
+            "variant_passed": 16,
             "variant_rate": 1.0
           },
           {
-            "baseline_passed": 7,
+            "baseline_passed": 14,
             "baseline_rate": 0.583333,
             "difficulty": "hard",
-            "pairs": 12,
+            "pairs": 24,
             "tasks": 3,
-            "variant_passed": 7,
+            "variant_passed": 14,
             "variant_rate": 0.583333
           }
         ],
         "ceiling": false,
         "current": true,
-        "days": 1,
+        "days": 2,
         "delta_cost_usd": {
-          "high": -1.1e-05,
-          "low": -0.000526,
-          "mean": -0.0002,
+          "high": -2.1e-05,
+          "low": -0.00033,
+          "mean": -0.000165,
           "verdict": "variant lower"
         },
         "delta_output_tokens": {
-          "high": -49.59375,
-          "low": -529.09375,
-          "mean": -231.0,
+          "high": -47.546875,
+          "low": -327.171875,
+          "mean": -180.625,
           "verdict": "variant lower"
         },
         "delta_pass_pp": {
-          "high": 12.5,
+          "high": 6.25,
           "low": -6.25,
-          "mean": 3.125,
+          "mean": 0.0,
           "verdict": "no detectable difference"
         },
         "delta_turns": {
-          "high": 0.03125,
-          "low": -0.90625,
-          "mean": -0.4375,
-          "verdict": "no detectable difference"
+          "high": -0.046875,
+          "low": -0.703125,
+          "mean": -0.390625,
+          "verdict": "variant lower"
         },
         "description": "max_turns: 15 \u2192 6",
         "excluded": {
@@ -2303,32 +2308,32 @@
         },
         "failures": {
           "baseline": {
-            "failed": 6,
+            "failed": 11,
             "labels": {
-              "incomplete_fix": 6
+              "incomplete_fix": 11
             },
-            "model_labelled": 6,
+            "model_labelled": 11,
             "unlabelled": 0
           },
           "variant": {
-            "failed": 5,
+            "failed": 11,
             "labels": {
-              "incomplete_fix": 5
+              "incomplete_fix": 11
             },
-            "model_labelled": 5,
+            "model_labelled": 11,
             "unlabelled": 0
           }
         },
         "first_date": "2026-11-19",
         "injection": {
           "baseline": {
-            "exposed": 0,
-            "resisted_exposed": 0,
-            "resisted_rate": null,
+            "exposed": 1,
+            "resisted_exposed": 1,
+            "resisted_rate": 1.0,
             "resisted_unknown": 0,
             "unknown": 0
           },
-          "pairs": 8,
+          "pairs": 16,
           "variant": {
             "exposed": 1,
             "resisted_exposed": 1,
@@ -2337,23 +2342,23 @@
             "unknown": 0
           }
         },
-        "last_date": "2026-11-19",
+        "last_date": "2026-11-26",
         "method": "task-clustered percentile bootstrap for every metric, pass rate included",
         "noise_floor": false,
-        "pairs": 32,
+        "pairs": 64,
         "question": "How much does cutting the turn budget from 15 to 6 hurt success?",
         "suite_hash": "690bbe394be7",
         "suite_tasks": 8,
         "tasks": 8,
         "track": "turn-budget",
         "variant": {
-          "ci_high": 0.931356,
-          "ci_low": 0.682459,
-          "cost_per_solved_usd": 0.002788,
-          "mean_cost_usd": 0.002352,
-          "n": 32,
-          "passed": 27,
-          "rate": 0.84375
+          "ci_high": 0.901223,
+          "ci_low": 0.717868,
+          "cost_per_solved_usd": 0.002773,
+          "mean_cost_usd": 0.002296,
+          "n": 64,
+          "passed": 53,
+          "rate": 0.828125
         },
         "variant_hash": "69fcff5566d5"
       },

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 250" width="760" height="250" role="img" aria-labelledby="title desc">
 <title id="title">Daily spend</title>
-<desc id="desc">Total spend per day in USD (attempts and warm-ups), labelled by track. 2026-11-01 aa-test $0.0633; 2026-11-02 model-comparison $0.2795; 2026-11-03 tool-design $0.0596; 2026-11-04 turn-budget $0.0628; 2026-11-05 plan-first $0.0740; 2026-11-06 self-verify $0.2850; 2026-11-07 tool-design $0.2443; 2026-11-08 aa-test $0.2345; 2026-11-09 model-comparison $1.2512; 2026-11-10 tool-design $0.2458; 2026-11-11 turn-budget $0.2146; 2026-11-12 plan-first $0.2505; 2026-11-13 self-verify $0.4409; 2026-11-14 effort-sweep $0.3002; 2026-11-15 aa-test $0.1640; 2026-11-16 model-comparison $0.9082; 2026-11-17 tool-design $0.1950; 2026-11-18 context-truncate $0.1972; 2026-11-19 turn-budget $0.1601; 2026-11-20 self-verify $0.1817; 2026-11-21 effort-sweep $0.2085; 2026-11-22 aa-test $0.1657; 2026-11-23 model-comparison $0.1673; 2026-11-24 tool-design $0.0000; 2026-11-25 context-truncate $0.1942</desc>
+<desc id="desc">Total spend per day in USD (attempts and warm-ups), labelled by track. 2026-11-01 aa-test $0.0633; 2026-11-02 model-comparison $0.2795; 2026-11-03 tool-design $0.0596; 2026-11-04 turn-budget $0.0628; 2026-11-05 plan-first $0.0740; 2026-11-06 self-verify $0.2850; 2026-11-07 tool-design $0.2443; 2026-11-08 aa-test $0.2345; 2026-11-09 model-comparison $1.2512; 2026-11-10 tool-design $0.2458; 2026-11-11 turn-budget $0.2146; 2026-11-12 plan-first $0.2505; 2026-11-13 self-verify $0.4409; 2026-11-14 effort-sweep $0.3002; 2026-11-15 aa-test $0.1640; 2026-11-16 model-comparison $0.9082; 2026-11-17 tool-design $0.1950; 2026-11-18 context-truncate $0.1972; 2026-11-19 turn-budget $0.1601; 2026-11-20 self-verify $0.1817; 2026-11-21 effort-sweep $0.2085; 2026-11-22 aa-test $0.1657; 2026-11-23 model-comparison $0.1673; 2026-11-24 tool-design $0.0000; 2026-11-25 context-truncate $0.1942; 2026-11-26 turn-budget $0.1505</desc>
 <style>
   :root { --fg: #57606a; --grid: #afb8c1; --accent: #0969da; --band: rgba(140,149,159,0.18); }
   @media (prefers-color-scheme: dark) {
@@ -20,63 +20,66 @@
 <line class="axis" x1="64.0" y1="190.0" x2="744.0" y2="190.0"/>
 <text class="small" x="58.0" y="194.0" text-anchor="end">$0</text>
 <text class="small" x="58.0" y="84.0" text-anchor="end">$1.3137</text>
-<text class="small" x="77.6" y="206.0" text-anchor="middle">11-01</text>
-<rect class="bar" x="68.1" y="184.7" width="19.0" height="5.3"/>
-<text class="small" transform="translate(80.6 180.7) rotate(-90)">aa-test</text>
-<rect class="bar" x="95.3" y="166.6" width="19.0" height="23.4"/>
-<text class="small" transform="translate(107.8 162.6) rotate(-90)">model-comparis</text>
-<rect class="bar" x="122.5" y="185.0" width="19.0" height="5.0"/>
-<text class="small" transform="translate(135.0 181.0) rotate(-90)">tool-design</text>
-<text class="small" x="159.2" y="206.0" text-anchor="middle">11-04</text>
-<rect class="bar" x="149.7" y="184.7" width="19.0" height="5.3"/>
-<text class="small" transform="translate(162.2 180.7) rotate(-90)">turn-budget</text>
-<rect class="bar" x="176.9" y="183.8" width="19.0" height="6.2"/>
-<text class="small" transform="translate(189.4 179.8) rotate(-90)">plan-first</text>
-<rect class="bar" x="204.1" y="166.1" width="19.0" height="23.9"/>
-<text class="small" transform="translate(216.6 162.1) rotate(-90)">self-verify</text>
-<text class="small" x="240.8" y="206.0" text-anchor="middle">11-07</text>
-<rect class="bar" x="231.3" y="169.5" width="19.0" height="20.5"/>
-<text class="small" transform="translate(243.8 165.5) rotate(-90)">tool-design</text>
-<rect class="bar" x="258.5" y="170.4" width="19.0" height="19.6"/>
-<text class="small" transform="translate(271.0 166.4) rotate(-90)">aa-test</text>
-<rect class="bar" x="285.7" y="85.2" width="19.0" height="104.8"/>
-<text class="small" transform="translate(298.2 81.2) rotate(-90)">model-comparis</text>
-<text class="small" x="322.4" y="206.0" text-anchor="middle">11-10</text>
-<rect class="bar" x="312.9" y="169.4" width="19.0" height="20.6"/>
-<text class="small" transform="translate(325.4 165.4) rotate(-90)">tool-design</text>
-<rect class="bar" x="340.1" y="172.0" width="19.0" height="18.0"/>
-<text class="small" transform="translate(352.6 168.0) rotate(-90)">turn-budget</text>
-<rect class="bar" x="367.3" y="169.0" width="19.0" height="21.0"/>
-<text class="small" transform="translate(379.8 165.0) rotate(-90)">plan-first</text>
-<text class="small" x="404.0" y="206.0" text-anchor="middle">11-13</text>
-<rect class="bar" x="394.5" y="153.1" width="19.0" height="36.9"/>
-<text class="small" transform="translate(407.0 149.1) rotate(-90)">self-verify</text>
-<rect class="bar" x="421.7" y="164.9" width="19.0" height="25.1"/>
-<text class="small" transform="translate(434.2 160.9) rotate(-90)">effort-sweep</text>
-<rect class="bar" x="448.9" y="176.3" width="19.0" height="13.7"/>
-<text class="small" transform="translate(461.4 172.3) rotate(-90)">aa-test</text>
-<text class="small" x="485.6" y="206.0" text-anchor="middle">11-16</text>
-<rect class="bar" x="476.1" y="114.0" width="19.0" height="76.0"/>
-<text class="small" transform="translate(488.6 110.0) rotate(-90)">model-comparis</text>
-<rect class="bar" x="503.3" y="173.7" width="19.0" height="16.3"/>
-<text class="small" transform="translate(515.8 169.7) rotate(-90)">tool-design</text>
-<rect class="bar" x="530.5" y="173.5" width="19.0" height="16.5"/>
-<text class="small" transform="translate(543.0 169.5) rotate(-90)">context-trunca</text>
-<text class="small" x="567.2" y="206.0" text-anchor="middle">11-19</text>
-<rect class="bar" x="557.7" y="176.6" width="19.0" height="13.4"/>
-<text class="small" transform="translate(570.2 172.6) rotate(-90)">turn-budget</text>
-<rect class="bar" x="584.9" y="174.8" width="19.0" height="15.2"/>
-<text class="small" transform="translate(597.4 170.8) rotate(-90)">self-verify</text>
-<rect class="bar" x="612.1" y="172.5" width="19.0" height="17.5"/>
-<text class="small" transform="translate(624.6 168.5) rotate(-90)">effort-sweep</text>
-<text class="small" x="648.8" y="206.0" text-anchor="middle">11-22</text>
-<rect class="bar" x="639.3" y="176.1" width="19.0" height="13.9"/>
-<text class="small" transform="translate(651.8 172.1) rotate(-90)">aa-test</text>
-<rect class="bar" x="666.5" y="176.0" width="19.0" height="14.0"/>
-<text class="small" transform="translate(679.0 172.0) rotate(-90)">model-comparis</text>
-<rect class="bar" x="693.7" y="190.0" width="19.0" height="0.0"/>
-<text class="small" transform="translate(706.2 186.0) rotate(-90)">tool-design</text>
-<text class="small" x="730.4" y="206.0" text-anchor="middle">11-25</text>
-<rect class="bar" x="720.9" y="173.7" width="19.0" height="16.3"/>
-<text class="small" transform="translate(733.4 169.7) rotate(-90)">context-trunca</text>
+<text class="small" x="77.1" y="206.0" text-anchor="middle">11-01</text>
+<rect class="bar" x="67.9" y="184.7" width="18.3" height="5.3"/>
+<text class="small" transform="translate(80.1 180.7) rotate(-90)">aa-test</text>
+<rect class="bar" x="94.1" y="166.6" width="18.3" height="23.4"/>
+<text class="small" transform="translate(106.2 162.6) rotate(-90)">model-comparis</text>
+<rect class="bar" x="120.2" y="185.0" width="18.3" height="5.0"/>
+<text class="small" transform="translate(132.4 181.0) rotate(-90)">tool-design</text>
+<text class="small" x="155.5" y="206.0" text-anchor="middle">11-04</text>
+<rect class="bar" x="146.4" y="184.7" width="18.3" height="5.3"/>
+<text class="small" transform="translate(158.5 180.7) rotate(-90)">turn-budget</text>
+<rect class="bar" x="172.5" y="183.8" width="18.3" height="6.2"/>
+<text class="small" transform="translate(184.7 179.8) rotate(-90)">plan-first</text>
+<rect class="bar" x="198.7" y="166.1" width="18.3" height="23.9"/>
+<text class="small" transform="translate(210.8 162.1) rotate(-90)">self-verify</text>
+<text class="small" x="234.0" y="206.0" text-anchor="middle">11-07</text>
+<rect class="bar" x="224.8" y="169.5" width="18.3" height="20.5"/>
+<text class="small" transform="translate(237.0 165.5) rotate(-90)">tool-design</text>
+<rect class="bar" x="251.0" y="170.4" width="18.3" height="19.6"/>
+<text class="small" transform="translate(263.2 166.4) rotate(-90)">aa-test</text>
+<rect class="bar" x="277.2" y="85.2" width="18.3" height="104.8"/>
+<text class="small" transform="translate(289.3 81.2) rotate(-90)">model-comparis</text>
+<text class="small" x="312.5" y="206.0" text-anchor="middle">11-10</text>
+<rect class="bar" x="303.3" y="169.4" width="18.3" height="20.6"/>
+<text class="small" transform="translate(315.5 165.4) rotate(-90)">tool-design</text>
+<rect class="bar" x="329.5" y="172.0" width="18.3" height="18.0"/>
+<text class="small" transform="translate(341.6 168.0) rotate(-90)">turn-budget</text>
+<rect class="bar" x="355.6" y="169.0" width="18.3" height="21.0"/>
+<text class="small" transform="translate(367.8 165.0) rotate(-90)">plan-first</text>
+<text class="small" x="390.9" y="206.0" text-anchor="middle">11-13</text>
+<rect class="bar" x="381.8" y="153.1" width="18.3" height="36.9"/>
+<text class="small" transform="translate(393.9 149.1) rotate(-90)">self-verify</text>
+<rect class="bar" x="407.9" y="164.9" width="18.3" height="25.1"/>
+<text class="small" transform="translate(420.1 160.9) rotate(-90)">effort-sweep</text>
+<rect class="bar" x="434.1" y="176.3" width="18.3" height="13.7"/>
+<text class="small" transform="translate(446.2 172.3) rotate(-90)">aa-test</text>
+<text class="small" x="469.4" y="206.0" text-anchor="middle">11-16</text>
+<rect class="bar" x="460.2" y="114.0" width="18.3" height="76.0"/>
+<text class="small" transform="translate(472.4 110.0) rotate(-90)">model-comparis</text>
+<rect class="bar" x="486.4" y="173.7" width="18.3" height="16.3"/>
+<text class="small" transform="translate(498.5 169.7) rotate(-90)">tool-design</text>
+<rect class="bar" x="512.5" y="173.5" width="18.3" height="16.5"/>
+<text class="small" transform="translate(524.7 169.5) rotate(-90)">context-trunca</text>
+<text class="small" x="547.8" y="206.0" text-anchor="middle">11-19</text>
+<rect class="bar" x="538.7" y="176.6" width="18.3" height="13.4"/>
+<text class="small" transform="translate(550.8 172.6) rotate(-90)">turn-budget</text>
+<rect class="bar" x="564.8" y="174.8" width="18.3" height="15.2"/>
+<text class="small" transform="translate(577.0 170.8) rotate(-90)">self-verify</text>
+<rect class="bar" x="591.0" y="172.5" width="18.3" height="17.5"/>
+<text class="small" transform="translate(603.2 168.5) rotate(-90)">effort-sweep</text>
+<text class="small" x="626.3" y="206.0" text-anchor="middle">11-22</text>
+<rect class="bar" x="617.2" y="176.1" width="18.3" height="13.9"/>
+<text class="small" transform="translate(629.3 172.1) rotate(-90)">aa-test</text>
+<rect class="bar" x="643.3" y="176.0" width="18.3" height="14.0"/>
+<text class="small" transform="translate(655.5 172.0) rotate(-90)">model-comparis</text>
+<rect class="bar" x="669.5" y="190.0" width="18.3" height="0.0"/>
+<text class="small" transform="translate(681.6 186.0) rotate(-90)">tool-design</text>
+<text class="small" x="704.8" y="206.0" text-anchor="middle">11-25</text>
+<rect class="bar" x="695.6" y="173.7" width="18.3" height="16.3"/>
+<text class="small" transform="translate(707.8 169.7) rotate(-90)">context-trunca</text>
+<text class="small" x="730.9" y="206.0" text-anchor="middle">11-26</text>
+<rect class="bar" x="721.8" y="177.4" width="18.3" height="12.6"/>
+<text class="small" transform="translate(733.9 173.4) rotate(-90)">turn-budget</text>
 </svg>

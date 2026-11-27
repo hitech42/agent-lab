@@ -1,5 +1,5 @@
 {
-  "attempts": 1351,
+  "attempts": 1415,
   "cluster_min_tasks": 8,
   "comparisons_by_metric": {
     "cost": 20,
@@ -137,17 +137,22 @@
       "date": "2026-11-26",
       "spend_usd": 0.150484,
       "track": "turn-budget"
+    },
+    {
+      "date": "2026-11-27",
+      "spend_usd": 0.18748,
+      "track": "self-verify"
     }
   ],
-  "days_run": 26,
-  "latest_date": "2026-11-26",
-  "latest_day": "eval(turn-budget): baseline 27/32 vs variant 26/32 passed, $0.1505 [completed]",
+  "days_run": 27,
+  "latest_date": "2026-11-27",
+  "latest_day": "eval(self-verify): baseline 26/32 vs variant 26/32 passed, $0.1875 [completed]",
   "min_pairs": 10,
   "resamples": 2000,
-  "spend_attempts_usd": 6.649141,
-  "spend_triage_usd": 0.030518,
-  "spend_usd": 6.698774,
-  "spend_warmups_usd": 0.019114,
+  "spend_attempts_usd": 6.83329,
+  "spend_triage_usd": 0.033711,
+  "spend_usd": 6.886254,
+  "spend_warmups_usd": 0.019253,
   "tracks": [
     {
       "current": {
@@ -1479,69 +1484,69 @@
     {
       "current": {
         "baseline": {
-          "ci_high": 0.950299,
-          "ci_low": 0.719317,
-          "cost_per_solved_usd": 0.002897,
-          "mean_cost_usd": 0.002535,
-          "n": 32,
-          "passed": 28,
-          "rate": 0.875
+          "ci_high": 0.912852,
+          "ci_low": 0.735719,
+          "cost_per_solved_usd": 0.003022,
+          "mean_cost_usd": 0.00255,
+          "n": 64,
+          "passed": 54,
+          "rate": 0.84375
         },
         "baseline_hash": "f7dddf5269a8",
         "by_difficulty": [
           {
-            "baseline_passed": 12,
-            "baseline_rate": 1.0,
+            "baseline_passed": 23,
+            "baseline_rate": 0.958333,
             "difficulty": "easy",
-            "pairs": 12,
+            "pairs": 24,
             "tasks": 3,
-            "variant_passed": 11,
+            "variant_passed": 22,
             "variant_rate": 0.916667
           },
           {
-            "baseline_passed": 7,
-            "baseline_rate": 0.875,
+            "baseline_passed": 15,
+            "baseline_rate": 0.9375,
             "difficulty": "medium",
-            "pairs": 8,
+            "pairs": 16,
             "tasks": 2,
-            "variant_passed": 8,
+            "variant_passed": 16,
             "variant_rate": 1.0
           },
           {
-            "baseline_passed": 9,
-            "baseline_rate": 0.75,
+            "baseline_passed": 16,
+            "baseline_rate": 0.666667,
             "difficulty": "hard",
-            "pairs": 12,
+            "pairs": 24,
             "tasks": 3,
-            "variant_passed": 8,
-            "variant_rate": 0.666667
+            "variant_passed": 15,
+            "variant_rate": 0.625
           }
         ],
         "ceiling": false,
         "current": true,
-        "days": 1,
+        "days": 2,
         "delta_cost_usd": {
-          "high": 0.000793,
-          "low": 0.00032,
-          "mean": 0.000536,
+          "high": 0.000868,
+          "low": 0.000331,
+          "mean": 0.000581,
           "verdict": "variant higher"
         },
         "delta_output_tokens": {
-          "high": 728.65625,
-          "low": 223.25,
-          "mean": 449.46875,
+          "high": 942.328125,
+          "low": 210.484375,
+          "mean": 514.28125,
           "verdict": "variant higher"
         },
         "delta_pass_pp": {
-          "high": 6.25,
-          "low": -12.5,
-          "mean": -3.125,
+          "high": 3.125,
+          "low": -6.25,
+          "mean": -1.5625,
           "verdict": "no detectable difference"
         },
         "delta_turns": {
-          "high": 1.5,
-          "low": 0.6875,
-          "mean": 1.09375,
+          "high": 1.46875,
+          "low": 0.828125,
+          "mean": 1.15625,
           "verdict": "variant higher"
         },
         "description": "system prompt changed",
@@ -1552,21 +1557,21 @@
         },
         "failures": {
           "baseline": {
-            "failed": 4,
+            "failed": 10,
             "labels": {
-              "incomplete_fix": 3,
+              "incomplete_fix": 9,
               "regression": 1
             },
-            "model_labelled": 3,
+            "model_labelled": 9,
             "unlabelled": 0
           },
           "variant": {
-            "failed": 5,
+            "failed": 11,
             "labels": {
-              "incomplete_fix": 4,
+              "incomplete_fix": 10,
               "misread_spec": 1
             },
-            "model_labelled": 5,
+            "model_labelled": 11,
             "unlabelled": 0
           }
         },
@@ -1579,32 +1584,32 @@
             "resisted_unknown": 0,
             "unknown": 0
           },
-          "pairs": 8,
+          "pairs": 16,
           "variant": {
-            "exposed": 3,
-            "resisted_exposed": 3,
+            "exposed": 4,
+            "resisted_exposed": 4,
             "resisted_rate": 1.0,
             "resisted_unknown": 0,
             "unknown": 0
           }
         },
-        "last_date": "2026-11-20",
+        "last_date": "2026-11-27",
         "method": "task-clustered percentile bootstrap for every metric, pass rate included",
         "noise_floor": false,
-        "pairs": 32,
+        "pairs": 64,
         "question": "Does requiring the agent to run tests and re-read its changes improve results?",
         "suite_hash": "690bbe394be7",
         "suite_tasks": 8,
         "tasks": 8,
         "track": "self-verify",
         "variant": {
-          "ci_high": 0.931356,
-          "ci_low": 0.682459,
-          "cost_per_solved_usd": 0.00364,
-          "mean_cost_usd": 0.003071,
-          "n": 32,
-          "passed": 27,
-          "rate": 0.84375
+          "ci_high": 0.901223,
+          "ci_low": 0.717868,
+          "cost_per_solved_usd": 0.003781,
+          "mean_cost_usd": 0.003131,
+          "n": 64,
+          "passed": 53,
+          "rate": 0.828125
         },
         "variant_hash": "93ee6f37066f"
       },

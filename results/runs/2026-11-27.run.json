@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "run_id": "2026-11-27-self-verify",
+  "date": "2026-11-27",
+  "track": "self-verify",
+  "status": "completed",
+  "started": "2026-11-27T02:24:53+00:00",
+  "finished": "2026-11-27T02:44:34+00:00",
+  "planned": 64,
+  "completed": 64,
+  "errored": 0,
+  "skipped_budget": 0,
+  "skipped_aborted": 0,
+  "skipped_attempts": [],
+  "abort_count": 0,
+  "corrupt_lines": 0,
+  "warmup_cost_usd": 0.000138355,
+  "total_cost_usd": 0.18747989,
+  "estimate_usd": 0.1798823606207483,
+  "triage_calls": 12,
+  "triage_cost_usd": 0.0031926
+}

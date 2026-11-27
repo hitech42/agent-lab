@@ -30,9 +30,9 @@ workflow; it states the data range it covers.
 <!-- agent-lab:report:start -->
 ## Results
 
-Data through **2026-11-26** · 26 day(s) run · 1351 attempts · **$6.6988** total spend (attempts $6.6491 + warm-ups $0.0191 + triage $0.0305).
+Data through **2026-11-27** · 27 day(s) run · 1415 attempts · **$6.8863** total spend (attempts $6.8333 + warm-ups $0.0193 + triage $0.0337).
 
-Latest day: eval\(turn-budget\): baseline 27/32 vs variant 26/32 passed, $0.1505 \[completed\]
+Latest day: eval\(self-verify\): baseline 26/32 vs variant 26/32 passed, $0.1875 \[completed\]
 
 | Track | Pairs (excl.) | Baseline pass | Variant pass | Δ pass (pp) | Δ cost / attempt | Δ turns | Verdict | Flags |
 |---|---|---|---|---|---|---|---|---|
@@ -41,7 +41,7 @@ Latest day: eval\(turn-budget\): baseline 27/32 vs variant 26/32 passed, $0.1505
 | effort-sweep | 32 (0) | 75% [58–87] | 88% [72–95] | +12.5 [+3.1, +25.0] | +$0.0010 [+$0.0003, +$0.0021] | +1.2 [+0.8, +1.5] | pass: variant higher; cost: variant higher |  |
 | model-comparison | 38 (2) | 74% [58–85] | 100% [91–100] | +26.3 [+5.3, +52.6] | +$0.0232 [+$0.0141, +$0.0347] | -0.7 [-1.6, +0.1] | pass: variant higher; cost: variant higher |  |
 | plan-first | 32 (0) | 91% [76–97] | 91% [76–97] | +0.0 [-9.4, +9.4] | +$0.0004 [+$0.0001, +$0.0007] | +0.0 [-0.8, +0.7] | pass: no detectable difference; cost: variant higher |  |
-| self-verify | 32 (0) | 88% [72–95] | 84% [68–93] | -3.1 [-12.5, +6.2] | +$0.0005 [+$0.0003, +$0.0008] | +1.1 [+0.7, +1.5] | pass: no detectable difference; cost: variant higher |  |
+| self-verify | 64 (0) | 84% [74–91] | 83% [72–90] | -1.6 [-6.2, +3.1] | +$0.0006 [+$0.0003, +$0.0009] | +1.2 [+0.8, +1.5] | pass: no detectable difference; cost: variant higher |  |
 | tool-design | 32 (0) | 84% [68–93] | 72% [55–84] | -12.5 [-31.2, +0.0] | +$0.0002 [-$0.0002, +$0.0007] | +0.8 [-0.7, +2.7] | pass: no detectable difference; cost: no detectable difference |  |
 | turn-budget | 64 (0) | 83% [72–90] | 83% [72–90] | +0.0 [-6.2, +6.2] | -$0.0002 [-$0.0003, +$0.0000] | -0.4 [-0.7, +0.0] | pass: no detectable difference; cost: variant lower |  |
 
@@ -64,10 +64,10 @@ Latest day: eval\(turn-budget\): baseline 27/32 vs variant 26/32 passed, $0.1505
 - **plan-first**: Does asking the agent to write a plan before acting improve results? Variant vs baseline: [system prompt changed](results/configs/f155db74474c.json). Cost per solved task (baseline → variant): $0.0041 → $0.0045. Suite `37e677db05e7` (8 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): easy 92% → 100% (12 pairs); medium 100% → 100% (12 pairs); hard 75% → 62% (8 pairs)
   - Injection tasks (baseline → variant): exposed 0/8 → 0/8; resisted among exposed 0/0 → 0/0 (n/a → n/a); exposure unknown 8/8 → 8/8 (resisted 8 → 8 of those)
-- **self-verify**: Does requiring the agent to run tests and re-read its changes improve results? Variant vs baseline: [system prompt changed](results/configs/93ee6f37066f.json). Cost per solved task (baseline → variant): $0.0029 → $0.0036. Suite `690bbe394be7` (8 tasks); 1 day(s).
-  - By difficulty (baseline → variant pass): easy 100% → 92% (12 pairs); medium 88% → 100% (8 pairs); hard 75% → 67% (12 pairs)
-  - Injection tasks (baseline → variant): exposed 0/8 → 3/8; resisted among exposed 0/0 → 3/3 (n/a → 100%); exposure unknown 0/8 → 0/8
-  - Failures, advisory labels: baseline 4 failed: 3 incomplete fix, 1 regression; variant 5 failed: 4 incomplete fix, 1 misread spec
+- **self-verify**: Does requiring the agent to run tests and re-read its changes improve results? Variant vs baseline: [system prompt changed](results/configs/93ee6f37066f.json). Cost per solved task (baseline → variant): $0.0030 → $0.0038. Suite `690bbe394be7` (8 tasks); 2 day(s).
+  - By difficulty (baseline → variant pass): easy 96% → 92% (24 pairs); medium 94% → 100% (16 pairs); hard 67% → 62% (24 pairs)
+  - Injection tasks (baseline → variant): exposed 0/16 → 4/16; resisted among exposed 0/0 → 4/4 (n/a → 100%); exposure unknown 0/16 → 0/16
+  - Failures, advisory labels: baseline 10 failed: 9 incomplete fix, 1 regression; variant 11 failed: 10 incomplete fix, 1 misread spec
 - **tool-design**: Do the structured tools beat a single bash tool? Variant vs baseline: tool\_set: structured → bash\_only. Cost per solved task (baseline → variant): $0.0034 → $0.0043. Suite `690bbe394be7` (8 tasks); 1 day(s).
   - By difficulty (baseline → variant pass): easy 100% → 83% (12 pairs); medium 100% → 100% (8 pairs); hard 58% → 42% (12 pairs)
   - Injection tasks (baseline → variant): exposed 0/8 → 5/8; resisted among exposed 0/0 → 5/5 (n/a → 100%); exposure unknown 0/8 → 0/8

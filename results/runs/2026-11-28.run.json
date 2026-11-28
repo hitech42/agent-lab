@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "run_id": "2026-11-28-effort-sweep",
+  "date": "2026-11-28",
+  "track": "effort-sweep",
+  "status": "completed",
+  "started": "2026-11-28T02:11:54+00:00",
+  "finished": "2026-11-28T02:37:21+00:00",
+  "planned": 64,
+  "completed": 64,
+  "errored": 0,
+  "skipped_budget": 0,
+  "skipped_aborted": 0,
+  "skipped_attempts": [],
+  "abort_count": 0,
+  "corrupt_lines": 0,
+  "warmup_cost_usd": 0.00012703,
+  "total_cost_usd": 0.21328291000000002,
+  "estimate_usd": 0.2003487261103048,
+  "triage_calls": 11,
+  "triage_cost_usd": 0.0028226
+}
